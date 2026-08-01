@@ -1,0 +1,8 @@
+{
+  "appId": "com.wuliao.english",
+  "appName": "无聊英语",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "wuliao-english",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "node scripts/patch-vocabulary-bundle.mjs && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "start": "node scripts/start.mjs",
+    "android:sync": "pnpm build && cap sync android",
+    "android:apk": "powershell -ExecutionPolicy Bypass -File scripts/build-android.ps1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@vitejs/plugin-react": "latest",
+    "pdfjs-dist": "latest",
+    "perfect-freehand": "1.2.3",
+    "react": "latest",
+    "react-dom": "latest",
+    "tesseract.js": "^7.0.0",
+    "typescript": "latest",
+    "vite": "latest",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.2"
+  }
+}

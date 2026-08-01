@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>无聊英语 · 每日复习</title>
+    <link rel="icon" href="/vocabulary/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/vocabulary/memorize.css?v=20260723" />
+    <link rel="stylesheet" href="/vocabulary/review.css?v=20260723" />
+    <link rel="stylesheet" href="/vocabulary/wuliao-theme.css?v=20260715" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="back-link" href="/vocabulary/memorize.html">← 返回背词</a>
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">无</span>
+        <div>
+          <h1>无聊英语 · 每日复习</h1>
+          <p>筛查三次划线的单词</p>
+        </div>
+      </div>
+      <span id="accountLabel" class="account"></span>
+    </header>
+
+    <main class="review-page">
+      <section class="review-toolbar">
+        <label>
+          <span>日期词库</span>
+          <select id="dateSelect" aria-label="选择复习日期"></select>
+        </label>
+        <label class="auto-speak-control"><input id="autoSpeakToggle" type="checkbox" /><span>下一词自动读音</span></label>
+        <span id="reviewRule">答错取消黑线，答对保持不变</span>
+      </section>
+
+      <section id="loadingState" class="review-state">正在读取每日背词记录…</section>
+      <section id="emptyState" class="review-state hidden">
+        <strong>这一天还没有完成三次划线的单词</strong>
+        <p>回到背词训练，把单词记录到 3/3 后会自动进入当天词库。</p>
+        <a class="primary-link" href="/vocabulary/memorize.html">去背单词</a>
+      </section>
+
+      <section id="quiz" class="review-quiz hidden" aria-live="polite">
+        <div class="review-progress-head">
+          <span id="dateName" class="date-badge"></span>
+          <span id="positionLabel"></span>
+          <span class="review-count correct">正确 <b id="correctCount">0</b></span>
+          <span class="review-count wrong">错误 <b id="wrongCount">0</b></span>
+        </div>
+        <div class="progress-track" aria-label="复习进度"><span id="progressBar"></span></div>
+        <button id="wordButton" class="review-word" type="button" title="点击朗读"></button>
+        <div id="optionGrid" class="review-options"></div>
+        <button id="skipButton" class="skip-button" type="button">我不会</button>
+        <p id="answerHint" class="answer-hint" aria-live="polite"></p>
+      </section>
+
+      <section id="completeState" class="review-state hidden">
+        <strong id="completeTitle">今日复习完成</strong>
+        <p id="completeSummary"></p>
+        <div class="complete-actions">
+          <button id="restartButton" class="primary-action" type="button">重新筛查本词库</button>
+          <a class="secondary-action" href="/vocabulary/memorize.html">返回背词训练</a>
+        </div>
+      </section>
+
+      <div id="message" class="message hidden"></div>
+    </main>
+
+    <script type="module" src="/vocabulary/review.js?v=20260723"></script>
+  </body>
+</html>

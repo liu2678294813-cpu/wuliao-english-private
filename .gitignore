@@ -1,0 +1,16 @@
+node_modules/
+dist/
+tmp/
+*.log
+__pycache__/
+*.py[cod]
+
+# Local SDK/toolchain and generated test/build output. These can be recreated
+# and must never be included in the source history.
+.android-sdk/
+.android-toolchain/
+output/
+.playwright-cli/
+
+# Local Netlify folder
+.netlify

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>无聊英语 · 导入词库</title>
+    <link rel="icon" href="/vocabulary/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/vocabulary/import.css?v=20260723" />
+    <link rel="stylesheet" href="/vocabulary/wuliao-theme.css?v=20260715" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="back-link" href="/vocabulary/memorize.html">← 返回背词</a>
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">无</span>
+        <div>
+          <h1>导入个人词库</h1>
+          <p>PDF、Excel、CSV 均只在当前浏览器本地处理</p>
+        </div>
+      </div>
+      <span id="accountLabel" class="account"></span>
+    </header>
+
+    <main class="import-page">
+      <section class="import-card intro-card">
+        <div>
+          <span class="eyebrow">推荐格式</span>
+          <h2>一行一个单词，两列最稳</h2>
+          <p>Excel/CSV 第一列填英文，第二列填中文；也可使用“单词 / 释义”等表头。文本型 PDF 会自动提取，扫描图片型 PDF 暂不做 OCR。</p>
+        </div>
+        <div class="format-example" aria-label="导入格式示例">
+          <span>abandon</span><span>放弃；抛弃</span>
+          <span>consequence</span><span>结果；后果</span>
+          <span>deliberate</span><span>故意的；深思熟虑的</span>
+        </div>
+      </section>
+
+      <section class="import-card form-card">
+        <label class="file-drop" for="fileInput">
+          <input id="fileInput" type="file" accept=".pdf,.xlsx,.xls,.csv" />
+          <strong id="filePrompt">选择 PDF、Excel 或 CSV</strong>
+          <span>文件不会上传到服务器</span>
+        </label>
+        <label class="name-field">
+          <span>词库名称</span>
+          <input id="listName" type="text" maxlength="60" placeholder="例如：7月专业课生词" />
+        </label>
+        <div class="form-actions">
+          <button id="parseButton" class="secondary-action" type="button" disabled>识别并预览</button>
+          <button id="saveButton" class="primary-action" type="button" disabled>保存到我的词库</button>
+        </div>
+        <p id="statusText" class="status-text" aria-live="polite">尚未选择文件</p>
+      </section>
+
+      <section id="previewCard" class="import-card preview-card hidden">
+        <div class="preview-heading">
+          <div><span class="eyebrow">识别预览</span><h2 id="previewTitle">已识别 0 词</h2></div>
+          <span>最多展示前 20 个</span>
+        </div>
+        <div class="preview-table" role="table" aria-label="词库识别预览">
+          <div class="preview-row preview-header" role="row"><span>英文</span><span>中文释义</span></div>
+          <div id="previewRows"></div>
+        </div>
+      </section>
+
+      <section id="successCard" class="import-card success-card hidden" aria-live="polite">
+        <strong>词库已保存</strong>
+        <p id="successText"></p>
+        <a id="openListLink" class="primary-action link-action" href="/vocabulary/index.html#/lists">打开完整词库</a>
+      </section>
+    </main>
+
+    <script src="/vocabulary/vendor/xlsx.full.min.js"></script>
+    <script type="module" src="/vocabulary/import.js?v=20260728-full-flow"></script>
+  </body>
+</html>

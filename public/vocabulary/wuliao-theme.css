@@ -1,0 +1,230 @@
+:root {
+  --wuliao-navy: #173a62;
+  --wuliao-navy-deep: #102e4e;
+  --wuliao-teal: #0b7b77;
+  --wuliao-teal-soft: #dcefed;
+  --wuliao-paper: #fffefa;
+  --wuliao-cream: #f5f2eb;
+  --wuliao-muted: #6c7e8d;
+  --wuliao-line: #d9e0e4;
+  font-family: Inter, "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  color: var(--wuliao-navy-deep);
+  background: var(--wuliao-cream);
+}
+
+html,
+body,
+#root {
+  background-color: var(--wuliao-cream);
+}
+
+body,
+#root {
+  background-image:
+    radial-gradient(circle at 88% 4%, rgba(11, 123, 119, 0.1), transparent 27rem),
+    linear-gradient(145deg, #fffefa 0%, #f5f2eb 76%);
+  color: var(--wuliao-navy-deep);
+}
+
+#root header.h-14,
+.topbar {
+  border-color: rgba(217, 224, 228, 0.92);
+  background: rgba(255, 254, 250, 0.94);
+  box-shadow: 0 1px 0 rgba(23, 58, 98, 0.06);
+}
+
+#root header.h-14 h1,
+#root main h2,
+#root main h3,
+.topbar h1,
+.english {
+  color: var(--wuliao-navy-deep);
+}
+
+#root header.h-14 h1::before,
+#root h1::before,
+.brand-mark {
+  border-radius: 12px 12px 12px 3px;
+  background: var(--wuliao-teal);
+  box-shadow: 0 8px 20px rgba(11, 123, 119, 0.22);
+}
+
+body:not([data-app-route="screening"]) #root main h2::before {
+  background: linear-gradient(180deg, var(--wuliao-teal), var(--wuliao-navy));
+}
+
+#root .min-h-screen > .bg-white,
+#root main .bg-white,
+.controls,
+.word-viewport {
+  border-color: rgba(217, 224, 228, 0.94);
+  background-color: rgba(255, 254, 250, 0.94);
+  box-shadow: 0 12px 32px rgba(22, 46, 73, 0.08);
+}
+
+#root .bg-blue-600,
+#root .bg-red-600,
+.mark-button {
+  background: linear-gradient(135deg, var(--wuliao-teal), #086763);
+  box-shadow: 0 7px 16px rgba(11, 123, 119, 0.2);
+}
+
+#root .text-blue-600,
+#root .text-blue-700,
+#root .text-indigo-600,
+.back-link {
+  color: var(--wuliao-teal);
+}
+
+#root .bg-blue-50,
+#root .bg-blue-100,
+#root .bg-indigo-50,
+.resume-note,
+.secondary {
+  color: var(--wuliao-teal);
+  background: var(--wuliao-teal-soft);
+}
+
+#root input,
+#root select,
+#root textarea,
+select {
+  border-color: #c9d5d8;
+  background: rgba(255, 254, 250, 0.96);
+  color: var(--wuliao-navy-deep);
+}
+
+#root input:focus,
+#root select:focus,
+#root textarea:focus,
+select:focus,
+button:focus-visible,
+a:focus-visible {
+  border-color: var(--wuliao-teal);
+  outline-color: rgba(11, 123, 119, 0.25);
+}
+
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white::after {
+  background: rgba(11, 123, 119, 0.08);
+}
+
+body[data-app-route="login"] #root h1::before {
+  background: var(--wuliao-teal);
+  box-shadow: 0 12px 26px rgba(11, 123, 119, 0.24);
+}
+
+body[data-app-route="login"] #root .min-h-screen::before {
+  background: rgba(11, 123, 119, 0.12);
+}
+
+body[data-app-route="login"] #root .min-h-screen::after {
+  background: rgba(23, 58, 98, 0.08);
+}
+
+#root input:focus {
+  --tw-ring-color: rgba(11, 123, 119, 0.28);
+}
+
+body[data-app-route="lists"] #root main .space-y-2 > .bg-white {
+  border-left-color: var(--wuliao-teal);
+}
+
+body[data-app-route="screening"] #root main h2,
+body[data-app-route="learning"] #root main > .flex.h-full {
+  border-color: rgba(217, 224, 228, 0.9);
+  background: rgba(255, 254, 250, 0.92);
+  box-shadow: 0 16px 44px rgba(22, 46, 73, 0.1);
+}
+
+body[data-app-route="learning"] #root main .flex-1.flex.items-center.justify-center {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(220, 239, 237, 0.78), transparent 48%),
+    linear-gradient(180deg, #fffefa, #f7f4ed);
+}
+
+#mobileAppNav {
+  border-color: rgba(217, 224, 228, 0.95);
+  background: rgba(255, 254, 250, 0.96);
+  box-shadow: 0 -8px 28px rgba(22, 46, 73, 0.1);
+}
+
+.app-nav-link,
+.app-nav-more {
+  color: var(--wuliao-muted);
+}
+
+.app-nav-link.is-active,
+.app-nav-more.is-active {
+  color: var(--wuliao-teal);
+}
+
+.app-nav-link.is-active .app-nav-symbol,
+.app-nav-more.is-active .app-nav-symbol {
+  background: var(--wuliao-teal-soft);
+}
+
+.app-more-panel {
+  border-color: rgba(217, 224, 228, 0.96);
+  background: rgba(255, 254, 250, 0.99);
+  box-shadow: 0 18px 42px rgba(22, 46, 73, 0.18);
+}
+
+.app-more-panel a {
+  color: var(--wuliao-navy);
+}
+
+.app-more-panel a:hover,
+.app-more-panel a:focus-visible {
+  color: var(--wuliao-teal);
+  background: var(--wuliao-teal-soft);
+}
+
+.account,
+.status-row,
+.chinese,
+.brand-lockup p {
+  color: var(--wuliao-muted);
+}
+
+.controls,
+.word-viewport {
+  border-radius: 18px;
+}
+
+.word-row {
+  border-color: #e5e7e4;
+  background: rgba(255, 254, 250, 0.9);
+}
+
+.word-row:nth-child(even) {
+  background: #f7f5ef;
+}
+
+.word-row.masked .word-content::after {
+  background: #050505;
+}
+
+.word-row.masked .mark-button {
+  background: var(--wuliao-navy);
+  box-shadow: none;
+}
+
+.message {
+  background: rgba(16, 46, 78, 0.95);
+}
+
+@media (min-width: 768px) {
+  #mobileAppNav {
+    box-shadow: 0 16px 42px rgba(22, 46, 73, 0.16);
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar h1 {
+    font-size: 15px;
+  }
+
+  .controls {
+    border-radius: 14px;
+  }
+}

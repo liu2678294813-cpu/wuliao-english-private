@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>无聊英语 · 背词训练</title>
+    <link rel="icon" href="/vocabulary/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/vocabulary/memorize.css?v=20260724" />
+    <link rel="stylesheet" href="/vocabulary/wuliao-theme.css?v=20260715" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="back-link" href="/vocabulary/index.html#/dashboard">← 返回单词首页</a>
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">无</span>
+        <div>
+          <h1>无聊英语 · 背词训练</h1>
+          <p>每次打开，接着上次继续</p>
+        </div>
+      </div>
+      <span id="accountLabel" class="account"></span>
+    </header>
+
+    <main class="page">
+      <section class="controls">
+        <label>
+          <span>选择词库</span>
+          <select id="listSelect"></select>
+        </label>
+        <div class="actions">
+          <label class="auto-speak-control"><input id="autoSpeakToggle" type="checkbox" /><span>自动读音</span></label>
+          <a class="secondary-link" href="/vocabulary/import.html">导入词库</a>
+          <a class="primary-link" href="/vocabulary/review.html">今日复习</a>
+          <button id="clearButton" class="secondary" type="button">一键清除黑线</button>
+        </div>
+      </section>
+
+      <section class="status-row">
+        <span id="listSummary">正在读取词库…</span>
+        <span id="todaySummary">今日背词 0 个</span>
+        <span id="maskSummary"></span>
+        <span class="resume-note">当前位置自动保存</span>
+      </section>
+
+      <section id="viewport" class="word-viewport" aria-live="polite">
+        <div id="spacer" class="spacer"></div>
+        <div id="rowsLayer" class="rows-layer"></div>
+      </section>
+
+      <div id="message" class="message hidden"></div>
+    </main>
+
+    <script type="module" src="/vocabulary/memorize.js?v=20260728-full-flow"></script>
+  </body>
+</html>
