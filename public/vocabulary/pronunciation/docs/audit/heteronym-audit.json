@@ -1,0 +1,747 @@
+{
+  "scope": "75 locally readable heteronym candidates: source Chinese first sense versus phonemizer base and selected CMU variants. No listening review.",
+  "sourceDictionaryHasPOS": false,
+  "candidateWordsNotInSource": [
+    "converse",
+    "incense",
+    "use"
+  ],
+  "sources": [
+    "https://github.com/cmusphinx/cmudict",
+    "https://dictionary.cambridge.org/us/pronunciation/english/alternate"
+  ],
+  "selectedDefaults": 20,
+  "explicitAmbiguousWords": [
+    "conflict",
+    "contrast",
+    "decrease",
+    "estimate",
+    "export",
+    "import",
+    "increase",
+    "insult",
+    "progress",
+    "protest",
+    "record",
+    "transfer",
+    "transport"
+  ],
+  "remainingRisk": "All synthetic audio remains unreviewed by a human listener; first-sense defaults do not cover every meaning/tense. read past tense, lead metal, wind verb, tear verb and resume noun require other readings not supplied here.",
+  "rows": [
+    {
+      "word": "absent",
+      "wordId": "word_0873",
+      "chinese": "缺席的；缺席；不参加",
+      "basePhonemes": "ˈæbsənt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "abstract",
+      "wordId": "word_0877",
+      "chinese": "抽象的；非具体的；深奥的",
+      "basePhonemes": "ˈæbstɹækt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "accent",
+      "wordId": "word_2872",
+      "chinese": "口音；腔调；强调",
+      "basePhonemes": "ˈæksənt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "address",
+      "wordId": "word_1087",
+      "chinese": "地址；网址；演说",
+      "basePhonemes": "ɐdɹˈɛs",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "advocate",
+      "wordId": "word_1472",
+      "chinese": "提倡；主张；提倡者",
+      "basePhonemes": "ˈædvəkˌeɪt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "affect",
+      "wordId": "word_1476",
+      "chinese": "影响；感动；假装",
+      "basePhonemes": "ɐfˈɛkt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "alternate",
+      "wordId": "word_1250",
+      "chinese": "交替的；轮流的；间隔的",
+      "basePhonemes": "ɔːltˈɜːnət",
+      "status": "dictionary-selected-default",
+      "defaultPos": "adjective",
+      "selectedPhonemes": "ˈɔltəɹnət",
+      "reason": "依据词库首义“交替的”选择adjective；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "appropriate",
+      "wordId": "word_0364",
+      "chinese": "适当的；恰当的；拨出",
+      "basePhonemes": "ɐpɹˈoʊpɹɪət",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "associate",
+      "wordId": "word_0054",
+      "chinese": "把联系在一起；与交往；同事",
+      "basePhonemes": "ɐsˈoʊsɪˌeɪt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "attribute",
+      "wordId": "word_1631",
+      "chinese": "由引起；把归因于；认为是创作的",
+      "basePhonemes": "ˈætɹɪbjˌuːt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "ətɹˈɪbjˌut",
+      "reason": "依据词库首义“由引起”选择verb；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "close",
+      "wordId": "word_1114",
+      "chinese": "关闭；使接近；接近的",
+      "basePhonemes": "klˈoʊs",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "klˈoʊz",
+      "reason": "首义关闭是动词，末音为浊辅音/z/。",
+      "humanListened": false
+    },
+    {
+      "word": "compact",
+      "wordId": "word_2388",
+      "chinese": "紧密的；小型的；协定",
+      "basePhonemes": "kəmpˈækt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "compound",
+      "wordId": "word_2396",
+      "chinese": "化合物；大院；复合的",
+      "basePhonemes": "kˈɑːmpaʊnd",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "compress",
+      "wordId": "word_0443",
+      "chinese": "压缩；压榨；外科",
+      "basePhonemes": "kəmpɹˈɛs",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "conduct",
+      "wordId": "word_0102",
+      "chinese": "实施；表现；指挥",
+      "basePhonemes": "kˈɑːndʌkt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "kɑndˈʌkt",
+      "reason": "首义“实施”明确为动词，“指挥”也支持动词；不让名词义“表现”决定默认重音。",
+      "humanListened": false
+    },
+    {
+      "word": "conflict",
+      "wordId": "word_0197",
+      "chinese": "冲突；矛盾；抵触",
+      "basePhonemes": "kˈɑːnflɪkt",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "console",
+      "wordId": "word_0134",
+      "chinese": "安慰；慰问；控制台",
+      "basePhonemes": "kˈɑːnsoʊl",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "kənsˈoʊl",
+      "reason": "依据词库首义“安慰”选择verb；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "content",
+      "wordId": "word_0012",
+      "chinese": "内容；含量；目录",
+      "basePhonemes": "kˈɑːntɛnt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "noun",
+      "selectedPhonemes": "kˈɑntɛnt",
+      "reason": "内容、含量、目录均为名词义。",
+      "humanListened": false
+    },
+    {
+      "word": "contest",
+      "wordId": "word_0014",
+      "chinese": "比赛；竞赛；竞争",
+      "basePhonemes": "kˈɑːntɛst",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "contract",
+      "wordId": "word_0016",
+      "chinese": "合同；契约；使",
+      "basePhonemes": "kˈɑːntɹækt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "noun",
+      "selectedPhonemes": "kˈɑntɹˌækt",
+      "reason": "优先释义“合同、契约”为名词；末项“使”不完整，不据此改判。",
+      "humanListened": false
+    },
+    {
+      "word": "contrast",
+      "wordId": "word_0019",
+      "chinese": "对照；反差；对立",
+      "basePhonemes": "kˈɑːntɹæst",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "convict",
+      "wordId": "word_4026",
+      "chinese": "定罪；宣判有罪；罪犯",
+      "basePhonemes": "kˈɑːnvɪkt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "kənvˈɪkt",
+      "reason": "依据词库首义“定罪”选择verb；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "coordinate",
+      "wordId": "word_3723",
+      "chinese": "协调；使配合；搭配",
+      "basePhonemes": "koʊˈɔːɹdᵻnət",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "koʊˈɔɹdənˌeɪt",
+      "reason": "依据词库首义“协调”选择verb；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "decrease",
+      "wordId": "word_0908",
+      "chinese": "减少；降低",
+      "basePhonemes": "dˈiːkɹiːs",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "defect",
+      "wordId": "word_3384",
+      "chinese": "毛病；缺陷；叛逃",
+      "basePhonemes": "dˈiːfɛkt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "delegate",
+      "wordId": "word_3498",
+      "chinese": "委派；授权；代表",
+      "basePhonemes": "dˈɛlɪɡˌeɪt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "deliberate",
+      "wordId": "word_0844",
+      "chinese": "深思熟虑的；故意的；深思熟虑",
+      "basePhonemes": "dᵻlˈɪbɚɹət",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "desert",
+      "wordId": "word_3303",
+      "chinese": "沙漠；荒漠；抛弃",
+      "basePhonemes": "dˈɛzɚt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "digest",
+      "wordId": "word_2065",
+      "chinese": "摘要；文摘；消化",
+      "basePhonemes": "daɪdʒˈɛst",
+      "status": "dictionary-selected-default",
+      "defaultPos": "noun",
+      "selectedPhonemes": "dˈaɪdʒɛst",
+      "reason": "依据词库首义“摘要”选择noun；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "discharge",
+      "wordId": "word_2181",
+      "chinese": "放出；排出；开除",
+      "basePhonemes": "dɪstʃˈɑːɹdʒ",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "discount",
+      "wordId": "word_3629",
+      "chinese": "折扣；贴现率；打折扣",
+      "basePhonemes": "dˈɪskaʊnt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "document",
+      "wordId": "word_0026",
+      "chinese": "文件；公文；文献",
+      "basePhonemes": "dˈɑːkjuːmənt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "duplicate",
+      "wordId": "word_4315",
+      "chinese": "复制；复印；再做一次",
+      "basePhonemes": "dˈuːplᵻkˌeɪt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "elaborate",
+      "wordId": "word_0866",
+      "chinese": "精心制作；详尽阐述；精心制作的",
+      "basePhonemes": "ᵻlˈæbɚɹˌeɪt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "entrance",
+      "wordId": "word_2347",
+      "chinese": "入口；进入；到场",
+      "basePhonemes": "ˈɛntɹəns",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "estimate",
+      "wordId": "word_0232",
+      "chinese": "估算；估价",
+      "basePhonemes": "ˈɛstᵻmət",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "excuse",
+      "wordId": "word_3883",
+      "chinese": "饶恕；借口；致歉",
+      "basePhonemes": "ɛkskjˈuːs",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "ɪkskjˈuz",
+      "reason": "依据词库首义“饶恕”选择verb；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "export",
+      "wordId": "word_1641",
+      "chinese": "输出；出口",
+      "basePhonemes": "ˈɛkspɔːɹt",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "extract",
+      "wordId": "word_4219",
+      "chinese": "提取物；摘录；精华",
+      "basePhonemes": "ˈɛkstɹækt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "frequent",
+      "wordId": "word_4091",
+      "chinese": "频繁的；经常发生的",
+      "basePhonemes": "fɹˈiːkwənt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "graduate",
+      "wordId": "word_1063",
+      "chinese": "大学毕业生；学士学位获得者；毕业",
+      "basePhonemes": "ɡɹˈædʒuːət",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "house",
+      "wordId": "word_5210",
+      "chinese": "房子；房屋",
+      "basePhonemes": "hˈaʊs",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "impact",
+      "wordId": "word_1404",
+      "chinese": "冲击；力；影响力",
+      "basePhonemes": "ˈɪmpækt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "import",
+      "wordId": "word_1411",
+      "chinese": "进口；输入；重要性",
+      "basePhonemes": "ɪmpˈɔːɹt",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "increase",
+      "wordId": "word_1353",
+      "chinese": "增加；增长；增多",
+      "basePhonemes": "ˈɪŋkɹiːs",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "insult",
+      "wordId": "word_1976",
+      "chinese": "侮辱；辱骂",
+      "basePhonemes": "ˈɪnsʌlt",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "intimate",
+      "wordId": "word_3904",
+      "chinese": "亲密的；私密的",
+      "basePhonemes": "ˈɪntᵻmət",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "invalid",
+      "wordId": "word_3913",
+      "chinese": "无效的；作废的；病弱者",
+      "basePhonemes": "ɪnvˈælɪd",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "lead",
+      "wordId": "word_0960",
+      "chinese": "领导；带领；导致",
+      "basePhonemes": "lˈiːd",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "live",
+      "wordId": "word_5256",
+      "chinese": "生活；居住；活着",
+      "basePhonemes": "lˈaɪv",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "lˈɪv",
+      "reason": "首义生活、居住、活着均为动词。",
+      "humanListened": false
+    },
+    {
+      "word": "minute",
+      "wordId": "word_2452",
+      "chinese": "分钟；一会儿；微小的",
+      "basePhonemes": "mˈɪnɪt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "moderate",
+      "wordId": "word_0395",
+      "chinese": "中等的；适度的；温和的",
+      "basePhonemes": "mˈɑːdɚɹət",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "object",
+      "wordId": "word_0494",
+      "chinese": "物体；目的；对象",
+      "basePhonemes": "ˈɑːbdʒɛkt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "noun",
+      "selectedPhonemes": "ˈɑbdʒɛkt",
+      "reason": "物体、目的、对象均为名词义。",
+      "humanListened": false
+    },
+    {
+      "word": "perfect",
+      "wordId": "word_0649",
+      "chinese": "完备的；完美的；使完美",
+      "basePhonemes": "pˈɜːfɛkt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "permit",
+      "wordId": "word_2964",
+      "chinese": "允许；准许；通行证",
+      "basePhonemes": "pˈɜːmɪt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "pəɹmˈɪt",
+      "reason": "首义允许、准许是动词，采用末音节重音。",
+      "humanListened": false
+    },
+    {
+      "word": "present",
+      "wordId": "word_0292",
+      "chinese": "目前；礼物；在场的",
+      "basePhonemes": "pɹˈɛzənt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "noun",
+      "selectedPhonemes": "pɹˈɛzənt",
+      "reason": "“目前、礼物”支持名词读法；“在场的”为形容词，与名词同为首音节重读。",
+      "humanListened": false
+    },
+    {
+      "word": "produce",
+      "wordId": "word_1583",
+      "chinese": "生产；生育；制造",
+      "basePhonemes": "pɹədˈuːs",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "pɹədˈus",
+      "reason": "生产、生育、制造均为动词义。",
+      "humanListened": false
+    },
+    {
+      "word": "progress",
+      "wordId": "word_4912",
+      "chinese": "进展；进步；缓慢前进",
+      "basePhonemes": "pɹˈɑːɡɹɛs",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "project",
+      "wordId": "word_1672",
+      "chinese": "计划；方案；项目",
+      "basePhonemes": "pɹˈɑːdʒɛkt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "noun",
+      "selectedPhonemes": "pɹˈɑdʒɛkt",
+      "reason": "首义“计划”可能名动，但紧随的“方案、项目”明确支持本词库优先名词义。",
+      "humanListened": false
+    },
+    {
+      "word": "protest",
+      "wordId": "word_4350",
+      "chinese": "抗议；抗议活动",
+      "basePhonemes": "pɹˈoʊtɛst",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "read",
+      "wordId": "word_5355",
+      "chinese": "读；阅读",
+      "basePhonemes": "ɹˈiːd",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "rebel",
+      "wordId": "word_2777",
+      "chinese": "反抗；造反；叛逆者",
+      "basePhonemes": "ɹˈɛbəl",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "ɹɪbˈɛl",
+      "reason": "依据词库首义“反抗”选择verb；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "record",
+      "wordId": "word_4931",
+      "chinese": "记录；唱片；录制",
+      "basePhonemes": "ɹˈɛkɚd",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "refuse",
+      "wordId": "word_3255",
+      "chinese": "拒绝；不接受；废料",
+      "basePhonemes": "ɹᵻfjˈuːz",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "reject",
+      "wordId": "word_0416",
+      "chinese": "拒绝；驳回；被拒之人",
+      "basePhonemes": "ɹᵻdʒˈɛkt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "resume",
+      "wordId": "word_1799",
+      "chinese": "中断后；继续；重新开始",
+      "basePhonemes": "ɹᵻzˈuːm",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "separate",
+      "wordId": "word_1202",
+      "chinese": "分开的；分离的；单独的",
+      "basePhonemes": "sˈɛpɹət",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "subject",
+      "wordId": "word_0480",
+      "chinese": "主题；话题；学科",
+      "basePhonemes": "sˈʌbdʒɛkt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "noun",
+      "selectedPhonemes": "sˈʌbdʒɪkt",
+      "reason": "主题、话题、学科均为名词义。",
+      "humanListened": false
+    },
+    {
+      "word": "suspect",
+      "wordId": "word_1865",
+      "chinese": "猜想；怀疑；嫌疑犯",
+      "basePhonemes": "sˈʌspɛkt",
+      "status": "dictionary-selected-default",
+      "defaultPos": "verb",
+      "selectedPhonemes": "səspˈɛkt",
+      "reason": "依据词库首义“猜想”选择verb；音素采用 CMU 美音词典。",
+      "humanListened": false
+    },
+    {
+      "word": "tear",
+      "wordId": "word_2625",
+      "chinese": "眼泪；泪水；撕裂",
+      "basePhonemes": "tˈɪɹ",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "transfer",
+      "wordId": "word_0317",
+      "chinese": "转移；转让；调任",
+      "basePhonemes": "tɹˈænsfɜː",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "transport",
+      "wordId": "word_0166",
+      "chinese": "运输",
+      "basePhonemes": "tɹˈænspɔːɹt",
+      "status": "ambiguous-base-retained",
+      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
+      "humanListened": false
+    },
+    {
+      "word": "upset",
+      "wordId": "word_0797",
+      "chinese": "推翻；打乱；使心烦",
+      "basePhonemes": "ʌpsˈɛt",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "wind",
+      "wordId": "word_2168",
+      "chinese": "风；蜿蜒；缠绕",
+      "basePhonemes": "wˈɪnd",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    },
+    {
+      "word": "wound",
+      "wordId": "word_3805",
+      "chinese": "伤口；创伤；使受伤",
+      "basePhonemes": "wˈuːnd",
+      "status": "first-sense-g2p-retained",
+      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
+      "humanListened": false
+    }
+  ]
+}

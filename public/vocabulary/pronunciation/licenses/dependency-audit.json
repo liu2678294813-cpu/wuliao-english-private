@@ -1,0 +1,60 @@
+[
+  {
+    "package": "kokoro-onnx",
+    "version": "0.6.1",
+    "license": "not specified in metadata",
+    "homepage": [
+      "Homepage, https://github.com/thewh1teagle/kokoro-onnx",
+      "Repository, https://github.com/thewh1teagle/kokoro-onnx",
+      "Issues, https://github.com/thewh1teagle/kokoro-onnx/issues"
+    ],
+    "redistributedWithSite": false
+  },
+  {
+    "package": "onnxruntime",
+    "version": "1.30.0",
+    "license": "MIT License",
+    "homepage": "https://onnxruntime.ai",
+    "redistributedWithSite": false
+  },
+  {
+    "package": "soundfile",
+    "version": "0.14.0",
+    "license": "BSD 3-Clause License",
+    "homepage": "https://github.com/bastibe/python-soundfile",
+    "redistributedWithSite": false
+  },
+  {
+    "package": "numpy",
+    "version": "2.5.3",
+    "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+    "homepage": [
+      "homepage, https://numpy.org",
+      "documentation, https://numpy.org/doc/",
+      "source, https://github.com/numpy/numpy",
+      "download, https://pypi.org/project/numpy/#files",
+      "tracker, https://github.com/numpy/numpy/issues",
+      "release notes, https://numpy.org/doc/stable/release"
+    ],
+    "redistributedWithSite": false
+  },
+  {
+    "package": "phonemizer",
+    "version": "3.4.0",
+    "license": "GNU GENERAL PUBLIC LICENSE",
+    "homepage": [
+      "Documentation, https://bootphon.github.io/phonemizer/",
+      "Repository, https://github.com/bootphon/phonemizer",
+      "Issues, https://github.com/bootphon/phonemizer",
+      "Changelog, https://github.com/bootphon/phonemizer/blob/master/docs/source/changelog.rst"
+    ],
+    "redistributedWithSite": false
+  },
+  {
+    "package": "espeakng-loader",
+    "version": "0.2.4",
+    "license": "not specified in metadata",
+    "homepage": null,
+    "redistributedWithSite": false
+  }
+]
