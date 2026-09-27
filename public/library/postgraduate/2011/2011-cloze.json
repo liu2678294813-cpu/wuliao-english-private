@@ -1,0 +1,676 @@
+{
+  "version": 1,
+  "id": "cloze-2011",
+  "year": 2011,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "Ancient Greek philosopher Aristotle viewed laughter as \"a bodily exercise precious to health.\" But 1 some claims to the contrary, laughing probably has little influence on physical fitness. Laughter does 2 short-term changes in the function of the heart and its blood vessels, 3 heart rate and oxygen consumption. But because hard laughter is difficult to 4 , a good laugh is unlikely to have 5 benefits the way, say, walking or jogging does.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Ancient Greek philosopher Aristotle viewed laughter as \"a bodily exercise precious to health.\" But"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "some claims to the contrary, laughing probably has little influence on physical fitness. Laughter does"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "short-term changes in the function of the heart and its blood vessels,"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "heart rate and oxygen consumption. But because hard laughter is difficult to"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": ", a good laugh is unlikely to have"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "benefits the way, say, walking or jogging does."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "__6 , instead of straining muscles to build them, as exercise does, laughter apparently accomplishes the 7 . Studies dating back to the 1930s indicate that laughter _ 8 muscles, decreasing muscle tone for up to 45 minutes after the laugh dies down.",
+      "segments": [
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": ", instead of straining muscles to build them, as exercise does, laughter apparently accomplishes the"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": ". Studies dating back to the 1930s indicate that laughter"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "muscles, decreasing muscle tone for up to 45 minutes after the laugh dies down."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "Such bodily reaction might conceivably help 9 the effects of psychological stress. Anyway, the act of laughing probably does produce other types of 10 feedback that improve an individual's emotional state. 11 one classical theory of emotion, our feelings are partially rooted 12 physical reactions. It was argued at the end of the 19th century that humans do not cry 13 they are sad but they become sad when the tears begin to flow.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Such bodily reaction might conceivably help"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "the effects of psychological stress. Anyway, the act of laughing probably does produce other types of"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "feedback that improve an individual's emotional state."
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "one classical theory of emotion, our feelings are partially rooted"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "physical reactions. It was argued at the end of the 19th century that humans do not cry"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "they are sad but they become sad when the tears begin to flow."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "Although sadness also 14 tears, evidence suggests that emotions can flow __15 muscular responses. In an experiment published in 1988, social psychologist Fritz Strack of the University of Wiirzburg in Germany asked volunteers to 16 a pen either with their teeth—thereby creating an artificial smile—or with their lips, which would produce a(n) _ 17 expression. Those forced to exercise their smiling muscles _ 18 more enthusiastically to funny cartoons than did those whose mouths were contracted in a frown, _ 19 that expressions may influence emotions rather than just the other way around. 20 , the physical act of laughter could improve mood.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Although sadness also"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "tears, evidence suggests that emotions can flow"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "muscular responses. In an experiment published in 1988, social psychologist Fritz Strack of the University of Wiirzburg in Germany asked volunteers to"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "a pen either with their teeth—thereby creating an artificial smile—or with their lips, which would produce a(n)"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "expression. Those forced to exercise their smiling muscles"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "more enthusiastically to funny cartoons than did those whose mouths were contracted in a frown,"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "that expressions may influence emotions rather than just the other way around."
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": ", the physical act of laughter could improve mood."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "among"
+        },
+        {
+          "key": "B",
+          "text": "except"
+        },
+        {
+          "key": "C",
+          "text": "despite"
+        },
+        {
+          "key": "D",
+          "text": "like"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "reflect"
+        },
+        {
+          "key": "B",
+          "text": "demand"
+        },
+        {
+          "key": "C",
+          "text": "indicate"
+        },
+        {
+          "key": "D",
+          "text": "produce"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "stabilizing"
+        },
+        {
+          "key": "B",
+          "text": "boosting"
+        },
+        {
+          "key": "C",
+          "text": "impairing"
+        },
+        {
+          "key": "D",
+          "text": "determining"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "transmit"
+        },
+        {
+          "key": "B",
+          "text": "sustain"
+        },
+        {
+          "key": "C",
+          "text": "evaluate"
+        },
+        {
+          "key": "D",
+          "text": "observe"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "measurable"
+        },
+        {
+          "key": "B",
+          "text": "manageable"
+        },
+        {
+          "key": "C",
+          "text": "affordable"
+        },
+        {
+          "key": "D",
+          "text": "renewable"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "In turn"
+        },
+        {
+          "key": "B",
+          "text": "In fact"
+        },
+        {
+          "key": "C",
+          "text": "In addition"
+        },
+        {
+          "key": "D",
+          "text": "In brief"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "opposite"
+        },
+        {
+          "key": "B",
+          "text": "impossible"
+        },
+        {
+          "key": "C",
+          "text": "average"
+        },
+        {
+          "key": "D",
+          "text": "expected"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "hardens"
+        },
+        {
+          "key": "B",
+          "text": "weakens"
+        },
+        {
+          "key": "C",
+          "text": "tightens"
+        },
+        {
+          "key": "D",
+          "text": "relaxes"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "aggravate"
+        },
+        {
+          "key": "B",
+          "text": "generate"
+        },
+        {
+          "key": "C",
+          "text": "moderate"
+        },
+        {
+          "key": "D",
+          "text": "enhance"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "physical"
+        },
+        {
+          "key": "B",
+          "text": "mental"
+        },
+        {
+          "key": "C",
+          "text": "subconscious"
+        },
+        {
+          "key": "D",
+          "text": "internal"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "Except for"
+        },
+        {
+          "key": "B",
+          "text": "According to"
+        },
+        {
+          "key": "C",
+          "text": "Due to"
+        },
+        {
+          "key": "D",
+          "text": "As for"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "with"
+        },
+        {
+          "key": "B",
+          "text": "on"
+        },
+        {
+          "key": "C",
+          "text": "in"
+        },
+        {
+          "key": "D",
+          "text": "at"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "unless"
+        },
+        {
+          "key": "B",
+          "text": "until"
+        },
+        {
+          "key": "C",
+          "text": "if"
+        },
+        {
+          "key": "D",
+          "text": "because"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "exhausts"
+        },
+        {
+          "key": "B",
+          "text": "follows"
+        },
+        {
+          "key": "C",
+          "text": "precedes"
+        },
+        {
+          "key": "D",
+          "text": "suppresses"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "into"
+        },
+        {
+          "key": "B",
+          "text": "from"
+        },
+        {
+          "key": "C",
+          "text": "towards"
+        },
+        {
+          "key": "D",
+          "text": "beyond"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "fetch"
+        },
+        {
+          "key": "B",
+          "text": "bite"
+        },
+        {
+          "key": "C",
+          "text": "pick"
+        },
+        {
+          "key": "D",
+          "text": "hold"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "disappointed"
+        },
+        {
+          "key": "B",
+          "text": "excited"
+        },
+        {
+          "key": "C",
+          "text": "joyful"
+        },
+        {
+          "key": "D",
+          "text": "indifferent"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "adapted"
+        },
+        {
+          "key": "B",
+          "text": "catered"
+        },
+        {
+          "key": "C",
+          "text": "turned"
+        },
+        {
+          "key": "D",
+          "text": "reacted"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "suggesting"
+        },
+        {
+          "key": "B",
+          "text": "requiring"
+        },
+        {
+          "key": "C",
+          "text": "mentioning"
+        },
+        {
+          "key": "D",
+          "text": "supposing"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "Eventually"
+        },
+        {
+          "key": "B",
+          "text": "Consequently"
+        },
+        {
+          "key": "C",
+          "text": "Similarly"
+        },
+        {
+          "key": "D",
+          "text": "Conversely"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807682
+}

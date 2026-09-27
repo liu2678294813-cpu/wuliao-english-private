@@ -1,21 +1,25 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
+    <script src="/vocabulary/pronunciation.js"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>无聊英语 · 背词训练</title>
     <link rel="icon" href="/vocabulary/favicon.svg" type="image/svg+xml" />
+    <script src="/vocabulary/vocabulary-bridge-adapter.js"></script>
+    <script src="/vocabulary/embedded-vocabulary.js"></script>
     <link rel="stylesheet" href="/vocabulary/memorize.css?v=20260724" />
     <link rel="stylesheet" href="/vocabulary/wuliao-theme.css?v=20260715" />
+    <link rel="stylesheet" href="/vocabulary/deep-sea-theme.css?v=20260801" />
+    <link rel="stylesheet" href="/vocabulary/vocabulary-redesign.css?v=20260808" />
   </head>
   <body>
     <header class="topbar">
-      <a class="back-link" href="/vocabulary/index.html#/dashboard">← 返回单词首页</a>
+      <a class="back-link" href="/vocabulary/index.html#/lists">← 返回主页</a>
       <div class="brand-lockup">
         <span class="brand-mark" aria-hidden="true">无</span>
         <div>
           <h1>无聊英语 · 背词训练</h1>
-          <p>每次打开，接着上次继续</p>
         </div>
       </div>
       <span id="accountLabel" class="account"></span>
@@ -27,11 +31,17 @@
           <span>选择词库</span>
           <select id="listSelect"></select>
         </label>
+        <div class="memory-controls-right">
+          <div class="memory-mode-switches" aria-label="背词模式">
+            <div role="group" aria-label="遮挡规则"><button data-memory-rule="default" type="button">默认</button><button data-memory-rule="cycle" type="button">循环</button></div>
+            <div role="group" aria-label="操作方式"><button data-memory-input="click" type="button">点击</button><button data-memory-input="swipe" type="button">滑动</button></div>
+          </div>
         <div class="actions">
-          <label class="auto-speak-control"><input id="autoSpeakToggle" type="checkbox" /><span>自动读音</span></label>
-          <a class="secondary-link" href="/vocabulary/import.html">导入词库</a>
+          <a class="primary-link" id="learnLink" href="/vocabulary/index.html#/learning?from=memorize">学习单词</a>
           <a class="primary-link" href="/vocabulary/review.html">今日复习</a>
+          <button id="undoButton" class="secondary" type="button" disabled>撤销上一步</button>
           <button id="clearButton" class="secondary" type="button">一键清除黑线</button>
+        </div>
         </div>
       </section>
 
@@ -40,6 +50,7 @@
         <span id="todaySummary">今日背词 0 个</span>
         <span id="maskSummary"></span>
         <span class="resume-note">当前位置自动保存</span>
+        <a href="/vocabulary/pronunciation-credits.html" target="_blank" rel="noreferrer">发音来源</a>
       </section>
 
       <section id="viewport" class="word-viewport" aria-live="polite">

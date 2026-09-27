@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>单词发音来源 · 无聊英语</title>
+  <style>
+    body{margin:0;background:#f8f6ee;color:#23454d;font:16px/1.7 system-ui,sans-serif}main{max-width:900px;margin:auto;padding:32px 20px}a{color:#087873}input{box-sizing:border-box;width:100%;font:inherit;padding:12px;border:1px solid #d9d2c4;border-radius:9px;background:#fffdf8}article{padding:15px 0;border-bottom:1px solid #ddd8cc}h1{font-size:26px}h2{font-size:18px;margin:0}small{color:#647571}p{margin:8px 0}nav{display:flex;gap:20px}
+  </style>
+</head>
+<body><main>
+  <nav><a href="/">返回无聊英语</a><a href="/vocabulary/pronunciation/AUDIO-CREDITS.md">完整署名与许可</a><a href="/vocabulary/pronunciation/docs/audit/README.md">多音词核查说明</a></nav>
+  <h1>单词发音来源</h1>
+  <p>默认使用美式发音。本批词库使用统一的语音合成声线，音量经过统一处理。</p>
+  <p><small>多音词参考词库首要释义选择默认读音；仍有歧义的词见核查说明。新导入且暂无配套音频的词，使用设备朗读。</small></p>
+  <label for="word">查询一个单词的来源</label><input id="word" type="search" placeholder="例如 abandon" autocomplete="off">
+  <p id="status" role="status">正在读取发音清单…</p><section id="results"></section>
+</main>
+<script>
+  let entries=[];
+  const input=document.getElementById('word'),status=document.getElementById('status'),results=document.getElementById('results');
+  function render(){
+    const q=input.value.trim().toLowerCase(),found=entries.filter(([word])=>q&&word.includes(q));results.replaceChildren();
+    status.textContent=q?`找到 ${found.length} 个词${found.length>40?'，显示前40个':''}`:`已有 ${entries.length} 个词的发音来源记录，请输入单词查询。`;
+    for(const [word,e] of found.slice(0,40)){
+      const row=document.createElement('article'),title=document.createElement('h2'),detail=document.createElement('p'),license=document.createElement('p');
+      title.textContent=word;detail.textContent=e.attribution||e.source||'来源见完整许可';license.textContent=`${e.generated?'合成发音':'录音'} · ${e.license||'见来源许可'}`;row.append(title,detail,license);
+      for(const [url,label] of [[e.source,'原始来源'],[e.licenseUrl,'查看许可']]){if(typeof url==='string'&&/^https?:\/\//.test(url)){const link=document.createElement('a');link.href=url.replace(/^http:\/\//,'https://');link.textContent=label;row.append(link,document.createTextNode(' '))}}results.append(row);
+    }
+  }
+  input.addEventListener('input',render);
+  fetch('/vocabulary/pronunciation/manifest.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(m=>{entries=Object.entries(m.entries||{});render()}).catch(()=>status.textContent='发音清单暂不可用，请稍后刷新。');
+</script></body></html>

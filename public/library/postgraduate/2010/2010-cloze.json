@@ -1,0 +1,690 @@
+{
+  "version": 1,
+  "id": "cloze-2010",
+  "year": 2010,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "In 1924 America's National Research Council sent two engineers to supervise a | series of experiments at a telephone-parts factory called the Hawthorne Plant near Chicago. It hoped they would learn how shop-floor lighting 1 workers' productivity. Instead, the studies ended 2 giving their name to the \"Hawthorne effect,\" the extremely influential idea that the very 3 of being experimented upon changed subjects' behavior.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "In 1924 America's National Research Council sent two engineers to supervise a | series of experiments at a telephone-parts factory called the Hawthorne Plant near Chicago. It hoped they would learn how shop-floor lighting"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "workers' productivity. Instead, the studies ended"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "giving their name to the \"Hawthorne effect,\" the extremely influential idea that the very"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "of being experimented upon changed subjects' behavior."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "The idea arose because of the _ 4 behavior of the women in the plant. According to _ 5 of the experiments, their hourly output rose when lighting was increased, but also when it was dimmed. It did not 6 what was done in the experiment; 7 something was changed, productivity rose. A(n) 8 that they were being experimented upon seemed to be 9 to alter workers' behavior 10 itself.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The idea arose because of the"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "behavior of the women in the plant. According to"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "of the experiments, their hourly output rose when lighting was increased, but also when it was dimmed. It did not"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "what was done in the experiment;"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "something was changed, productivity rose. A(n)"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "that they were being experimented upon seemed to be"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "to alter workers' behavior"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "itself."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "After several decades, the same data were 11 to econometric analysis. The Hawthorne experiments had another surprise in store. 12 the descriptions on record, no systematic 13 was found that levels of productivity were related to changes in lighting.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "After several decades, the same data were"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "to econometric analysis. The Hawthorne experiments had another surprise in store."
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "the descriptions on record, no systematic"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "was found that levels of productivity were related to changes in lighting."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "It turns out that the peculiar way of conducting the experiments may have led to __14 interpretations of what happened. _ 15 , lighting was always changed on a Sunday. When work started again on Monday, output 16 rose compared with the previous Saturday and _ 17 to rise for the next couple of days. 18 , a |",
+      "segments": [
+        {
+          "type": "text",
+          "text": "It turns out that the peculiar way of conducting the experiments may have led to"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "interpretations of what happened."
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": ", lighting was always changed on a Sunday. When work started again on Monday, output"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "rose compared with the previous Saturday and"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "to rise for the next couple of days."
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": ", a |"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "text": "comparison with data for weeks when there was no experimentation showed that | output always went up on Mondays. Workers 19 to be diligent for the first few days of the week in any case, before 20 a plateau and then slackening off. This suggests that the alleged \"Hawthorne effect\" is hard to pin down.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "comparison with data for weeks when there was no experimentation showed that | output always went up on Mondays. Workers"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "to be diligent for the first few days of the week in any case, before"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "a plateau and then slackening off. This suggests that the alleged \"Hawthorne effect\" is hard to pin down."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "affected"
+        },
+        {
+          "key": "B",
+          "text": "achieved"
+        },
+        {
+          "key": "C",
+          "text": "extracted"
+        },
+        {
+          "key": "D",
+          "text": "restored"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "at"
+        },
+        {
+          "key": "B",
+          "text": "up"
+        },
+        {
+          "key": "C",
+          "text": "with"
+        },
+        {
+          "key": "D",
+          "text": "off"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "truth"
+        },
+        {
+          "key": "B",
+          "text": "sight"
+        },
+        {
+          "key": "C",
+          "text": "act"
+        },
+        {
+          "key": "D",
+          "text": "proof"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "controversial"
+        },
+        {
+          "key": "B",
+          "text": "perplexing"
+        },
+        {
+          "key": "C",
+          "text": "mischievous"
+        },
+        {
+          "key": "D",
+          "text": "ambiguous"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "requirements"
+        },
+        {
+          "key": "B",
+          "text": "explanations"
+        },
+        {
+          "key": "C",
+          "text": "accounts"
+        },
+        {
+          "key": "D",
+          "text": "assessments"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "conclude"
+        },
+        {
+          "key": "B",
+          "text": "matter"
+        },
+        {
+          "key": "C",
+          "text": "indicate"
+        },
+        {
+          "key": "D",
+          "text": "work"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "as far as"
+        },
+        {
+          "key": "B",
+          "text": "for fear that"
+        },
+        {
+          "key": "C",
+          "text": "in case that"
+        },
+        {
+          "key": "D",
+          "text": "so long as"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "awareness"
+        },
+        {
+          "key": "B",
+          "text": "expectation"
+        },
+        {
+          "key": "C",
+          "text": "sentiment"
+        },
+        {
+          "key": "D",
+          "text": "illusion"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "suitable"
+        },
+        {
+          "key": "B",
+          "text": "excessive"
+        },
+        {
+          "key": "C",
+          "text": "enough"
+        },
+        {
+          "key": "D",
+          "text": "abundant"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "about"
+        },
+        {
+          "key": "B",
+          "text": "for"
+        },
+        {
+          "key": "C",
+          "text": "on"
+        },
+        {
+          "key": "D",
+          "text": "by"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "compared"
+        },
+        {
+          "key": "B",
+          "text": "shown"
+        },
+        {
+          "key": "C",
+          "text": "subjected"
+        },
+        {
+          "key": "D",
+          "text": "conveyed"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "Contrary to"
+        },
+        {
+          "key": "B",
+          "text": "Consistent with"
+        },
+        {
+          "key": "C",
+          "text": "Parallel with"
+        },
+        {
+          "key": "D",
+          "text": "Peculiar to"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "evidence"
+        },
+        {
+          "key": "B",
+          "text": "guidance"
+        },
+        {
+          "key": "C",
+          "text": "implication"
+        },
+        {
+          "key": "D",
+          "text": "source"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "disputable"
+        },
+        {
+          "key": "B",
+          "text": "enlightening"
+        },
+        {
+          "key": "C",
+          "text": "reliable"
+        },
+        {
+          "key": "D",
+          "text": "misleading"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "In contrast"
+        },
+        {
+          "key": "B",
+          "text": "For example"
+        },
+        {
+          "key": "C",
+          "text": "In consequence"
+        },
+        {
+          "key": "D",
+          "text": "As usual"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "duly"
+        },
+        {
+          "key": "B",
+          "text": "accidentally"
+        },
+        {
+          "key": "C",
+          "text": "unpredictably"
+        },
+        {
+          "key": "D",
+          "text": "suddenly"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "failed"
+        },
+        {
+          "key": "B",
+          "text": "ceased"
+        },
+        {
+          "key": "C",
+          "text": "started"
+        },
+        {
+          "key": "D",
+          "text": "continued"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "Therefore"
+        },
+        {
+          "key": "B",
+          "text": "Furthermore"
+        },
+        {
+          "key": "C",
+          "text": "However"
+        },
+        {
+          "key": "D",
+          "text": "Meanwhile"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "attempted"
+        },
+        {
+          "key": "B",
+          "text": "tended"
+        },
+        {
+          "key": "C",
+          "text": "chose"
+        },
+        {
+          "key": "D",
+          "text": "intended"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "breaking"
+        },
+        {
+          "key": "B",
+          "text": "climbing"
+        },
+        {
+          "key": "C",
+          "text": "surpassing"
+        },
+        {
+          "key": "D",
+          "text": "hitting"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807665
+}

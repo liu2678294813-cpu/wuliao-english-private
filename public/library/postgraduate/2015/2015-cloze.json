@@ -1,0 +1,705 @@
+{
+  "version": 1,
+  "id": "cloze-2015",
+  "year": 2015,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "Though not biologically related, friends are as \"related\" as fourth cousins, sharing about 1% of genes. That is 1 a study, published from the University of California and Yale University in the Proceedings of the National Academy of Sciences, has 2.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Though not biologically related, friends are as \"related\" as fourth cousins, sharing about 1% of genes. That is"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "a study, published from the University of California and Yale University in the Proceedings of the National Academy of Sciences, has 2."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "The study is a genome-wide analysis conducted 3 1,932 unique subjects which _ 4 pairs of unrelated friends and unrelated strangers. The same people were used in both 5 .",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The study is a genome-wide analysis conducted"
+        },
+        {
+          "type": "blank",
+          "number": 2,
+          "missing": true
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "1,932 unique subjects which"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "pairs of unrelated friends and unrelated strangers. The same people were used in both"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "While 1% may seem 6 , it is not so to a geneticist. As James Fowler, professor of medical genetics at UC San Diego, says, \"Most people do not even 7 their fourth cousins but somehow manage to select as friends the people who 8 our kin.\"",
+      "segments": [
+        {
+          "type": "text",
+          "text": "While 1% may seem"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": ", it is not so to a geneticist. As James Fowler, professor of medical genetics at UC San Diego, says, \"Most people do not even"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "their fourth cousins but somehow manage to select as friends the people who"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "our kin.\""
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "The study 9 found that the genes for smell were something shared in friends but not genes for immunity. Why this similarity exists in smell genes is difficult to explain, for now. _ 10 , as the team suggests, it draws us to similar environments but there is more 11 it. There could be many mechanisms working together that",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The study"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "found that the genes for smell were something shared in friends but not genes for immunity. Why this similarity exists in smell genes is difficult to explain, for now."
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": ", as the team suggests, it draws us to similar environments but there is more"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "it. There could be many mechanisms working together that"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "text": "_ 12 us in choosing genetically similar friends 13 \"functional kinship\" of being friends with 14 |",
+      "segments": [
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "us in choosing genetically similar friends"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "\"functional kinship\" of being friends with"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "|"
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "text": "One of the remarkable findings of the study was that the similar genes seem to be evolving 15 than other genes. Studying this could help 16 why human evolution picked pace in the last 30, 000 years, with social environment being a major 17 factor.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "One of the remarkable findings of the study was that the similar genes seem to be evolving"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "than other genes. Studying this could help"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "why human evolution picked pace in the last 30, 000 years, with social environment being a major"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "factor."
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "text": "The findings do not simply explain people's 18 to befriend those of similar _19 backgrounds, say the researchers. Though all the subjects were drawn from a population of European extraction, care was taken to 20 that all subjects, friends and strangers, were taken from the same population.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The findings do not simply explain people's"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "to befriend those of similar"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "backgrounds, say the researchers. Though all the subjects were drawn from a population of European extraction, care was taken to"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "that all subjects, friends and strangers, were taken from the same population."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "what"
+        },
+        {
+          "key": "B",
+          "text": "why"
+        },
+        {
+          "key": "C",
+          "text": "how"
+        },
+        {
+          "key": "D",
+          "text": "when"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "defended"
+        },
+        {
+          "key": "B",
+          "text": "concluded"
+        },
+        {
+          "key": "C",
+          "text": "withdrawn"
+        },
+        {
+          "key": "D",
+          "text": "advised"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "for"
+        },
+        {
+          "key": "B",
+          "text": "with"
+        },
+        {
+          "key": "C",
+          "text": "by"
+        },
+        {
+          "key": "D",
+          "text": "on"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "separated"
+        },
+        {
+          "key": "B",
+          "text": "sought"
+        },
+        {
+          "key": "C",
+          "text": "compared"
+        },
+        {
+          "key": "D",
+          "text": "connected"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "fests"
+        },
+        {
+          "key": "B",
+          "text": "objects"
+        },
+        {
+          "key": "C",
+          "text": "samples"
+        },
+        {
+          "key": "D",
+          "text": "examples"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "insignificant"
+        },
+        {
+          "key": "B",
+          "text": "unexpected"
+        },
+        {
+          "key": "C",
+          "text": "unreliable"
+        },
+        {
+          "key": "D",
+          "text": "incredible"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "visit"
+        },
+        {
+          "key": "B",
+          "text": "miss"
+        },
+        {
+          "key": "C",
+          "text": "know"
+        },
+        {
+          "key": "D",
+          "text": "seek"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "surpass"
+        },
+        {
+          "key": "B",
+          "text": "influence"
+        },
+        {
+          "key": "C",
+          "text": "favor"
+        },
+        {
+          "key": "D",
+          "text": "resemble"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "again"
+        },
+        {
+          "key": "B",
+          "text": "also"
+        },
+        {
+          "key": "C",
+          "text": "instead"
+        },
+        {
+          "key": "D",
+          "text": "thus"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "Meanwhile"
+        },
+        {
+          "key": "B",
+          "text": "Furthermore"
+        },
+        {
+          "key": "C",
+          "text": "Likewise"
+        },
+        {
+          "key": "D",
+          "text": "Perhaps"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "about"
+        },
+        {
+          "key": "B",
+          "text": "to"
+        },
+        {
+          "key": "C",
+          "text": "from"
+        },
+        {
+          "key": "D",
+          "text": "like"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "limit"
+        },
+        {
+          "key": "B",
+          "text": "observe"
+        },
+        {
+          "key": "C",
+          "text": "confuse"
+        },
+        {
+          "key": "D",
+          "text": "drive"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "according to"
+        },
+        {
+          "key": "B",
+          "text": "rather than"
+        },
+        {
+          "key": "C",
+          "text": "regardless of"
+        },
+        {
+          "key": "D",
+          "text": "along with"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "chances"
+        },
+        {
+          "key": "B",
+          "text": "responses"
+        },
+        {
+          "key": "C",
+          "text": "benefits"
+        },
+        {
+          "key": "D",
+          "text": "missions"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "faster"
+        },
+        {
+          "key": "B",
+          "text": "slower"
+        },
+        {
+          "key": "C",
+          "text": "later"
+        },
+        {
+          "key": "D",
+          "text": "earlier"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "forecast"
+        },
+        {
+          "key": "B",
+          "text": "remember"
+        },
+        {
+          "key": "C",
+          "text": "express"
+        },
+        {
+          "key": "D",
+          "text": "understand"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "unpredictable"
+        },
+        {
+          "key": "B",
+          "text": "contributory"
+        },
+        {
+          "key": "C",
+          "text": "controllable"
+        },
+        {
+          "key": "D",
+          "text": "disruptive"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "tendency"
+        },
+        {
+          "key": "B",
+          "text": "decision"
+        },
+        {
+          "key": "C",
+          "text": "arrangement"
+        },
+        {
+          "key": "D",
+          "text": "endeavor"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "political"
+        },
+        {
+          "key": "B",
+          "text": "religious"
+        },
+        {
+          "key": "C",
+          "text": "ethnic"
+        },
+        {
+          "key": "D",
+          "text": "economic"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "see"
+        },
+        {
+          "key": "B",
+          "text": "show"
+        },
+        {
+          "key": "C",
+          "text": "prove"
+        },
+        {
+          "key": "D",
+          "text": "tell"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [
+    "正文空位 5 可能被 OCR 漏掉，已插入占位空"
+  ],
+  "createdAt": 1786271807745
+}

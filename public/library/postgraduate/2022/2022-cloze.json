@@ -1,0 +1,699 @@
+{
+  "version": 1,
+  "id": "cloze-2022",
+  "year": 2022,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "The 1dea that plants have some degree of consciousness first took root in the early 2000s. The term \"plant neurobiology\" was 1 around the notion that some aspects of plant behavior could be 2 to intelligence in animals. 3 plants lack brains, the firing of electrical signals in their stems and leaves nonetheless triggered responses that 4 consciousness, researchers previously reported.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The 1dea that plants have some degree of consciousness first took root in the early 2000s. The term \"plant neurobiology\" was"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "around the notion that some aspects of plant behavior could be"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "to intelligence in animals."
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "plants lack brains, the firing of electrical signals in their stems and leaves nonetheless triggered responses that"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "consciousness, researchers previously reported."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "But such an idea is untrue, according to a new opinion article. Plant biology is complex and fascinating, but it 5 so greatly from that of animals that so-called __6 of plants' intelligence is inconclusive, the authors wrote.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "But such an idea is untrue, according to a new opinion article. Plant biology is complex and fascinating, but it"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "so greatly from that of animals that so-called"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "of plants' intelligence is inconclusive, the authors wrote."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "Beginning in 2006, some scientists have __7 that plants possess neuron-like cells that interact with hormones and neurotransmitters, 8 \"a plant nervous system, _ 9 to that in animals,\" said lead study author Lincoln Taiz. \"They 10 claimed that plants have °brain-like command centers' at their root tips.\"",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Beginning in 2006, some scientists have"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "that plants possess neuron-like cells that interact with hormones and neurotransmitters,"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "\"a plant nervous system,"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "to that in animals,\" said lead study author Lincoln Taiz. \"They"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "claimed that plants have °brain-like command centers' at their root tips.\""
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "This 11 makes sense if you simplify the workings of a complex brain, 12 it to an array of electrical pulses; cells in plants also communicate through electrical signals. 13, the signaling in a plant is only 14 similar to the firing in a complex animal brain, which is more than \"a mass of cells that communicate by electricity,\" Taiz said.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "This"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "makes sense if you simplify the workings of a complex brain,"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "it to an array of electrical pulses; cells in plants also communicate through electrical signals. 13, the signaling in a plant is only"
+        },
+        {
+          "type": "blank",
+          "number": 13,
+          "missing": true
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "similar to the firing in a complex animal brain, which is more than \"a mass of cells that communicate by electricity,\" Taiz said."
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "text": "\"For consciousness to evolve, a brain with a threshold 15 of complexity and capacity is required,\" he 16 . \"Since plants don't have nervous systems, the 17 that they have consciousness are effectively zero.\"",
+      "segments": [
+        {
+          "type": "text",
+          "text": "\"For consciousness to evolve, a brain with a threshold"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "of complexity and capacity is required,\" he"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": ". \"Since plants don't have nervous systems, the"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "that they have consciousness are effectively zero.\""
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "text": "And what's so great about consciousness, anyway? Plants can't run away from __ 18 , so vesting energy in a body system which 19 a threat and can feel pain would be a very 20 evolutionary strategy, according to the article.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "And what's so great about consciousness, anyway? Plants can't run away from"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": ", so vesting energy in a body system which"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "a threat and can feel pain would be a very"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "evolutionary strategy, according to the article."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "coined"
+        },
+        {
+          "key": "B",
+          "text": "discovered"
+        },
+        {
+          "key": "C",
+          "text": "collected"
+        },
+        {
+          "key": "D",
+          "text": "issued"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "attributed"
+        },
+        {
+          "key": "B",
+          "text": "directed"
+        },
+        {
+          "key": "C",
+          "text": "compared"
+        },
+        {
+          "key": "D",
+          "text": "confined"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "Unless"
+        },
+        {
+          "key": "B",
+          "text": "When"
+        },
+        {
+          "key": "C",
+          "text": "Once"
+        },
+        {
+          "key": "D",
+          "text": "Though"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "coped with"
+        },
+        {
+          "key": "B",
+          "text": "consisted of"
+        },
+        {
+          "key": "C",
+          "text": "hinted at"
+        },
+        {
+          "key": "D",
+          "text": "extended to"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "suffers"
+        },
+        {
+          "key": "B",
+          "text": "benefits"
+        },
+        {
+          "key": "C",
+          "text": "develops"
+        },
+        {
+          "key": "D",
+          "text": "differs"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "acceptance"
+        },
+        {
+          "key": "B",
+          "text": "evidence"
+        },
+        {
+          "key": "C",
+          "text": "cultivation"
+        },
+        {
+          "key": "D",
+          "text": "creation"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "doubted"
+        },
+        {
+          "key": "B",
+          "text": "denied"
+        },
+        {
+          "key": "C",
+          "text": "argued"
+        },
+        {
+          "key": "D",
+          "text": "requested"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "adapting"
+        },
+        {
+          "key": "B",
+          "text": "forming"
+        },
+        {
+          "key": "C",
+          "text": "repairing"
+        },
+        {
+          "key": "D",
+          "text": "testing"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "analogous"
+        },
+        {
+          "key": "B",
+          "text": "essential"
+        },
+        {
+          "key": "C",
+          "text": "suitable"
+        },
+        {
+          "key": "D",
+          "text": "sensitive"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "just"
+        },
+        {
+          "key": "B",
+          "text": "ever"
+        },
+        {
+          "key": "C",
+          "text": "still"
+        },
+        {
+          "key": "D",
+          "text": "even"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "restriction"
+        },
+        {
+          "key": "B",
+          "text": "experiment"
+        },
+        {
+          "key": "C",
+          "text": "perspective"
+        },
+        {
+          "key": "D",
+          "text": "demand"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "attaching"
+        },
+        {
+          "key": "B",
+          "text": "reducing"
+        },
+        {
+          "key": "C",
+          "text": "returning"
+        },
+        {
+          "key": "D",
+          "text": "exposing"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "However"
+        },
+        {
+          "key": "B",
+          "text": "Moreover"
+        },
+        {
+          "key": "C",
+          "text": "Therefore"
+        },
+        {
+          "key": "D",
+          "text": "Otherwise"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "temporarily"
+        },
+        {
+          "key": "B",
+          "text": "literally"
+        },
+        {
+          "key": "C",
+          "text": "superficially"
+        },
+        {
+          "key": "D",
+          "text": "imaginarily"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "list"
+        },
+        {
+          "key": "B",
+          "text": "level"
+        },
+        {
+          "key": "C",
+          "text": "label"
+        },
+        {
+          "key": "D",
+          "text": "load"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "recalled"
+        },
+        {
+          "key": "B",
+          "text": "agreed"
+        },
+        {
+          "key": "C",
+          "text": "questioned"
+        },
+        {
+          "key": "D",
+          "text": "added"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "chances"
+        },
+        {
+          "key": "B",
+          "text": "risks"
+        },
+        {
+          "key": "C",
+          "text": "excuses"
+        },
+        {
+          "key": "D",
+          "text": "assumptions"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "danger"
+        },
+        {
+          "key": "B",
+          "text": "failure"
+        },
+        {
+          "key": "C",
+          "text": "warning"
+        },
+        {
+          "key": "D",
+          "text": "control"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "represents"
+        },
+        {
+          "key": "B",
+          "text": "includes"
+        },
+        {
+          "key": "C",
+          "text": "reveals"
+        },
+        {
+          "key": "D",
+          "text": "recognizes"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "humble"
+        },
+        {
+          "key": "B",
+          "text": "poor"
+        },
+        {
+          "key": "C",
+          "text": "practical"
+        },
+        {
+          "key": "D",
+          "text": "easy"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [
+    "正文空位 14 可能被 OCR 漏掉，已插入占位空"
+  ],
+  "createdAt": 1786271807857
+}

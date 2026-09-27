@@ -1,0 +1,700 @@
+{
+  "version": 1,
+  "id": "cloze-2014",
+  "year": 2014,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "| As many people hit middle age, they often start to notice that their memory and mental clarity are not what they used to be. We suddenly can't remember 1 we put the keys just a moment ago, or an old acquaintance's name, or the name of an old band we used to love. As the brain 2 | we refer to these occurrences as \"senior moments.\" 3 seemingly innocent, this loss of mental focus can potentially have",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| As many people hit middle age, they often start to notice that their memory and mental clarity are not what they used to be. We suddenly can't remember"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "we put the keys just a moment ago, or an old acquaintance's name, or the name of an old band we used to love. As the brain"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "| we refer to these occurrences as \"senior moments.\""
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "seemingly innocent, this loss of mental focus can potentially have"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "| a(n) 4 impact on our professional, social, and personal 5 .",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| a(n)"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "impact on our professional, social, and personal"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "Neuroscientists, experts who study the nervous system, are increasingly showing that there's actually a lot that can be done. It 6 out that the brain needs exercise in much the same way our muscles do, and the right mental 7 can significantly improve our basic cognitive _ 8 . Thinking is essentially a 9 of making connections in the brain. To a certain extent, our ability to 10 in making the connections that drive intelligence is inherited. _ 11 , because these connections are made through effort and practice, scientists believe that intelligence can expand and fluctuate 12 mental effort.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Neuroscientists, experts who study the nervous system, are increasingly showing that there's actually a lot that can be done. It"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "out that the brain needs exercise in much the same way our muscles do, and the right mental"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "can significantly improve our basic cognitive"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": ". Thinking is essentially a"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "of making connections in the brain. To a certain extent, our ability to"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "in making the connections that drive intelligence is inherited."
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": ", because these connections are made through effort and practice, scientists believe that intelligence can expand and fluctuate"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "mental effort."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "Now, a new Web-based company has taken ita step 13 and developed the first \"brain training program\" designed to actually help people improve and regain their mental 14 |",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Now, a new Web-based company has taken ita step"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "and developed the first \"brain training program\" designed to actually help people improve and regain their mental"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "|"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "text": "The Web-based program 15 you to systematically improve your memory and attention skills. The program keeps = 16 of your progress and provides detailed",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The Web-based program"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "you to systematically improve your memory and attention skills. The program keeps ="
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "of your progress and provides detailed"
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "text": "| feedback _ 17 your performance and improvement. Most importantly, it 18 modifies and enhances the games you play to 19 on the strengths you are developing—much like a(n) 20 exercise routine requires you to increase resistance and vary your muscle use.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| feedback"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "your performance and improvement. Most importantly, it"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "modifies and enhances the games you play to"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "on the strengths you are developing—much like a(n)"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "exercise routine requires you to increase resistance and vary your muscle use."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "why"
+        },
+        {
+          "key": "B",
+          "text": "when"
+        },
+        {
+          "key": "C",
+          "text": "that"
+        },
+        {
+          "key": "D",
+          "text": "where"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "improves"
+        },
+        {
+          "key": "B",
+          "text": "fades"
+        },
+        {
+          "key": "C",
+          "text": "collapses"
+        },
+        {
+          "key": "D",
+          "text": "recovers"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "While"
+        },
+        {
+          "key": "B",
+          "text": "Unless"
+        },
+        {
+          "key": "C",
+          "text": "Once"
+        },
+        {
+          "key": "D",
+          "text": "If"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "uneven"
+        },
+        {
+          "key": "B",
+          "text": "limited"
+        },
+        {
+          "key": "C",
+          "text": "damaging"
+        },
+        {
+          "key": "D",
+          "text": "obscure"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "relationship"
+        },
+        {
+          "key": "B",
+          "text": "environment"
+        },
+        {
+          "key": "C",
+          "text": "wellbeing"
+        },
+        {
+          "key": "D",
+          "text": "outlook"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "turns"
+        },
+        {
+          "key": "B",
+          "text": "finds"
+        },
+        {
+          "key": "C",
+          "text": "points"
+        },
+        {
+          "key": "D",
+          "text": "figures"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "responses"
+        },
+        {
+          "key": "B",
+          "text": "roundabouts"
+        },
+        {
+          "key": "C",
+          "text": "workouts"
+        },
+        {
+          "key": "D",
+          "text": "associations"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "genre"
+        },
+        {
+          "key": "B",
+          "text": "criterion"
+        },
+        {
+          "key": "C",
+          "text": "circumstances"
+        },
+        {
+          "key": "D",
+          "text": "functions"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "channel"
+        },
+        {
+          "key": "B",
+          "text": "process"
+        },
+        {
+          "key": "C",
+          "text": "sequence"
+        },
+        {
+          "key": "D",
+          "text": "condition"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "excel"
+        },
+        {
+          "key": "B",
+          "text": "feature"
+        },
+        {
+          "key": "C",
+          "text": "persist"
+        },
+        {
+          "key": "D",
+          "text": "believe"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "However"
+        },
+        {
+          "key": "B",
+          "text": "Moreover"
+        },
+        {
+          "key": "C",
+          "text": "Otherwise"
+        },
+        {
+          "key": "D",
+          "text": "Therefore"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "instead of"
+        },
+        {
+          "key": "B",
+          "text": "regardless of"
+        },
+        {
+          "key": "C",
+          "text": "apart from"
+        },
+        {
+          "key": "D",
+          "text": "according to"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "back"
+        },
+        {
+          "key": "B",
+          "text": "further"
+        },
+        {
+          "key": "C",
+          "text": "aside"
+        },
+        {
+          "key": "D",
+          "text": "around"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "framework"
+        },
+        {
+          "key": "B",
+          "text": "stability"
+        },
+        {
+          "key": "C",
+          "text": "sharpness"
+        },
+        {
+          "key": "D",
+          "text": "flexibility"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "hurries"
+        },
+        {
+          "key": "B",
+          "text": "reminds"
+        },
+        {
+          "key": "C",
+          "text": "forces"
+        },
+        {
+          "key": "D",
+          "text": "allows"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "order"
+        },
+        {
+          "key": "B",
+          "text": "track"
+        },
+        {
+          "key": "C",
+          "text": "hold"
+        },
+        {
+          "key": "D",
+          "text": "pace"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "to"
+        },
+        {
+          "key": "B",
+          "text": "on"
+        },
+        {
+          "key": "C",
+          "text": "for"
+        },
+        {
+          "key": "D",
+          "text": "with"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "constantly"
+        },
+        {
+          "key": "B",
+          "text": "habitually"
+        },
+        {
+          "key": "C",
+          "text": "irregularly \""
+        },
+        {
+          "key": "D",
+          "text": "unusually"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "carry"
+        },
+        {
+          "key": "B",
+          "text": "put"
+        },
+        {
+          "key": "C",
+          "text": "build"
+        },
+        {
+          "key": "D",
+          "text": "take"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "risky"
+        },
+        {
+          "key": "B",
+          "text": "familiar"
+        },
+        {
+          "key": "C",
+          "text": "idle"
+        },
+        {
+          "key": "D",
+          "text": "effective Section I"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807731
+}

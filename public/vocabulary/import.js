@@ -92,7 +92,12 @@ function rowsFromGrid(grid) {
 
 async function parseSpreadsheet(file) {
   if (!window.XLSX) throw new Error("Excel 解析组件未加载，请刷新页面后重试");
-  const workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array" });
+  // Android WebView 下 SheetJS 的 array 模式会把无 BOM UTF-8 CSV 的中文
+  // 当作 Latin-1 解码（如“放弃”变成“æ”），随后被中文释义校验误判为空。
+  // CSV 直接交给 string 模式；Excel 仍走二进制 array 模式。
+  const workbook = /\.csv$/i.test(file.name || "")
+    ? window.XLSX.read(await file.text(), { type: "string" })
+    : window.XLSX.read(await file.arrayBuffer(), { type: "array" });
   const words = [];
   workbook.SheetNames.forEach((sheetName) => {
     const grid = window.XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, defval: "" });
@@ -143,17 +148,42 @@ function rowsFromTextLines(lines) {
   return normalizeRows(candidates);
 }
 
+function withParseTimeout(promise, message, timeoutMs = 60000) {
+  return new Promise((resolvePromise, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => { window.clearTimeout(timer); resolvePromise(value); },
+      (reason) => { window.clearTimeout(timer); reject(reason); },
+    );
+  });
+}
+
 async function parsePdf(file) {
   const pdfjs = await import("/vocabulary/vendor/pdf.mjs");
   pdfjs.GlobalWorkerOptions.workerSrc = "/vocabulary/vendor/pdf.worker.compat.mjs";
-  const document = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
-  const lines = [];
-  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-    const page = await document.getPage(pageNumber);
-    const content = await page.getTextContent();
-    lines.push(...textLinesFromPdfPage(content.items));
+  const data = await withParseTimeout(file.arrayBuffer(), "PDF 文件读取超时，请重试");
+  const loadingTask = pdfjs.getDocument({ data });
+  const document = await withParseTimeout(loadingTask.promise, "PDF 文件解析超时，请重试");
+  try {
+    const lines = [];
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await withParseTimeout(document.getPage(pageNumber), `PDF 第 ${pageNumber} 页解析超时，请重试`);
+      try {
+        const content = await withParseTimeout(page.getTextContent(), `PDF 第 ${pageNumber} 页文本提取超时，请重试`);
+        lines.push(...textLinesFromPdfPage(content.items));
+      } finally {
+        page.cleanup?.();
+      }
+    }
+    return rowsFromTextLines(lines);
+  } finally {
+    try {
+      const destroyTask = loadingTask.destroy();
+      if (destroyTask?.catch) destroyTask.catch(() => {});
+    } catch {
+      // 已销毁时忽略
+    }
   }
-  return rowsFromTextLines(lines);
 }
 
 function renderPreview() {

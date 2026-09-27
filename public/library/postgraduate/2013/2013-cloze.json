@@ -1,0 +1,696 @@
+{
+  "version": 1,
+  "id": "cloze-2013",
+  "year": 2013,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "People are, on the whole, poor at considering background information when making individual decisions. At first glance this might seem like a strength that 1 the ability to make judgments which are unbiased by = 2 factors. But Dr Uri Simonsohn speculated that an inability to consider the big 3 was leading decision-makers to be biased by the daily samples of information they were working with. 4 | he theorised that a judge 5 of appearing too soft 6 crime might be more likely to send someone to prison 7 he had already sentenced five or six other defendants",
+      "segments": [
+        {
+          "type": "text",
+          "text": "People are, on the whole, poor at considering background information when making individual decisions. At first glance this might seem like a strength that"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "the ability to make judgments which are unbiased by ="
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "factors. But Dr Uri Simonsohn speculated that an inability to consider the big"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "was leading decision-makers to be biased by the daily samples of information they were working with."
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "| he theorised that a judge"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "of appearing too soft"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "crime might be more likely to send someone to prison"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "he had already sentenced five or six other defendants"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "only to forced community service on that day.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "only to forced community service on that day."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "To 8 this idea, he turned to the university-admissions process. In theory, the 9 of an applicant should not depend on the few others 10 randomly for interview during the same day, but Dr Simonsohn suspected the truth was 11",
+      "segments": [
+        {
+          "type": "text",
+          "text": "To"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "this idea, he turned to the university-admissions process. In theory, the"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "of an applicant should not depend on the few others"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "randomly for interview during the same day, but Dr Simonsohn suspected the truth was"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "He studied the results of 9,323 MBA interviews 12 by 31 admissions officers. The interviewers had _ 13 applicants on a scale of one to five. This scale 14 numerous factors into consideration. The scores were 15 used in conjunction with an applicant's score on the Graduate Management Admission Test, or GMAT, a",
+      "segments": [
+        {
+          "type": "text",
+          "text": "He studied the results of 9,323 MBA interviews"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "by 31 admissions officers. The interviewers had"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "applicants on a scale of one to five. This scale"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "numerous factors into consideration. The scores were"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "used in conjunction with an applicant's score on the Graduate Management Admission Test, or GMAT, a"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "text": "standardised exam which is _ 16 out of 800 points, to make a decision on whether to accept him or her.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "standardised exam which is"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "out of 800 points, to make a decision on whether to accept him or her."
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "text": "Dr Simonsohn found if the score of the previous candidate in a daily series of interviewees was 0.75 points or more higher than that of the one 17 that, then the score for the next applicant would 18 by an average of 0.075 points. This might sound small, but to _ 19 the effects of such a decrease a candidate would need 30 more GMAT points than would otherwise have been 20 .",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Dr Simonsohn found if the score of the previous candidate in a daily series of interviewees was 0.75 points or more higher than that of the one"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "that, then the score for the next applicant would"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "by an average of 0.075 points. This might sound small, but to"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "the effects of such a decrease a candidate would need 30 more GMAT points than would otherwise have been"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "grants"
+        },
+        {
+          "key": "B",
+          "text": "submits"
+        },
+        {
+          "key": "C",
+          "text": "transmits"
+        },
+        {
+          "key": "D",
+          "text": "delivers"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "minor"
+        },
+        {
+          "key": "B",
+          "text": "external"
+        },
+        {
+          "key": "C",
+          "text": "crucial"
+        },
+        {
+          "key": "D",
+          "text": "objective"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "issue"
+        },
+        {
+          "key": "B",
+          "text": "vision"
+        },
+        {
+          "key": "C",
+          "text": "picture"
+        },
+        {
+          "key": "D",
+          "text": "moment"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "Above all"
+        },
+        {
+          "key": "B",
+          "text": "On average"
+        },
+        {
+          "key": "C",
+          "text": "In principle"
+        },
+        {
+          "key": "D",
+          "text": "For example"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "fond"
+        },
+        {
+          "key": "B",
+          "text": "fearful"
+        },
+        {
+          "key": "C",
+          "text": "capable"
+        },
+        {
+          "key": "D",
+          "text": "thoughtless"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "in"
+        },
+        {
+          "key": "B",
+          "text": "for"
+        },
+        {
+          "key": "C",
+          "text": "to"
+        },
+        {
+          "key": "D",
+          "text": "on"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "if"
+        },
+        {
+          "key": "B",
+          "text": "until"
+        },
+        {
+          "key": "C",
+          "text": "though"
+        },
+        {
+          "key": "D",
+          "text": "unless"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "test"
+        },
+        {
+          "key": "B",
+          "text": "emphasize"
+        },
+        {
+          "key": "C",
+          "text": "share"
+        },
+        {
+          "key": "D",
+          "text": "promote"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "decision"
+        },
+        {
+          "key": "B",
+          "text": "quality"
+        },
+        {
+          "key": "C",
+          "text": "status"
+        },
+        {
+          "key": "D",
+          "text": "success"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "found"
+        },
+        {
+          "key": "B",
+          "text": "studied"
+        },
+        {
+          "key": "C",
+          "text": "chosen"
+        },
+        {
+          "key": "D",
+          "text": "identified"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "otherwise"
+        },
+        {
+          "key": "B",
+          "text": "defensible"
+        },
+        {
+          "key": "C",
+          "text": "replaceable"
+        },
+        {
+          "key": "D",
+          "text": "exceptional"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "inspired"
+        },
+        {
+          "key": "B",
+          "text": "expressed"
+        },
+        {
+          "key": "C",
+          "text": "conducted"
+        },
+        {
+          "key": "D",
+          "text": "secured"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "assigned"
+        },
+        {
+          "key": "B",
+          "text": "rated"
+        },
+        {
+          "key": "C",
+          "text": "matched"
+        },
+        {
+          "key": "D",
+          "text": "arranged"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "put"
+        },
+        {
+          "key": "B",
+          "text": "got"
+        },
+        {
+          "key": "C",
+          "text": "took"
+        },
+        {
+          "key": "D",
+          "text": "gave"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "instead"
+        },
+        {
+          "key": "B",
+          "text": "then"
+        },
+        {
+          "key": "C",
+          "text": "ever"
+        },
+        {
+          "key": "D",
+          "text": "rather"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "selected"
+        },
+        {
+          "key": "B",
+          "text": "passed"
+        },
+        {
+          "key": "C",
+          "text": "marked"
+        },
+        {
+          "key": "D",
+          "text": "introduced"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "below"
+        },
+        {
+          "key": "B",
+          "text": "after"
+        },
+        {
+          "key": "C",
+          "text": "above"
+        },
+        {
+          "key": "D",
+          "text": "before"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "jump"
+        },
+        {
+          "key": "B",
+          "text": "float"
+        },
+        {
+          "key": "C",
+          "text": "fluctuate"
+        },
+        {
+          "key": "D",
+          "text": "drop"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "achieve"
+        },
+        {
+          "key": "B",
+          "text": "undo"
+        },
+        {
+          "key": "C",
+          "text": "maintain"
+        },
+        {
+          "key": "D",
+          "text": "disregard"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "necessary"
+        },
+        {
+          "key": "B",
+          "text": "possible"
+        },
+        {
+          "key": "C",
+          "text": "promising"
+        },
+        {
+          "key": "D",
+          "text": "helpful"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807716
+}

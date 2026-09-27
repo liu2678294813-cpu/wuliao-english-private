@@ -1,0 +1,668 @@
+{
+  "version": 1,
+  "id": "cloze-2018",
+  "year": 2018,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "Trust is a tricky business. On the one hand, it's a necessary condition 1 many worthwhile things: child care, friendships, etc. On the other hand, putting your _2 in the wrong place often carries a high 3.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Trust is a tricky business. On the one hand, it's a necessary condition"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "many worthwhile things: child care, friendships, etc. On the other hand, putting your"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "in the wrong place often carries a high 3."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "4 , why do we trust at all? Well, because it feels good. 5 people place their trust in an individual or an institution, their brains release oxytocin, a hormone that __ 6 pleasurable feelings and triggers the herding instinct that prompts humans to 7 with one another. Scientists have found that exposure 8 this hormone puts us in a trusting 9 : In a Swiss study, researchers sprayed oxytocin into the noses of half the subjects; those subjects were ready to lend significantly higher amounts of money to strangers than were their 10 who inhaled something else.",
+      "segments": [
+        {
+          "type": "blank",
+          "number": 3,
+          "missing": true
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": ", why do we trust at all? Well, because it feels good."
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "people place their trust in an individual or an institution, their brains release oxytocin, a hormone that"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "pleasurable feelings and triggers the herding instinct that prompts humans to"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "with one another. Scientists have found that exposure"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "this hormone puts us in a trusting"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": ": In a Swiss study, researchers sprayed oxytocin into the noses of half the subjects; those subjects were ready to lend significantly higher amounts of money to strangers than were their"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "who inhaled something else."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "__11 for us, we also have a sixth sense for dishonesty that may 12 us. A Canadian study found that children as young as 14 months can differentiate 13 a credible person and a dishonest one. Sixty toddlers were each 14 to an adult tester holding a plastic container. The tester would ask, \" Whats in here?\" before looking into the container, smiling, and exclaiming, \"Wow!\" Each subject was then invited to look __15 . Half of them found a toy; the other half . 16 the container was empty—and realized the tester had 17 them.",
+      "segments": [
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "for us, we also have a sixth sense for dishonesty that may"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "us. A Canadian study found that children as young as"
+        },
+        {
+          "type": "blank",
+          "number": 13,
+          "missing": true
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "months can differentiate 13 a credible person and a dishonest one. Sixty toddlers were each 14 to an adult tester holding a plastic container. The tester would ask, \" Whats in here?\" before looking into the container, smiling, and exclaiming, \"Wow!\" Each subject was then invited to look"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": ". Half of them found a toy; the other half ."
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "the container was empty—and realized the tester had"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "them."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "Among the children who had not been tricked, the majority were 18 to cooperate with the tester in learning a new skill, demonstrating that they trusted his leadership. 19 , only five of the 30 children paired with the \" 20 7 tester participated in a follow-up activity.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Among the children who had not been tricked, the majority were"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "to cooperate with the tester in learning a new skill, demonstrating that they trusted his leadership."
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": ", only five of the 30 children paired with the \""
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "7 tester participated in a follow-up activity."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "from"
+        },
+        {
+          "key": "B",
+          "text": "for"
+        },
+        {
+          "key": "C",
+          "text": "like"
+        },
+        {
+          "key": "D",
+          "text": "on"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "attention"
+        },
+        {
+          "key": "B",
+          "text": "concern"
+        },
+        {
+          "key": "C",
+          "text": "faith"
+        },
+        {
+          "key": "D",
+          "text": "interest"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "benefit"
+        },
+        {
+          "key": "B",
+          "text": "price"
+        },
+        {
+          "key": "C",
+          "text": "debt"
+        },
+        {
+          "key": "D",
+          "text": "hope\""
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "Again"
+        },
+        {
+          "key": "B",
+          "text": "Instead"
+        },
+        {
+          "key": "C",
+          "text": "Therefore"
+        },
+        {
+          "key": "D",
+          "text": "Then"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "When"
+        },
+        {
+          "key": "B",
+          "text": "Unless"
+        },
+        {
+          "key": "C",
+          "text": "Although"
+        },
+        {
+          "key": "D",
+          "text": "Until"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "selects"
+        },
+        {
+          "key": "B",
+          "text": "applies"
+        },
+        {
+          "key": "C",
+          "text": "produces"
+        },
+        {
+          "key": "D",
+          "text": "maintains"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "connect"
+        },
+        {
+          "key": "B",
+          "text": "compete"
+        },
+        {
+          "key": "C",
+          "text": "consult"
+        },
+        {
+          "key": "D",
+          "text": "compare"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "by"
+        },
+        {
+          "key": "B",
+          "text": "to"
+        },
+        {
+          "key": "C",
+          "text": "of"
+        },
+        {
+          "key": "D",
+          "text": "at"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "context"
+        },
+        {
+          "key": "B",
+          "text": "circle"
+        },
+        {
+          "key": "C",
+          "text": "period"
+        },
+        {
+          "key": "D",
+          "text": "mood"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "counterparts"
+        },
+        {
+          "key": "B",
+          "text": "colleagues"
+        },
+        {
+          "key": "C",
+          "text": "substitutes"
+        },
+        {
+          "key": "D",
+          "text": "supporters"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "Odd"
+        },
+        {
+          "key": "B",
+          "text": "Funny"
+        },
+        {
+          "key": "C",
+          "text": "Lucky"
+        },
+        {
+          "key": "D",
+          "text": "Ironic"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "protect"
+        },
+        {
+          "key": "B",
+          "text": "delight"
+        },
+        {
+          "key": "C",
+          "text": "surprise"
+        },
+        {
+          "key": "D",
+          "text": "monitor"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "over"
+        },
+        {
+          "key": "B",
+          "text": "within"
+        },
+        {
+          "key": "C",
+          "text": "toward"
+        },
+        {
+          "key": "D",
+          "text": "between"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "added"
+        },
+        {
+          "key": "B",
+          "text": "transferred"
+        },
+        {
+          "key": "C",
+          "text": "introduced"
+        },
+        {
+          "key": "D",
+          "text": "entrusted"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "out"
+        },
+        {
+          "key": "B",
+          "text": "inside"
+        },
+        {
+          "key": "C",
+          "text": "back"
+        },
+        {
+          "key": "D",
+          "text": "around"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "proved"
+        },
+        {
+          "key": "B",
+          "text": "remembered"
+        },
+        {
+          "key": "C",
+          "text": "insisted"
+        },
+        {
+          "key": "D",
+          "text": "discovered"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "fooled"
+        },
+        {
+          "key": "B",
+          "text": "mocked"
+        },
+        {
+          "key": "C",
+          "text": "betrayed"
+        },
+        {
+          "key": "D",
+          "text": "wronged"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "forced"
+        },
+        {
+          "key": "B",
+          "text": "willing"
+        },
+        {
+          "key": "C",
+          "text": "hesitant"
+        },
+        {
+          "key": "D",
+          "text": "entitled"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "On the whole"
+        },
+        {
+          "key": "B",
+          "text": "As a result"
+        },
+        {
+          "key": "C",
+          "text": "For instance"
+        },
+        {
+          "key": "D",
+          "text": "In contrast"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "incapable"
+        },
+        {
+          "key": "B",
+          "text": "inflexible ="
+        },
+        {
+          "key": "C",
+          "text": "unreliable"
+        },
+        {
+          "key": "D",
+          "text": "unsuitable"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [
+    "正文空位 10 可能被 OCR 漏掉，已插入占位空"
+  ],
+  "createdAt": 1786271807792
+}

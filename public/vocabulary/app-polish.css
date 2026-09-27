@@ -618,3 +618,44 @@ body[data-app-route="confusion"] #root main .p-12.text-center::before {
     gap: 12px;
   }
 }
+
+/* 2026-08-03: hide the SPA top row (app title / account name / logout). */
+#root header.h-14 {
+  display: none !important;
+}
+
+/* 2026-08-03: shuffle-screening toggle on the screening page. */
+.shuffle-toggle-bar {
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid rgba(175, 138, 85, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, 0.95);
+  color: #0b1823;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(7, 25, 37, 0.18);
+}
+
+.shuffle-toggle-bar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.shuffle-toggle-bar input {
+  width: 17px;
+  height: 17px;
+  accent-color: #4f8580;
+}
+
+/* 2026-08-03: 乱序筛查开关已移至主界面顶部栏，隐藏页面内旧开关。 */
+#shuffleToggleBar {
+  display: none !important;
+}

@@ -1,0 +1,679 @@
+{
+  "version": 1,
+  "id": "cloze-2009",
+  "year": 2009,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "Research on animal intelligence always makes us wonder just how smart humans are. 1 the fruit-fly experiments described by Carl Zimmer in the Science Times. Fruit flies who were taught to be smarter than the average fruit fly 2 to live shorter lives. This suggests that 3 bulbs burn longer, that there is a(n) 4 in not being too bright.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Research on animal intelligence always makes us wonder just how smart humans are."
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "the fruit-fly experiments described by Carl Zimmer in the Science Times. Fruit flies who were taught to be smarter than the average fruit fly"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "to live shorter lives. This suggests that"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "bulbs burn longer, that there is a(n)"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "in not being too bright."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "Intelligence, it 5, is a high-priced option. It takes more upkeep, burns more fuel and is slow _ 6 the starting line because it depends on learning—a(n) 7 process—instead of instinct. Plenty of other species are able to learn, and one of the things they've apparently learned is when to 8 - .",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Intelligence, it 5, is a high-priced option. It takes more upkeep, burns more fuel and is slow"
+        },
+        {
+          "type": "blank",
+          "number": 5,
+          "missing": true
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "the starting line because it depends on learning—a(n)"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "process—instead of instinct. Plenty of other species are able to learn, and one of the things they've apparently learned is when to"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "- ."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "Is there an adaptive value to 9 intelligence? That's the question behind this new research. Instead of casting a wistful glance _ 10 at all the species we've left in the dust 1.Q.-wise, it implicitly asks what the real 11 of our own intelligence might be. This is 12 the mind of every animal we've ever met.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Is there an adaptive value to"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "intelligence? That's the question behind this new research. Instead of casting a wistful glance"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "at all the species we've left in the dust 1.Q.-wise, it implicitly asks what the real"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "of our own intelligence might be. This is"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "the mind of every animal we've ever met."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "Research on animal intelligence also makes us wonder what experiments animals would 13 on humans if they had the chance. Every cat with an owner, 14 , is running a small-scale study in operant conditioning. We believe that 15 animals ran the labs, they would test us to 16 the limits of our patience, our faithfulness, our memory for locations. They would try to decide what intelligence in humans is really _ 17 , not merely how much of it there is. 18 , they would hope to study a(n) _19 question: Are humans actually aware of the world they live in? 20 the results are inconclusive. |",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Research on animal intelligence also makes us wonder what experiments animals would"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "on humans if they had the chance. Every cat with an owner,"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": ", is running a small-scale study in operant conditioning. We believe that"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "animals ran the labs, they would test us to"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "the limits of our patience, our faithfulness, our memory for locations. They would try to decide what intelligence in humans is really"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": ", not merely how much of it there is."
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": ", they would hope to study a(n)"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "question: Are humans actually aware of the world they live in?"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "the results are inconclusive. |"
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "Suppose"
+        },
+        {
+          "key": "B",
+          "text": "Consider"
+        },
+        {
+          "key": "C",
+          "text": "Observe"
+        },
+        {
+          "key": "D",
+          "text": "Imagine"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "tended"
+        },
+        {
+          "key": "B",
+          "text": "feared"
+        },
+        {
+          "key": "C",
+          "text": "happened"
+        },
+        {
+          "key": "D",
+          "text": "threatened"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "thinner"
+        },
+        {
+          "key": "B",
+          "text": "stabler"
+        },
+        {
+          "key": "C",
+          "text": "lighter"
+        },
+        {
+          "key": "D",
+          "text": "dimmer"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "tendency"
+        },
+        {
+          "key": "B",
+          "text": "advantage"
+        },
+        {
+          "key": "C",
+          "text": "inclination"
+        },
+        {
+          "key": "D",
+          "text": "priority"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "insists on"
+        },
+        {
+          "key": "B",
+          "text": "sums up"
+        },
+        {
+          "key": "C",
+          "text": "turns out"
+        },
+        {
+          "key": "D",
+          "text": "puts forward"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "off"
+        },
+        {
+          "key": "B",
+          "text": "behind"
+        },
+        {
+          "key": "C",
+          "text": "over"
+        },
+        {
+          "key": "D",
+          "text": "along"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "incredible"
+        },
+        {
+          "key": "B",
+          "text": "spontaneous"
+        },
+        {
+          "key": "C",
+          "text": "inevitable"
+        },
+        {
+          "key": "D",
+          "text": "gradual"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "fight"
+        },
+        {
+          "key": "B",
+          "text": "doubt"
+        },
+        {
+          "key": "C",
+          "text": "stop"
+        },
+        {
+          "key": "D",
+          "text": "think"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "invisible"
+        },
+        {
+          "key": "B",
+          "text": "limited"
+        },
+        {
+          "key": "C",
+          "text": "indefinite"
+        },
+        {
+          "key": "D",
+          "text": "different"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "upward"
+        },
+        {
+          "key": "B",
+          "text": "forward"
+        },
+        {
+          "key": "C",
+          "text": "afterward"
+        },
+        {
+          "key": "D",
+          "text": "backward"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "features"
+        },
+        {
+          "key": "B",
+          "text": "influences"
+        },
+        {
+          "key": "C",
+          "text": "results"
+        },
+        {
+          "key": "D",
+          "text": "costs"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "outside"
+        },
+        {
+          "key": "B",
+          "text": "on"
+        },
+        {
+          "key": "C",
+          "text": "by"
+        },
+        {
+          "key": "D",
+          "text": "across"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "deliver"
+        },
+        {
+          "key": "B",
+          "text": "carry"
+        },
+        {
+          "key": "C",
+          "text": "perform"
+        },
+        {
+          "key": "D",
+          "text": "apply"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "by chance"
+        },
+        {
+          "key": "B",
+          "text": "in contrast"
+        },
+        {
+          "key": "C",
+          "text": "as usual"
+        },
+        {
+          "key": "D",
+          "text": "for instance"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "if"
+        },
+        {
+          "key": "B",
+          "text": "unless"
+        },
+        {
+          "key": "C",
+          "text": "as"
+        },
+        {
+          "key": "D",
+          "text": "lest"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "moderate"
+        },
+        {
+          "key": "B",
+          "text": "overcome"
+        },
+        {
+          "key": "C",
+          "text": "determine"
+        },
+        {
+          "key": "D",
+          "text": "reach"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "at"
+        },
+        {
+          "key": "B",
+          "text": "for"
+        },
+        {
+          "key": "C",
+          "text": "after"
+        },
+        {
+          "key": "D",
+          "text": "with"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "Above all"
+        },
+        {
+          "key": "B",
+          "text": "After all"
+        },
+        {
+          "key": "C",
+          "text": "However"
+        },
+        {
+          "key": "D",
+          "text": "Otherwise"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "fundamental"
+        },
+        {
+          "key": "B",
+          "text": "comprehensive"
+        },
+        {
+          "key": "C",
+          "text": "equivalent"
+        },
+        {
+          "key": "D",
+          "text": "hostile"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "By accident"
+        },
+        {
+          "key": "B",
+          "text": "In time"
+        },
+        {
+          "key": "C",
+          "text": "So far"
+        },
+        {
+          "key": "D",
+          "text": "Better still"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [
+    "正文空位 8 可能被 OCR 漏掉，已插入占位空"
+  ],
+  "createdAt": 1786271807647
+}

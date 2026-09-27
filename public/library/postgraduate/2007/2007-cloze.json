@@ -1,0 +1,650 @@
+{
+  "version": 1,
+  "id": "cloze-2007",
+  "year": 2007,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "By 1830 the former Spanish and Portuguese colonies had become independent nations. The roughly 20 million 1 of these nations looked 2 to the future. Born in the crisis of the old regime and Iberian colonialism, many of the leaders of independence 3 the ideals of representative government, careers 4 to talent, freedom of commerce and trade, the 5 to private property, and a belief in the individual as the basis of society. __6 there was a belief that the new nations should be sovereign and independent states, large enough to be economically viable and integrated bya 7 set of laws. | On the issue of _ 8 of religion and the position of the Church, 9 , there was less agreement 10 the leadership. Roman Catholicism had been the state religion and the only one 11 by the Spanish crown. 12 most leaders sought to maintain Catholicism _ 13 the official religion of the new states, some sought to end the _14 of other faiths. The defense of the Church became a rallying 15 for the conservative forces. | The ideals of the early leaders of independence were often egalitarian, valuing equality of everything. Bolivar had received aid from Haiti and had 16 in return to abolish slavery in the areas he liberated. By 1854 slavery had been abolished everywhere except Spain's 17 colonies. Early promises to end Indian tribute and taxes on people of mixed origin came much 18 because the new nations still needed the revenue such policies 19 . Egalitarian sentiments were often tempered by fears that the mass of the population was 20 self-rule and democracy.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "By 1830 the former Spanish and Portuguese colonies had become independent nations. The roughly 20 million"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "of these nations looked"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "to the future. Born in the crisis of the old regime and Iberian colonialism, many of the leaders of independence"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "the ideals of representative government, careers"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "to talent, freedom of commerce and trade, the"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "to private property, and a belief in the individual as the basis of society."
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "there was a belief that the new nations should be sovereign and independent states, large enough to be economically viable and integrated bya"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "set of laws. | On the issue of"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "of religion and the position of the Church,"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": ", there was less agreement"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "the leadership. Roman Catholicism had been the state religion and the only one"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "by the Spanish crown."
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "most leaders sought to maintain Catholicism"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "the official religion of the new states, some sought to end the"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "of other faiths. The defense of the Church became a rallying"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "for the conservative forces. | The ideals of the early leaders of independence were often egalitarian, valuing equality of everything. Bolivar had received aid from Haiti and had"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "in return to abolish slavery in the areas he liberated. By 1854 slavery had been abolished everywhere except Spain's"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "colonies. Early promises to end Indian tribute and taxes on people of mixed origin came much"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "because the new nations still needed the revenue such policies"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": ". Egalitarian sentiments were often tempered by fears that the mass of the population was"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "self-rule and democracy."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "natives"
+        },
+        {
+          "key": "B",
+          "text": "inhabitants"
+        },
+        {
+          "key": "C",
+          "text": "peoples"
+        },
+        {
+          "key": "D",
+          "text": "individuals"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "confusedly"
+        },
+        {
+          "key": "B",
+          "text": "cheerfully"
+        },
+        {
+          "key": "C",
+          "text": "worriedly"
+        },
+        {
+          "key": "D",
+          "text": "hopefully"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "shared"
+        },
+        {
+          "key": "B",
+          "text": "forgot"
+        },
+        {
+          "key": "C",
+          "text": "attained"
+        },
+        {
+          "key": "D",
+          "text": "rejected"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "related"
+        },
+        {
+          "key": "B",
+          "text": "close"
+        },
+        {
+          "key": "C",
+          "text": "open"
+        },
+        {
+          "key": "D",
+          "text": "devoted"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "access"
+        },
+        {
+          "key": "B",
+          "text": "succession"
+        },
+        {
+          "key": "C",
+          "text": "right"
+        },
+        {
+          "key": "D",
+          "text": "return"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "Presumably"
+        },
+        {
+          "key": "B",
+          "text": "Incidentally"
+        },
+        {
+          "key": "C",
+          "text": "Obviously"
+        },
+        {
+          "key": "D",
+          "text": "Generally"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "unique"
+        },
+        {
+          "key": "B",
+          "text": "common"
+        },
+        {
+          "key": "C",
+          "text": "particular"
+        },
+        {
+          "key": "D",
+          "text": "typical"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "freedom"
+        },
+        {
+          "key": "B",
+          "text": "origin"
+        },
+        {
+          "key": "C",
+          "text": "impact"
+        },
+        {
+          "key": "D",
+          "text": "reform"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "therefore"
+        },
+        {
+          "key": "B",
+          "text": "however"
+        },
+        {
+          "key": "C",
+          "text": "indeed"
+        },
+        {
+          "key": "D",
+          "text": "moreover"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "with"
+        },
+        {
+          "key": "B",
+          "text": "about"
+        },
+        {
+          "key": "C",
+          "text": "among"
+        },
+        {
+          "key": "D",
+          "text": "by"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "allowed"
+        },
+        {
+          "key": "B",
+          "text": "preached"
+        },
+        {
+          "key": "C",
+          "text": "granted."
+        },
+        {
+          "key": "D",
+          "text": "funded"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "Since"
+        },
+        {
+          "key": "B",
+          "text": "If"
+        },
+        {
+          "key": "C",
+          "text": "Unless"
+        },
+        {
+          "key": "D",
+          "text": "While"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "as"
+        },
+        {
+          "key": "B",
+          "text": "for"
+        },
+        {
+          "key": "C",
+          "text": "under"
+        },
+        {
+          "key": "D",
+          "text": "against"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "spread"
+        },
+        {
+          "key": "B",
+          "text": "interference"
+        },
+        {
+          "key": "C",
+          "text": "exclusion"
+        },
+        {
+          "key": "D",
+          "text": "influence"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "support"
+        },
+        {
+          "key": "B",
+          "text": "cry"
+        },
+        {
+          "key": "C",
+          "text": "plea"
+        },
+        {
+          "key": "D",
+          "text": "wish"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "urged"
+        },
+        {
+          "key": "B",
+          "text": "intended"
+        },
+        {
+          "key": "C",
+          "text": "expected"
+        },
+        {
+          "key": "D",
+          "text": "promised"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "controlling"
+        },
+        {
+          "key": "B",
+          "text": "former"
+        },
+        {
+          "key": "C",
+          "text": "remaining"
+        },
+        {
+          "key": "D",
+          "text": "original"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "slower"
+        },
+        {
+          "key": "B",
+          "text": "faster"
+        },
+        {
+          "key": "C",
+          "text": "easier"
+        },
+        {
+          "key": "D",
+          "text": "tougher"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "created"
+        },
+        {
+          "key": "B",
+          "text": "produced"
+        },
+        {
+          "key": "C",
+          "text": "contributed"
+        },
+        {
+          "key": "D",
+          "text": "preferred"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "puzzled by"
+        },
+        {
+          "key": "B",
+          "text": "hostile to"
+        },
+        {
+          "key": "C",
+          "text": "pessimistic about"
+        },
+        {
+          "key": "D",
+          "text": "unprepared for"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807610
+}

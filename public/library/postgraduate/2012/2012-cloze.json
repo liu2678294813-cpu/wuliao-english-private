@@ -1,0 +1,700 @@
+{
+  "version": 1,
+  "id": "cloze-2012",
+  "year": 2012,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "| The ethical judgments of the Supreme Court justices have become an important issue recently. The court cannot 1 its legitimacy as guardian of the rule of law __ 2 justices behave like politicians. Yet, in several instances, justices acted in ways that 3 the court's reputation for being independent and impartial.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| The ethical judgments of the Supreme Court justices have become an important issue recently. The court cannot"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "its legitimacy as guardian of the rule of law"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "justices behave like politicians. Yet, in several instances, justices acted in ways that"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "the court's reputation for being independent and impartial."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "Justice Antonin Scalia, for example, appeared at political events. That kind of activity makes it less likely that the court's decisions will be 4 as impartial judgments. Part of the problem is that the justices are not 5 by an ethics code. At the very least, the court should make itself 6 to the code of conduct that 7 to the rest of the federal judiciary.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Justice Antonin Scalia, for example, appeared at political events. That kind of activity makes it less likely that the court's decisions will be"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "as impartial judgments. Part of the problem is that the justices are not"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "by an ethics code. At the very least, the court should make itself"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "to the code of conduct that"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "to the rest of the federal judiciary."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "| This and other similar cases 8 the question of whether there is stilla 9 between the court and politics.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| This and other similar cases"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "the question of whether there is stilla"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "between the court and politics."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "The framers of the Constitution envisioned law 10 having authority apart from politics. They gave justices permanent positions 11 they would be free to 12 those in power and have no need to 13 political support. Our legal system was designed to set law apart from politics precisely because they are so closely 14 .",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The framers of the Constitution envisioned law"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "having authority apart from politics. They gave justices permanent positions"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "they would be free to"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "those in power and have no need to"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "political support. Our legal system was designed to set law apart from politics precisely because they are so closely"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "text": "Constitutional law is political because it results from choices rooted in fundamental social 15 like liberty and property. When the court deals with social policy decisions, the law it 16 is inescapably political—which is why decisions split along ideological lines are so easily 17 as unjust.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Constitutional law is political because it results from choices rooted in fundamental social"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "like liberty and property. When the court deals with social policy decisions, the law it"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "is inescapably political—which is why decisions split along ideological lines are so easily"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "as unjust."
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "text": "| The justices must 18 doubts about the court's legitimacy by making themselves _ 19 to the code of conduct. That would make their rulings more likely to be seen as separate from politics and, 20 , convincing as law.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| The justices must"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "doubts about the court's legitimacy by making themselves"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "to the code of conduct. That would make their rulings more likely to be seen as separate from politics and,"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": ", convincing as law."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "emphasize"
+        },
+        {
+          "key": "B",
+          "text": "maintain"
+        },
+        {
+          "key": "C",
+          "text": "modify"
+        },
+        {
+          "key": "D",
+          "text": "recognize"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "when"
+        },
+        {
+          "key": "B",
+          "text": "lest"
+        },
+        {
+          "key": "C",
+          "text": "before"
+        },
+        {
+          "key": "D",
+          "text": "unless"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "restored"
+        },
+        {
+          "key": "B",
+          "text": "weakened"
+        },
+        {
+          "key": "C",
+          "text": "established"
+        },
+        {
+          "key": "D",
+          "text": "eliminated"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "challenged"
+        },
+        {
+          "key": "B",
+          "text": "compromised"
+        },
+        {
+          "key": "C",
+          "text": "suspected"
+        },
+        {
+          "key": "D",
+          "text": "accepted"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "advanced"
+        },
+        {
+          "key": "B",
+          "text": "caught"
+        },
+        {
+          "key": "C",
+          "text": "bound"
+        },
+        {
+          "key": "D",
+          "text": "founded"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "resistant"
+        },
+        {
+          "key": "B",
+          "text": "subject"
+        },
+        {
+          "key": "C",
+          "text": "immune"
+        },
+        {
+          "key": "D",
+          "text": "prone"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "resorts"
+        },
+        {
+          "key": "B",
+          "text": "sticks"
+        },
+        {
+          "key": "C",
+          "text": "leads"
+        },
+        {
+          "key": "D",
+          "text": "applies"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "evade"
+        },
+        {
+          "key": "B",
+          "text": "raise"
+        },
+        {
+          "key": "C",
+          "text": "deny"
+        },
+        {
+          "key": "D",
+          "text": "settle"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "line"
+        },
+        {
+          "key": "B",
+          "text": "barrier"
+        },
+        {
+          "key": "C",
+          "text": "similarity"
+        },
+        {
+          "key": "D",
+          "text": "conflict"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "by"
+        },
+        {
+          "key": "B",
+          "text": "as"
+        },
+        {
+          "key": "C",
+          "text": "through"
+        },
+        {
+          "key": "D",
+          "text": "towards"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "so"
+        },
+        {
+          "key": "B",
+          "text": "since"
+        },
+        {
+          "key": "C",
+          "text": "provided"
+        },
+        {
+          "key": "D",
+          "text": "though"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "serve"
+        },
+        {
+          "key": "B",
+          "text": "satisfy"
+        },
+        {
+          "key": "C",
+          "text": "upset"
+        },
+        {
+          "key": "D",
+          "text": "replace"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "confirm"
+        },
+        {
+          "key": "B",
+          "text": "express"
+        },
+        {
+          "key": "C",
+          "text": "cultivate"
+        },
+        {
+          "key": "D",
+          "text": "offer"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "guarded"
+        },
+        {
+          "key": "B",
+          "text": "followed"
+        },
+        {
+          "key": "C",
+          "text": "studied"
+        },
+        {
+          "key": "D",
+          "text": "tied"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "concepts"
+        },
+        {
+          "key": "B",
+          "text": "theories"
+        },
+        {
+          "key": "C",
+          "text": "divisions"
+        },
+        {
+          "key": "D",
+          "text": "conventions"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "excludes"
+        },
+        {
+          "key": "B",
+          "text": "questions"
+        },
+        {
+          "key": "C",
+          "text": "shapes"
+        },
+        {
+          "key": "D",
+          "text": "controls"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "dismissed"
+        },
+        {
+          "key": "B",
+          "text": "released"
+        },
+        {
+          "key": "C",
+          "text": "ranked"
+        },
+        {
+          "key": "D",
+          "text": "distorted"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "suppress"
+        },
+        {
+          "key": "B",
+          "text": "exploit"
+        },
+        {
+          "key": "C",
+          "text": "address"
+        },
+        {
+          "key": "D",
+          "text": "ignore"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "accessible"
+        },
+        {
+          "key": "B",
+          "text": "amiable"
+        },
+        {
+          "key": "C",
+          "text": "agreeable"
+        },
+        {
+          "key": "D",
+          "text": "accountable"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "by all means"
+        },
+        {
+          "key": "B",
+          "text": "at all costs"
+        },
+        {
+          "key": "C",
+          "text": "in a word"
+        },
+        {
+          "key": "D",
+          "text": "as a result | Section I"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807700
+}

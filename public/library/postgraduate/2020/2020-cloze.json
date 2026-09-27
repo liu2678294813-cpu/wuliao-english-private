@@ -1,0 +1,680 @@
+{
+  "version": 1,
+  "id": "cloze-2020",
+  "year": 2020,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "Even if families don't sit down to eat together as frequently as before, millions of Britons will nonetheless have got a share this weekend of one of the nation's great traditions: the Sunday roast. 1 a cold winter's day, few culinary pleasures can 2 it. Yet as we report now, the food police are determined that this 3 should be rendered yet another guilty pleasure 4 to damage our health.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Even if families don't sit down to eat together as frequently as before, millions of Britons will nonetheless have got a share this weekend of one of the nation's great traditions: the Sunday roast."
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "a cold winter's day, few culinary pleasures can"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "it. Yet as we report now, the food police are determined that this"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "should be rendered yet another guilty pleasure"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "to damage our health."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "The Food Standards Authority (FSA) has 5 a public warning about the risks of a compound called acrylamide that forms in some foods cooked © 6 high temperatures. This means that people should 7 crisping their roast potatoes, reject thin-crust pizzas and only 8 toast their bread. But where is the evidence to support such alarmist advice? 9 studies have shown that acrylamide can cause neurological damage in mice, there is no 10 evidence that it causes cancer in humans.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The Food Standards Authority (FSA) has"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "a public warning about the risks of a compound called acrylamide that forms in some foods cooked ©"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "high temperatures. This means that people should"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "crisping their roast potatoes, reject thin-crust pizzas and only"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "toast their bread. But where is the evidence to support such alarmist advice?"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "studies have shown that acrylamide can cause neurological damage in mice, there is no"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "evidence that it causes cancer in humans."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "Scientists say the compound is 11 to cause cancer but have no hard scientific proof. 12 the precautionary principle, it could be argued that itis 13 to follow the FSA advice. 14 , it was rumoured that smoking caused cancer for years before the evidence was found to prove a 15 .",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Scientists say the compound is"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "to cause cancer but have no hard scientific proof."
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "the precautionary principle, it could be argued that itis"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "to follow the FSA advice."
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": ", it was rumoured that smoking caused cancer for years before the evidence was found to prove a"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "| Doubtless a piece of boiled beef can always be 16 up on Sunday alongside some steamed vegetables, without the Yorkshire pudding and no wine. But would life be worth living? 17 , the FSA says it is not telling people to cut out roast foods 18 |, but to reduce their lifetime intake. However, its 19 risks coming across as being pushy and overprotective. Constant health scares just _ 20 with no one listening.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| Doubtless a piece of boiled beef can always be"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "up on Sunday alongside some steamed vegetables, without the Yorkshire pudding and no wine. But would life be worth living?"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": ", the FSA says it is not telling people to cut out roast foods"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "|, but to reduce their lifetime intake. However, its"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "risks coming across as being pushy and overprotective. Constant health scares just"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "with no one listening."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "In"
+        },
+        {
+          "key": "B",
+          "text": "On"
+        },
+        {
+          "key": "C",
+          "text": "Till"
+        },
+        {
+          "key": "D",
+          "text": "Towards"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "match"
+        },
+        {
+          "key": "B",
+          "text": "express"
+        },
+        {
+          "key": "C",
+          "text": "satisfy"
+        },
+        {
+          "key": "D",
+          "text": "influence"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "patience"
+        },
+        {
+          "key": "B",
+          "text": "concern"
+        },
+        {
+          "key": "C",
+          "text": "surprise"
+        },
+        {
+          "key": "D",
+          "text": "enjoyment"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "intensified"
+        },
+        {
+          "key": "B",
+          "text": "guaranteed"
+        },
+        {
+          "key": "C",
+          "text": "compelled"
+        },
+        {
+          "key": "D",
+          "text": "privileged"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "ignored"
+        },
+        {
+          "key": "B",
+          "text": "received"
+        },
+        {
+          "key": "C",
+          "text": "issued"
+        },
+        {
+          "key": "D",
+          "text": "cancelled"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "under"
+        },
+        {
+          "key": "B",
+          "text": "by"
+        },
+        {
+          "key": "C",
+          "text": "for"
+        },
+        {
+          "key": "D",
+          "text": "at"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "forget"
+        },
+        {
+          "key": "B",
+          "text": "avoid"
+        },
+        {
+          "key": "C",
+          "text": "finish"
+        },
+        {
+          "key": "D",
+          "text": "regret"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "easily"
+        },
+        {
+          "key": "B",
+          "text": "regularly"
+        },
+        {
+          "key": "C",
+          "text": "partially"
+        },
+        {
+          "key": "D",
+          "text": "initially"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "If"
+        },
+        {
+          "key": "B",
+          "text": "Since"
+        },
+        {
+          "key": "C",
+          "text": "While"
+        },
+        {
+          "key": "D",
+          "text": "Unless"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "conclusive"
+        },
+        {
+          "key": "B",
+          "text": "external"
+        },
+        {
+          "key": "C",
+          "text": "secondary"
+        },
+        {
+          "key": "D",
+          "text": "negative"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "likely"
+        },
+        {
+          "key": "B",
+          "text": "bound"
+        },
+        {
+          "key": "C",
+          "text": "insufficient"
+        },
+        {
+          "key": "D",
+          "text": "slow"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "In addition to"
+        },
+        {
+          "key": "B",
+          "text": "At the cost of"
+        },
+        {
+          "key": "C",
+          "text": "On the basis of"
+        },
+        {
+          "key": "D",
+          "text": "In contrast to"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "interesting"
+        },
+        {
+          "key": "B",
+          "text": "fortunate"
+        },
+        {
+          "key": "C",
+          "text": "urgent"
+        },
+        {
+          "key": "D",
+          "text": "advisable"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "As usual"
+        },
+        {
+          "key": "B",
+          "text": "After all"
+        },
+        {
+          "key": "C",
+          "text": "By definition"
+        },
+        {
+          "key": "D",
+          "text": "In particular"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "connection"
+        },
+        {
+          "key": "B",
+          "text": "combination"
+        },
+        {
+          "key": "C",
+          "text": "resemblance"
+        },
+        {
+          "key": "D",
+          "text": "pattern"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "made"
+        },
+        {
+          "key": "B",
+          "text": "used"
+        },
+        {
+          "key": "C",
+          "text": "saved"
+        },
+        {
+          "key": "D",
+          "text": "served"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "To be brief"
+        },
+        {
+          "key": "B",
+          "text": "For instance"
+        },
+        {
+          "key": "C",
+          "text": "To be fair"
+        },
+        {
+          "key": "D",
+          "text": "In general"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "entirely"
+        },
+        {
+          "key": "B",
+          "text": "gradually"
+        },
+        {
+          "key": "C",
+          "text": "reluctantly"
+        },
+        {
+          "key": "D",
+          "text": "carefully"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "promise"
+        },
+        {
+          "key": "B",
+          "text": "competition"
+        },
+        {
+          "key": "C",
+          "text": "experience"
+        },
+        {
+          "key": "D",
+          "text": "campaign"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "follow up"
+        },
+        {
+          "key": "B",
+          "text": "end up"
+        },
+        {
+          "key": "C",
+          "text": "open up"
+        },
+        {
+          "key": "D",
+          "text": "pick up"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807823
+}

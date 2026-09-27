@@ -1,0 +1,665 @@
+{
+  "version": 1,
+  "id": "cloze-2008",
+  "year": 2008,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "The idea that some groups of people may be more intelligent than others is one of those hypotheses that dare not speak its name. But Gregory Cochran is 1 tosayit anyway. He 1s that 2 bird, a scientist who works independently 3 any institution. He helped popularize the idea that some diseases not 4 thought to have a bacterial cause were actually infections, which aroused much controversy when it was first suggested.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The idea that some groups of people may be more intelligent than others is one of those hypotheses that dare not speak its name. But Gregory Cochran is"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "tosayit anyway. He 1s that"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "bird, a scientist who works independently"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "any institution. He helped popularize the idea that some diseases not"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "thought to have a bacterial cause were actually infections, which aroused much controversy when it was first suggested."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "5 he, however, might tremble at the __6 of what he is about to do. Together with another two scientists, he is publishing a paper which not only 7 that one group of humanity is more intelligent than the others, but explains the process that has brought this about. The group in 8 are a particular people originated from central Europe. The process is natural selection. |",
+      "segments": [
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "he, however, might tremble at the"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "of what he is about to do. Together with another two scientists, he is publishing a paper which not only"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "that one group of humanity is more intelligent than the others, but explains the process that has brought this about. The group in"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "are a particular people originated from central Europe. The process is natural selection. |"
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "| This group generally do well in IQ test, 9 12-15 points above the 10 value of 100, and have contributed 11 to the intellectual and cultural life of the West, as the 12 of their elites, including several world-renowned scientists, 13. They also suffer more often than most people from a number of nasty genetic diseases, such as breast cancer. These facts, 14 , have previously been thought unrelated. The former has been _ 15 to social effects, such as a strong tradition of 16 education. The latter was seen as a (an) 17 of genetic isolation. Dr. Cochran suggests that the intelligence and diseases are intimately 18 . His argument is that the unusual history of these people has 19 them to unique evolutionary pressures that have resulted in this 20 state of affairs.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| This group generally do well in IQ test,"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "12-15 points above the"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "value of 100, and have contributed"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "to the intellectual and cultural life of the West, as the"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "of their elites, including several world-renowned scientists, 13. They also suffer more often than most people from a number of nasty genetic diseases, such as breast cancer. These facts,"
+        },
+        {
+          "type": "blank",
+          "number": 13,
+          "missing": true
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": ", have previously been thought unrelated. The former has been"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "to social effects, such as a strong tradition of"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "education. The latter was seen as a (an)"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "of genetic isolation. Dr. Cochran suggests that the intelligence and diseases are intimately"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": ". His argument is that the unusual history of these people has"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "them to unique evolutionary pressures that have resulted in this"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "state of affairs."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "selected"
+        },
+        {
+          "key": "B",
+          "text": "prepared"
+        },
+        {
+          "key": "C",
+          "text": "obliged"
+        },
+        {
+          "key": "D",
+          "text": "pleased"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "unique"
+        },
+        {
+          "key": "B",
+          "text": "particular"
+        },
+        {
+          "key": "C",
+          "text": "special"
+        },
+        {
+          "key": "D",
+          "text": "rare"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "of"
+        },
+        {
+          "key": "B",
+          "text": "with"
+        },
+        {
+          "key": "C",
+          "text": "in"
+        },
+        {
+          "key": "D",
+          "text": "against"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "subsequently"
+        },
+        {
+          "key": "B",
+          "text": "presently"
+        },
+        {
+          "key": "C",
+          "text": "previously"
+        },
+        {
+          "key": "D",
+          "text": "lately"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "Only"
+        },
+        {
+          "key": "B",
+          "text": "So"
+        },
+        {
+          "key": "C",
+          "text": "Even"
+        },
+        {
+          "key": "D",
+          "text": "Hence"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "thought"
+        },
+        {
+          "key": "B",
+          "text": "sight"
+        },
+        {
+          "key": "C",
+          "text": "cost"
+        },
+        {
+          "key": "D",
+          "text": "risk"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "advises"
+        },
+        {
+          "key": "B",
+          "text": "suggests"
+        },
+        {
+          "key": "C",
+          "text": "protests"
+        },
+        {
+          "key": "D",
+          "text": "objects"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "progress"
+        },
+        {
+          "key": "B",
+          "text": "fact"
+        },
+        {
+          "key": "C",
+          "text": "need"
+        },
+        {
+          "key": "D",
+          "text": "question"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "attaining"
+        },
+        {
+          "key": "B",
+          "text": "scoring"
+        },
+        {
+          "key": "C",
+          "text": "reaching"
+        },
+        {
+          "key": "D",
+          "text": "calculating"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "normal"
+        },
+        {
+          "key": "B",
+          "text": "common"
+        },
+        {
+          "key": "C",
+          "text": "mean"
+        },
+        {
+          "key": "D",
+          "text": "total"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "unconsciously"
+        },
+        {
+          "key": "B",
+          "text": "disproportionately"
+        },
+        {
+          "key": "C",
+          "text": "indefinitely"
+        },
+        {
+          "key": "D",
+          "text": "unaccountably"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "missions"
+        },
+        {
+          "key": "B",
+          "text": "fortunes"
+        },
+        {
+          "key": "C",
+          "text": "interests"
+        },
+        {
+          "key": "D",
+          "text": "careers"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "affirm"
+        },
+        {
+          "key": "B",
+          "text": "witness"
+        },
+        {
+          "key": "C",
+          "text": "observe"
+        },
+        {
+          "key": "D",
+          "text": "approve"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "moreover"
+        },
+        {
+          "key": "B",
+          "text": "therefore"
+        },
+        {
+          "key": "C",
+          "text": "however"
+        },
+        {
+          "key": "D",
+          "text": "meanwhile"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "given up"
+        },
+        {
+          "key": "B",
+          "text": "got over"
+        },
+        {
+          "key": "C",
+          "text": "carried on"
+        },
+        {
+          "key": "D",
+          "text": "put down"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "assessing"
+        },
+        {
+          "key": "B",
+          "text": "supervising"
+        },
+        {
+          "key": "C",
+          "text": "administering"
+        },
+        {
+          "key": "D",
+          "text": "valuing"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "development"
+        },
+        {
+          "key": "B",
+          "text": "origin"
+        },
+        {
+          "key": "C",
+          "text": "consequence"
+        },
+        {
+          "key": "D",
+          "text": "instrument"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "linked"
+        },
+        {
+          "key": "B",
+          "text": "integrated"
+        },
+        {
+          "key": "C",
+          "text": "woven"
+        },
+        {
+          "key": "D",
+          "text": "combined"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "limited"
+        },
+        {
+          "key": "B",
+          "text": "subjected"
+        },
+        {
+          "key": "C",
+          "text": "converted"
+        },
+        {
+          "key": "D",
+          "text": "directed"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "paradoxical"
+        },
+        {
+          "key": "B",
+          "text": "incompatible"
+        },
+        {
+          "key": "C",
+          "text": "inevitable"
+        },
+        {
+          "key": "D",
+          "text": "continuous"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [
+    "正文空位 20 可能被 OCR 漏掉，已插入占位空"
+  ],
+  "createdAt": 1786271807631
+}

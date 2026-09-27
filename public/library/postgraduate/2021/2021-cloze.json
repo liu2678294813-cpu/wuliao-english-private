@@ -1,0 +1,696 @@
+{
+  "version": 1,
+  "id": "cloze-2021",
+  "year": 2021,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "Fluid intelligence is the type of intelligence that has to do with short-term memory and the ability to think quickly, logically, and abstractly in order to solve new problems. It 1 in young adulthood, levels out for a period of time, and then 2 starts to",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Fluid intelligence is the type of intelligence that has to do with short-term memory and the ability to think quickly, logically, and abstractly in order to solve new problems. It"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "in young adulthood, levels out for a period of time, and then"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "starts to"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "| slowly decline as we age. But 3 aging is inevitable, scientists are finding out that certain changes in brain function may not be.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "| slowly decline as we age. But"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "aging is inevitable, scientists are finding out that certain changes in brain function may not be."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "One study found that muscle loss and the 4 of body fat around the abdomen are associated with a decline in fluid intelligence. This suggests the _ 5 that lifestyle factors might help prevent or 6 this type of decline.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "One study found that muscle loss and the"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "of body fat around the abdomen are associated with a decline in fluid intelligence. This suggests the"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "that lifestyle factors might help prevent or"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "this type of decline."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "The researchers looked at data that 7 measurements of lean muscle and abdominal fat from more than 4,000 middle-to-older-aged men and women and 8 that data to reported changes in fluid intelligence over a six-year period. They found that middle-aged people = 9 higher measures of abdominal fat 10 worse on measures of fluid intelligence as the years 11 . |",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The researchers looked at data that"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "measurements of lean muscle and abdominal fat from more than 4,000 middle-to-older-aged men and women and"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "that data to reported changes in fluid intelligence over a six-year period. They found that middle-aged people ="
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "higher measures of abdominal fat"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "worse on measures of fluid intelligence as the years"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": ". |"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "text": "For women, the association may be 12 to changes in immunity that resulted from excess abdominal fat; in men, the immune system did not appear to be 13. It is hoped that future studies could 14 these differences and perhaps lead to different 15 for men and women.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "For women, the association may be"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "to changes in immunity that resulted from excess abdominal fat; in men, the immune system did not appear to be 13. It is hoped that future studies could"
+        },
+        {
+          "type": "blank",
+          "number": 13,
+          "missing": true
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "these differences and perhaps lead to different"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "for men and women."
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "text": "__16_, there are steps you can 17 to help reduce abdominal fat and maintain lean muscle mass as you age in order to protect both your physical and mental 18 . The two highly recommended lifestyle approaches are maintaining or increasing your 19 of aerobic exercise and following a Mediterranean-style 20 that is high in fiber and eliminates highly processed foods.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "__16_, there are steps you can"
+        },
+        {
+          "type": "blank",
+          "number": 16,
+          "missing": true
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "to help reduce abdominal fat and maintain lean muscle mass as you age in order to protect both your physical and mental"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": ". The two highly recommended lifestyle approaches are maintaining or increasing your"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "of aerobic exercise and following a Mediterranean-style"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "that is high in fiber and eliminates highly processed foods."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "pauses"
+        },
+        {
+          "key": "B",
+          "text": "peaks"
+        },
+        {
+          "key": "C",
+          "text": "returns"
+        },
+        {
+          "key": "D",
+          "text": "fades"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "alternatively"
+        },
+        {
+          "key": "B",
+          "text": "formally"
+        },
+        {
+          "key": "C",
+          "text": "generally"
+        },
+        {
+          "key": "D",
+          "text": "accidentally"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "until"
+        },
+        {
+          "key": "B",
+          "text": "since"
+        },
+        {
+          "key": "C",
+          "text": "once"
+        },
+        {
+          "key": "D",
+          "text": "while"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "accumulation"
+        },
+        {
+          "key": "B",
+          "text": "detection"
+        },
+        {
+          "key": "C",
+          "text": "consumption"
+        },
+        {
+          "key": "D",
+          "text": "separation"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "requirement"
+        },
+        {
+          "key": "B",
+          "text": "decision"
+        },
+        {
+          "key": "C",
+          "text": "goal"
+        },
+        {
+          "key": "D",
+          "text": "possibility"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "utilize"
+        },
+        {
+          "key": "B",
+          "text": "ensure"
+        },
+        {
+          "key": "C",
+          "text": "seek"
+        },
+        {
+          "key": "D",
+          "text": "delay"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "modified"
+        },
+        {
+          "key": "B",
+          "text": "included"
+        },
+        {
+          "key": "C",
+          "text": "supported"
+        },
+        {
+          "key": "D",
+          "text": "predicted"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "compared"
+        },
+        {
+          "key": "B",
+          "text": "devoted"
+        },
+        {
+          "key": "C",
+          "text": "converted"
+        },
+        {
+          "key": "D",
+          "text": "applied"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "against"
+        },
+        {
+          "key": "B",
+          "text": "above"
+        },
+        {
+          "key": "C",
+          "text": "by"
+        },
+        {
+          "key": "D",
+          "text": "with"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "lived"
+        },
+        {
+          "key": "B",
+          "text": "scored"
+        },
+        {
+          "key": "C",
+          "text": "managed"
+        },
+        {
+          "key": "D",
+          "text": "played"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "ran out"
+        },
+        {
+          "key": "B",
+          "text": "set off"
+        },
+        {
+          "key": "C",
+          "text": "went by"
+        },
+        {
+          "key": "D",
+          "text": "drew in"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "attributable"
+        },
+        {
+          "key": "B",
+          "text": "superior"
+        },
+        {
+          "key": "C",
+          "text": "parallel"
+        },
+        {
+          "key": "D",
+          "text": "resistant"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "restored"
+        },
+        {
+          "key": "B",
+          "text": "involved"
+        },
+        {
+          "key": "C",
+          "text": "isolated"
+        },
+        {
+          "key": "D",
+          "text": "controlled"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "alter"
+        },
+        {
+          "key": "B",
+          "text": "spread"
+        },
+        {
+          "key": "C",
+          "text": "explain"
+        },
+        {
+          "key": "D",
+          "text": "remove"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "compensations"
+        },
+        {
+          "key": "B",
+          "text": "symptoms"
+        },
+        {
+          "key": "C",
+          "text": "treatments"
+        },
+        {
+          "key": "D",
+          "text": "demands"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "Meanwhile"
+        },
+        {
+          "key": "B",
+          "text": "Likewise"
+        },
+        {
+          "key": "C",
+          "text": "Therefore"
+        },
+        {
+          "key": "D",
+          "text": "Instead"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "change"
+        },
+        {
+          "key": "B",
+          "text": "watch"
+        },
+        {
+          "key": "C",
+          "text": "take"
+        },
+        {
+          "key": "D",
+          "text": "count"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "coordination"
+        },
+        {
+          "key": "B",
+          "text": "process"
+        },
+        {
+          "key": "C",
+          "text": "formation"
+        },
+        {
+          "key": "D",
+          "text": "wellbeing"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "space"
+        },
+        {
+          "key": "B",
+          "text": "love"
+        },
+        {
+          "key": "C",
+          "text": "knowledge"
+        },
+        {
+          "key": "D",
+          "text": "level"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "design"
+        },
+        {
+          "key": "B",
+          "text": "diet"
+        },
+        {
+          "key": "C",
+          "text": "routine"
+        },
+        {
+          "key": "D",
+          "text": "prescription"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [
+    "正文空位 15 可能被 OCR 漏掉，已插入占位空"
+  ],
+  "createdAt": 1786271807840
+}

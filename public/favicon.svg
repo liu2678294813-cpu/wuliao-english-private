@@ -1,4 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="18" fill="#0b7b77"/>
-  <path d="M18 18h28v7H25v7h18v7H25v7h21v7H18z" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="无聊英语">
+  <defs>
+    <linearGradient id="sea" x1="12" y1="8" x2="116" y2="122" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#132f4d"/>
+      <stop offset="1" stop-color="#071b2b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="18" y1="8" x2="110" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e5c477"/>
+      <stop offset="1" stop-color="#a9762f"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="122" height="122" rx="27" fill="url(#sea)" stroke="url(#gold)" stroke-width="6"/>
+  <path d="M27 37h17l-5 8 15 39 10-24 10 24 15-39-5-8h17L82 94H70l-6-16-6 16H46z" fill="#fffaf0"/>
+  <path d="M30 94c10-7 19-7 29 0 9 6 18 6 28 0 5-3 9-4 14-4" fill="none" stroke="#fffaf0" stroke-width="5" stroke-linecap="round"/>
+  <path d="M30 104c10-7 19-7 29 0 9 6 18 6 28 0 5-3 9-4 14-4" fill="none" stroke="#6ca6a2" stroke-width="4" stroke-linecap="round"/>
+  <path d="m64 87 3 5 5 3-5 3-3 6-3-6-5-3 5-3z" fill="#6ca6a2"/>
 </svg>

@@ -1,0 +1,690 @@
+{
+  "version": 1,
+  "id": "cloze-2019",
+  "year": 2019,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "Today, we live in a world where GPS systems, digital maps, and other navigation apps are all available on our smartphones. 1 of us just walk straight into the woods without a phone. But phones 2 on batteries, and batteries can die faster than we realize. 3 you get lost without a phone or a compass, and you 4 can't find north, a few tricks may help you navigate 5 to civilization, one of which is to follow the land.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Today, we live in a world where GPS systems, digital maps, and other navigation apps are all available on our smartphones."
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "of us just walk straight into the woods without a phone. But phones"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "on batteries, and batteries can die faster than we realize."
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "you get lost without a phone or a compass, and you"
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": "can't find north, a few tricks may help you navigate"
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "to civilization, one of which is to follow the land."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "When you find yourself 6 a trail, but not in a completely 7 area of land, you have to answer two questions: Which 8 is downhill, in this particular area? And where is the nearest water source? Humans overwhelmingly live in valleys, and on supplies of fresh water. 9 , if you head downhill, and follow any H,O you find, you should 10 see signs of people.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "When you find yourself"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "a trail, but not in a completely"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "area of land, you have to answer two questions: Which"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "is downhill, in this particular area? And where is the nearest water source? Humans overwhelmingly live in valleys, and on supplies of fresh water."
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": ", if you head downhill, and follow any H,O you find, you should"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "see signs of people."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "If you've explored the area before, keep an eye out for familiar sights—you may be _11 how quickly identifying a distinctive rock or tree can restore your bearings.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "If you've explored the area before, keep an eye out for familiar sights—you may be"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": "how quickly identifying a distinctive rock or tree can restore your bearings."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "Another _ 12 : Climb high and look for signs of human habitation. 13 , even in dense forest, you should be able to 14 gaps in the tree line due to roads, train tracks, and other paths people carve _ 15 the woods. Head toward these 16 to find a way out. At night, scan the horizon for 17 light sources, such as fires and streetlights, then walk toward the glow of light pollution. |",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Another"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": ": Climb high and look for signs of human habitation."
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": ", even in dense forest, you should be able to"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": "gaps in the tree line due to roads, train tracks, and other paths people carve"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "the woods. Head toward these"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "to find a way out. At night, scan the horizon for"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "light sources, such as fires and streetlights, then walk toward the glow of light pollution. |"
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "text": "- _ 18 , assuming you're lost in an area humans tend to frequent, look for the 19 we leave on the landscape. Trail blazes, tire tracks, and other features can 20 youto civilization.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "-"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": ", assuming you're lost in an area humans tend to frequent, look for the"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "we leave on the landscape. Trail blazes, tire tracks, and other features can"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "youto civilization."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "Few"
+        },
+        {
+          "key": "B",
+          "text": "Most"
+        },
+        {
+          "key": "C",
+          "text": "Some"
+        },
+        {
+          "key": "D",
+          "text": "All"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "put"
+        },
+        {
+          "key": "B",
+          "text": "take"
+        },
+        {
+          "key": "C",
+          "text": "run"
+        },
+        {
+          "key": "D",
+          "text": "come"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "Since"
+        },
+        {
+          "key": "B",
+          "text": "Until"
+        },
+        {
+          "key": "C",
+          "text": "Though"
+        },
+        {
+          "key": "D",
+          "text": "If"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "formally"
+        },
+        {
+          "key": "B",
+          "text": "literally"
+        },
+        {
+          "key": "C",
+          "text": "gradually"
+        },
+        {
+          "key": "D",
+          "text": "relatively"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "around"
+        },
+        {
+          "key": "B",
+          "text": "away"
+        },
+        {
+          "key": "C",
+          "text": "back"
+        },
+        {
+          "key": "D",
+          "text": "next"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "onto"
+        },
+        {
+          "key": "B",
+          "text": "along"
+        },
+        {
+          "key": "C",
+          "text": "across"
+        },
+        {
+          "key": "D",
+          "text": "off"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "unattractive"
+        },
+        {
+          "key": "B",
+          "text": "unfamiliar"
+        },
+        {
+          "key": "C",
+          "text": "unchanged"
+        },
+        {
+          "key": "D",
+          "text": "uncrowded"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "way"
+        },
+        {
+          "key": "B",
+          "text": "point"
+        },
+        {
+          "key": "C",
+          "text": "site"
+        },
+        {
+          "key": "D",
+          "text": "place"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "Instead"
+        },
+        {
+          "key": "B",
+          "text": "Yet"
+        },
+        {
+          "key": "C",
+          "text": "So"
+        },
+        {
+          "key": "D",
+          "text": "Besides"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "immediately"
+        },
+        {
+          "key": "B",
+          "text": "eventually"
+        },
+        {
+          "key": "C",
+          "text": "unexpectedly"
+        },
+        {
+          "key": "D",
+          "text": "intentionally"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "frightened"
+        },
+        {
+          "key": "B",
+          "text": "annoyed"
+        },
+        {
+          "key": "C",
+          "text": "surprised"
+        },
+        {
+          "key": "D",
+          "text": "confused"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "problem"
+        },
+        {
+          "key": "B",
+          "text": "result"
+        },
+        {
+          "key": "C",
+          "text": "view"
+        },
+        {
+          "key": "D",
+          "text": "option"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "Above all"
+        },
+        {
+          "key": "B",
+          "text": "For example"
+        },
+        {
+          "key": "C",
+          "text": "On average"
+        },
+        {
+          "key": "D",
+          "text": "In contrast"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "spot"
+        },
+        {
+          "key": "B",
+          "text": "avoid"
+        },
+        {
+          "key": "C",
+          "text": "bridge"
+        },
+        {
+          "key": "D",
+          "text": "separate"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "from"
+        },
+        {
+          "key": "B",
+          "text": "under"
+        },
+        {
+          "key": "C",
+          "text": "beyond"
+        },
+        {
+          "key": "D",
+          "text": "through"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "posts"
+        },
+        {
+          "key": "B",
+          "text": "breaks"
+        },
+        {
+          "key": "C",
+          "text": "shades"
+        },
+        {
+          "key": "D",
+          "text": "links"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "hidden"
+        },
+        {
+          "key": "B",
+          "text": "mysterious"
+        },
+        {
+          "key": "C",
+          "text": "artificial"
+        },
+        {
+          "key": "D",
+          "text": "limited"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "Finally"
+        },
+        {
+          "key": "B",
+          "text": "Consequently"
+        },
+        {
+          "key": "C",
+          "text": "Incidentally"
+        },
+        {
+          "key": "D",
+          "text": "Generally"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "memories"
+        },
+        {
+          "key": "B",
+          "text": "belongings"
+        },
+        {
+          "key": "C",
+          "text": "notes"
+        },
+        {
+          "key": "D",
+          "text": "marks"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "lead"
+        },
+        {
+          "key": "B",
+          "text": "adapt"
+        },
+        {
+          "key": "C",
+          "text": "restrict"
+        },
+        {
+          "key": "D",
+          "text": "expose"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807808
+}

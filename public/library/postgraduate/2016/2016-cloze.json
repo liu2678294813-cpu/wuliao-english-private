@@ -1,0 +1,680 @@
+{
+  "version": 1,
+  "id": "cloze-2016",
+  "year": 2016,
+  "label": "Section I · Use of English",
+  "paragraphs": [
+    {
+      "number": 1,
+      "text": "In Cambodia, the choice of a spouse is a complex one for the young male. It may involve not only his parents and his friends, 1 those of the young woman, but also a matchmaker. A young man can 2 a likely spouse on his own and then ask his parents to _ 3 the marriage negotiations, or the young man's parents may make the",
+      "segments": [
+        {
+          "type": "text",
+          "text": "In Cambodia, the choice of a spouse is a complex one for the young male. It may involve not only his parents and his friends,"
+        },
+        {
+          "type": "blank",
+          "number": 1
+        },
+        {
+          "type": "text",
+          "text": "those of the young woman, but also a matchmaker. A young man can"
+        },
+        {
+          "type": "blank",
+          "number": 2
+        },
+        {
+          "type": "text",
+          "text": "a likely spouse on his own and then ask his parents to"
+        },
+        {
+          "type": "blank",
+          "number": 3
+        },
+        {
+          "type": "text",
+          "text": "the marriage negotiations, or the young man's parents may make the"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "text": "choice of a spouse, giving the child little to say in the selection. 4 , a girl may veto the spouse her parents have chosen. 5 a spouse has been selected, each family Investigates the other to make sure its child is marrying 6 a good family.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "choice of a spouse, giving the child little to say in the selection."
+        },
+        {
+          "type": "blank",
+          "number": 4
+        },
+        {
+          "type": "text",
+          "text": ", a girl may veto the spouse her parents have chosen."
+        },
+        {
+          "type": "blank",
+          "number": 5
+        },
+        {
+          "type": "text",
+          "text": "a spouse has been selected, each family Investigates the other to make sure its child is marrying"
+        },
+        {
+          "type": "blank",
+          "number": 6
+        },
+        {
+          "type": "text",
+          "text": "a good family."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "text": "The traditional wedding is a long and colorful affair. Formerly it lasted three days, _ 7 by the 1980s it more commonly lasted a day and a half. Buddhist priests offer a short sermon and _ 8 prayers of blessing. Parts of the ceremony involve ritual hair cutting, 9 cotton threads soaked in holy water around the bride's and groom's wrists, and 10 a candle around a circle of happily married and respected couples to bless the _ 11 . Newlyweds traditionally move in with the wife's parents and may _ 12 with them up to a year, 13 they can build a new house nearby.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "The traditional wedding is a long and colorful affair. Formerly it lasted three days,"
+        },
+        {
+          "type": "blank",
+          "number": 7
+        },
+        {
+          "type": "text",
+          "text": "by the 1980s it more commonly lasted a day and a half. Buddhist priests offer a short sermon and"
+        },
+        {
+          "type": "blank",
+          "number": 8
+        },
+        {
+          "type": "text",
+          "text": "prayers of blessing. Parts of the ceremony involve ritual hair cutting,"
+        },
+        {
+          "type": "blank",
+          "number": 9
+        },
+        {
+          "type": "text",
+          "text": "cotton threads soaked in holy water around the bride's and groom's wrists, and"
+        },
+        {
+          "type": "blank",
+          "number": 10
+        },
+        {
+          "type": "text",
+          "text": "a candle around a circle of happily married and respected couples to bless the"
+        },
+        {
+          "type": "blank",
+          "number": 11
+        },
+        {
+          "type": "text",
+          "text": ". Newlyweds traditionally move in with the wife's parents and may"
+        },
+        {
+          "type": "blank",
+          "number": 12
+        },
+        {
+          "type": "text",
+          "text": "with them up to a year,"
+        },
+        {
+          "type": "blank",
+          "number": 13
+        },
+        {
+          "type": "text",
+          "text": "they can build a new house nearby."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "text": "Divorce is legal and easy to _ 14 , but not common. Divorced persons are 15 with some disapproval. Each spouse retains 16 property he or she 17 into the marriage, and jointly-acquired property is 18 equally. Divorced persons may remarry, but a gender prejudice 19 up: The divorced male doesn't have a waiting period before he can remarry 20 the woman must wait ten months.",
+      "segments": [
+        {
+          "type": "text",
+          "text": "Divorce is legal and easy to"
+        },
+        {
+          "type": "blank",
+          "number": 14
+        },
+        {
+          "type": "text",
+          "text": ", but not common. Divorced persons are"
+        },
+        {
+          "type": "blank",
+          "number": 15
+        },
+        {
+          "type": "text",
+          "text": "with some disapproval. Each spouse retains"
+        },
+        {
+          "type": "blank",
+          "number": 16
+        },
+        {
+          "type": "text",
+          "text": "property he or she"
+        },
+        {
+          "type": "blank",
+          "number": 17
+        },
+        {
+          "type": "text",
+          "text": "into the marriage, and jointly-acquired property is"
+        },
+        {
+          "type": "blank",
+          "number": 18
+        },
+        {
+          "type": "text",
+          "text": "equally. Divorced persons may remarry, but a gender prejudice"
+        },
+        {
+          "type": "blank",
+          "number": 19
+        },
+        {
+          "type": "text",
+          "text": "up: The divorced male doesn't have a waiting period before he can remarry"
+        },
+        {
+          "type": "blank",
+          "number": 20
+        },
+        {
+          "type": "text",
+          "text": "the woman must wait ten months."
+        }
+      ]
+    }
+  ],
+  "blanks": [
+    {
+      "id": "blank-1",
+      "number": 1,
+      "options": [
+        {
+          "key": "A",
+          "text": "by way of"
+        },
+        {
+          "key": "B",
+          "text": "as well as"
+        },
+        {
+          "key": "C",
+          "text": "on behalf of"
+        },
+        {
+          "key": "D",
+          "text": "with regard to"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-2",
+      "number": 2,
+      "options": [
+        {
+          "key": "A",
+          "text": "adapt to"
+        },
+        {
+          "key": "B",
+          "text": "provide for"
+        },
+        {
+          "key": "C",
+          "text": "compete with"
+        },
+        {
+          "key": "D",
+          "text": "decide on"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-3",
+      "number": 3,
+      "options": [
+        {
+          "key": "A",
+          "text": "close"
+        },
+        {
+          "key": "B",
+          "text": "renew"
+        },
+        {
+          "key": "C",
+          "text": "arrange"
+        },
+        {
+          "key": "D",
+          "text": "postpone"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-4",
+      "number": 4,
+      "options": [
+        {
+          "key": "A",
+          "text": "In theory"
+        },
+        {
+          "key": "B",
+          "text": "Above all"
+        },
+        {
+          "key": "C",
+          "text": "In time"
+        },
+        {
+          "key": "D",
+          "text": "For example"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-5",
+      "number": 5,
+      "options": [
+        {
+          "key": "A",
+          "text": "Although"
+        },
+        {
+          "key": "B",
+          "text": "Lest"
+        },
+        {
+          "key": "C",
+          "text": "After"
+        },
+        {
+          "key": "D",
+          "text": "Unless"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-6",
+      "number": 6,
+      "options": [
+        {
+          "key": "A",
+          "text": "into"
+        },
+        {
+          "key": "B",
+          "text": "within"
+        },
+        {
+          "key": "C",
+          "text": "from"
+        },
+        {
+          "key": "D",
+          "text": "through"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-7",
+      "number": 7,
+      "options": [
+        {
+          "key": "A",
+          "text": "since"
+        },
+        {
+          "key": "B",
+          "text": "or"
+        },
+        {
+          "key": "C",
+          "text": "but"
+        },
+        {
+          "key": "D",
+          "text": "so"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-8",
+      "number": 8,
+      "options": [
+        {
+          "key": "A",
+          "text": "test"
+        },
+        {
+          "key": "B",
+          "text": "copy"
+        },
+        {
+          "key": "C",
+          "text": "recite"
+        },
+        {
+          "key": "D",
+          "text": "create"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-9",
+      "number": 9,
+      "options": [
+        {
+          "key": "A",
+          "text": "folding"
+        },
+        {
+          "key": "B",
+          "text": "piling"
+        },
+        {
+          "key": "C",
+          "text": "wrapping"
+        },
+        {
+          "key": "D",
+          "text": "tying"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-10",
+      "number": 10,
+      "options": [
+        {
+          "key": "A",
+          "text": "lighting"
+        },
+        {
+          "key": "B",
+          "text": "passing"
+        },
+        {
+          "key": "C",
+          "text": "hiding"
+        },
+        {
+          "key": "D",
+          "text": "serving"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-11",
+      "number": 11,
+      "options": [
+        {
+          "key": "A",
+          "text": "meeting"
+        },
+        {
+          "key": "B",
+          "text": "association"
+        },
+        {
+          "key": "C",
+          "text": "collection"
+        },
+        {
+          "key": "D",
+          "text": "union"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-12",
+      "number": 12,
+      "options": [
+        {
+          "key": "A",
+          "text": "grow"
+        },
+        {
+          "key": "B",
+          "text": "part"
+        },
+        {
+          "key": "C",
+          "text": "deal"
+        },
+        {
+          "key": "D",
+          "text": "live"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-13",
+      "number": 13,
+      "options": [
+        {
+          "key": "A",
+          "text": "whereas"
+        },
+        {
+          "key": "B",
+          "text": "until"
+        },
+        {
+          "key": "C",
+          "text": "for"
+        },
+        {
+          "key": "D",
+          "text": "if"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-14",
+      "number": 14,
+      "options": [
+        {
+          "key": "A",
+          "text": "obtain"
+        },
+        {
+          "key": "B",
+          "text": "follow"
+        },
+        {
+          "key": "C",
+          "text": "challenge"
+        },
+        {
+          "key": "D",
+          "text": "avoid"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-15",
+      "number": 15,
+      "options": [
+        {
+          "key": "A",
+          "text": "isolated"
+        },
+        {
+          "key": "B",
+          "text": "persuaded"
+        },
+        {
+          "key": "C",
+          "text": "viewed"
+        },
+        {
+          "key": "D",
+          "text": "exposed"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-16",
+      "number": 16,
+      "options": [
+        {
+          "key": "A",
+          "text": "wherever"
+        },
+        {
+          "key": "B",
+          "text": "however"
+        },
+        {
+          "key": "C",
+          "text": "whenever"
+        },
+        {
+          "key": "D",
+          "text": "whatever"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-17",
+      "number": 17,
+      "options": [
+        {
+          "key": "A",
+          "text": "changed"
+        },
+        {
+          "key": "B",
+          "text": "brought"
+        },
+        {
+          "key": "C",
+          "text": "shaped"
+        },
+        {
+          "key": "D",
+          "text": "pushed"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-18",
+      "number": 18,
+      "options": [
+        {
+          "key": "A",
+          "text": "divided"
+        },
+        {
+          "key": "B",
+          "text": "invested"
+        },
+        {
+          "key": "C",
+          "text": "donated"
+        },
+        {
+          "key": "D",
+          "text": "withdrawn"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-19",
+      "number": 19,
+      "options": [
+        {
+          "key": "A",
+          "text": "clears"
+        },
+        {
+          "key": "B",
+          "text": "warms"
+        },
+        {
+          "key": "C",
+          "text": "shows"
+        },
+        {
+          "key": "D",
+          "text": "breaks"
+        }
+      ],
+      "complete": true
+    },
+    {
+      "id": "blank-20",
+      "number": 20,
+      "options": [
+        {
+          "key": "A",
+          "text": "while"
+        },
+        {
+          "key": "B",
+          "text": "so that"
+        },
+        {
+          "key": "C",
+          "text": "once"
+        },
+        {
+          "key": "D",
+          "text": "in that"
+        }
+      ],
+      "complete": true
+    }
+  ],
+  "source": {
+    "type": "official-exam-pdf",
+    "method": "offline-ocr",
+    "sourcePages": [
+      2,
+      3
+    ]
+  },
+  "warnings": [],
+  "createdAt": 1786271807759
+}
