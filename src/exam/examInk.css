@@ -1,0 +1,36 @@
+/* 考试笔迹 Surface 定位样式。
+   共享 Toolbar 的视觉契约（高度 / 按钮 / slider / 颜色 / 折叠 pill）唯一来源是
+   src/redesign/reader.css；本文件禁止重复定义任何 toolbar 视觉尺寸。 */
+
+.exam-ink-surface {
+  position: relative;
+  min-width: 0;
+}
+
+.exam-ink-surface.is-disabled .exam-ink-content {
+  pointer-events: none;
+}
+
+.exam-ink-content {
+  position: relative;
+  min-height: 1px;
+}
+
+.exam-ink-canvas,
+.exam-ink-preview {
+  position: absolute;
+  z-index: 2;
+  inset: 0 auto auto 0;
+  pointer-events: none;
+}
+
+.exam-ink-preview {
+  z-index: 3;
+}
+
+.exam-ink-warning {
+  margin: 8px 0;
+  color: #9e3e2c;
+  font-size: 13px;
+  line-height: 1.5;
+}

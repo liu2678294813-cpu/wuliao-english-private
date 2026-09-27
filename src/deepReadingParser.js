@@ -1,5 +1,7 @@
 const optionPattern = /^(?:\[\s*([A-D])\s*\]|\(\s*([A-D])\s*\)|([A-D])[.)])\s*(.*)$/i;
 const numberedQuestionPattern = /^(\d{1,3})\s*[.)]\s*(?=[A-Z"'])(.{5,})$/;
+import { assembleReadingPageGroups } from "./examPageStructure.js";
+
 const textMarkerPattern = /^\s*(?:Text|Passage)\s*([A-Za-z0-9]+)\s*$/gim;
 
 function cleanLine(value) {
@@ -208,7 +210,7 @@ function mergeQuestions(target, questions) {
   }
 }
 
-function makePassage(label, paragraphs, questions, index) {
+function makePassage(label, paragraphs, questions, index, sourcePages = []) {
   return {
     id: `passage-${String(label || index + 1).toLowerCase()}`,
     label: label ? `Text ${label}` : `精读文章 ${index + 1}`,
@@ -221,6 +223,7 @@ function makePassage(label, paragraphs, questions, index) {
       ...question,
       id: `q-${index + 1}-${question.number || questionIndex + 1}-${questionIndex}`,
     })),
+    sourcePages,
   };
 }
 
@@ -294,6 +297,19 @@ export function buildDeepReading(pages, documentTitle) {
   const matches = [...combined.matchAll(textMarkerPattern)];
   const groups = new Map();
 
+  assembleReadingPageGroups(pages).forEach((pageGroup, index) => {
+    const paragraphs = splitArticleParagraphs(pageGroup.text);
+    const questions = parseQuestionsFromText(pageGroup.text);
+    groups.set(pageGroup.label.toLowerCase(), {
+      label: pageGroup.label,
+      paragraphs,
+      questions,
+      score: paragraphs.join(" ").length,
+      order: index,
+      sourcePages: pageGroup.sourcePages,
+    });
+  });
+
   matches.forEach((match, index) => {
     const label = match[1];
     const segmentEnd = matches[index + 1]?.index ?? combined.length;
@@ -302,7 +318,7 @@ export function buildDeepReading(pages, documentTitle) {
     const paragraphs = splitArticleParagraphs(segment);
     const questions = parseQuestionsFromText(segment);
     const key = label.toLowerCase();
-    if (!groups.has(key)) groups.set(key, { label, paragraphs: [], questions: [], score: 0, order: index });
+    if (!groups.has(key)) groups.set(key, { label, paragraphs: [], questions: [], score: 0, order: index, sourcePages: [] });
     const group = groups.get(key);
     const score = paragraphs.join(" ").length;
     if (score > group.score) {
@@ -316,7 +332,7 @@ export function buildDeepReading(pages, documentTitle) {
     .filter((group) => group.score >= 300 && !isSentenceWorksheet(group.paragraphs))
     .sort((a, b) => a.order - b.order)
     .slice(0, 8)
-    .map((group, index) => makePassage(group.label, group.paragraphs, group.questions, index));
+    .map((group, index) => makePassage(group.label, group.paragraphs, group.questions, index, group.sourcePages));
 
   passages = normalizePassages(passages);
 

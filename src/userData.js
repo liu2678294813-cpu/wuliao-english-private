@@ -1,10 +1,23 @@
+import { AppEvent } from "./events/eventTypes.js";
+import { emitAppEvent } from "./events/appEvents.js";
+import { inkStorageReady, isDurableInkKey, readDurableInk, writeDurableInk, listDurableInk } from "./durableInkStorage.js";
+import { isSerializedInkSnapshot } from "./ink/inkSnapshot.js";
+
 export const CURRENT_USER_KEY = "kaoyan_vocab_current_user";
 
 const AUTH_DB_NAME = "KaoyanVocabDB";
 const USERS_STORE = "users";
+const ANDROID_PASSWORD_VERIFIER_PREFIX = "account:password-verifier:v1:";
 const LEGACY_OWNER_KEY = "wuliao_auth_legacy_owner";
 const USER_PREFIX = "wuliao:user:";
 const PASSWORD_ITERATIONS = 210000;
+const PASSWORD_VERIFIER_FIELDS = Object.freeze([
+  "passwordHash",
+  "passwordSalt",
+  "passwordIterations",
+  "passwordVersion",
+  "passwordUpdatedAt",
+]);
 
 function requestResult(request) {
   return new Promise((resolve, reject) => {
@@ -62,6 +75,72 @@ function openAuthDatabase() {
   });
 }
 
+function androidSecureStore() {
+  return globalThis.window?.AndroidSecureStore || null;
+}
+
+function androidPasswordVerifierKey(username) {
+  return `${ANDROID_PASSWORD_VERIFIER_PREFIX}${encodeURIComponent(username)}`;
+}
+
+function passwordVerifierFromAccount(account) {
+  if (!account?.passwordHash || !account?.passwordSalt) return null;
+  return Object.fromEntries(PASSWORD_VERIFIER_FIELDS.map((field) => [field, account[field]]));
+}
+
+function accountWithoutPasswordVerifier(account) {
+  const profile = { ...(account || {}) };
+  PASSWORD_VERIFIER_FIELDS.forEach((field) => { delete profile[field]; });
+  return profile;
+}
+
+function parsePasswordVerifier(value) {
+  try {
+    const parsed = JSON.parse(String(value || ""));
+    return parsed?.passwordHash && parsed?.passwordSalt ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function putAccountRecord(account) {
+  const database = await openAuthDatabase();
+  try {
+    const transaction = database.transaction(USERS_STORE, "readwrite");
+    transaction.objectStore(USERS_STORE).put(account);
+    await transactionDone(transaction);
+  } finally {
+    database.close();
+  }
+}
+
+async function writeAndroidPasswordVerifier(username, verifier, secureStore = androidSecureStore()) {
+  const serialized = JSON.stringify(verifier);
+  const key = androidPasswordVerifierKey(username);
+  await secureStore.set(key, serialized);
+  const confirmed = String(await secureStore.get(key) || "");
+  if (confirmed !== serialized) throw new Error("Android 安全存储无法确认账号凭据写入");
+}
+
+async function migrateAndroidPasswordVerifier(account) {
+  const secureStore = androidSecureStore();
+  if (!secureStore?.get || !secureStore?.set || !account?.username) return account;
+
+  const profile = accountWithoutPasswordVerifier(account);
+  const legacyVerifier = passwordVerifierFromAccount(account);
+  const storedVerifier = parsePasswordVerifier(
+    await secureStore.get(androidPasswordVerifierKey(account.username)),
+  );
+  const verifier = storedVerifier || legacyVerifier;
+  if (!verifier) return profile;
+
+  if (!storedVerifier) {
+    await writeAndroidPasswordVerifier(account.username, verifier, secureStore);
+  }
+  if (legacyVerifier) await putAccountRecord(profile);
+  return { ...profile, ...verifier };
+}
+
 function bytesToBase64(bytes) {
   let binary = "";
   bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
@@ -97,7 +176,7 @@ export function setCurrentUsername(username) {
   const value = String(username || "").trim();
   if (value) localStorage.setItem(CURRENT_USER_KEY, value);
   else localStorage.removeItem(CURRENT_USER_KEY);
-  window.dispatchEvent(new CustomEvent("wuliao:account-changed", { detail: { username: value } }));
+  emitAppEvent(AppEvent.ACCOUNT_CHANGED, { username: value });
 }
 
 export function userStoragePrefix(username = getCurrentUsername()) {
@@ -112,6 +191,7 @@ export function scopedUserKey(key, username = getCurrentUsername()) {
 
 export function getUserItem(key, username = getCurrentUsername()) {
   if (!username) return null;
+  if (isDurableInkKey(key) && inkStorageReady(username)) return readDurableInk(username, key);
   const scopedValue = localStorage.getItem(scopedUserKey(key, username));
   if (scopedValue !== null) return scopedValue;
   if (localStorage.getItem(LEGACY_OWNER_KEY) === username) {
@@ -122,6 +202,8 @@ export function getUserItem(key, username = getCurrentUsername()) {
 
 export function setUserItem(key, value, username = getCurrentUsername()) {
   if (!username) throw new Error("请先登录账号");
+  if (isDurableInkKey(key) && inkStorageReady(username)) return writeDurableInk(username, key,
+    isSerializedInkSnapshot(value) ? value : String(value));
   if (
     localStorage.getItem(LEGACY_OWNER_KEY) === username
     && localStorage.getItem(key) !== null
@@ -135,6 +217,7 @@ export function setUserItem(key, value, username = getCurrentUsername()) {
 
 export function removeUserItem(key, username = getCurrentUsername()) {
   if (!username) return;
+  if (isDurableInkKey(key) && inkStorageReady(username)) writeDurableInk(username, key, null);
   localStorage.removeItem(scopedUserKey(key, username));
   if (localStorage.getItem(LEGACY_OWNER_KEY) === username) localStorage.removeItem(key);
 }
@@ -158,6 +241,10 @@ export function listUserItems(prefix = "", username = getCurrentUsername()) {
       key,
       value: localStorage.getItem(rawKey),
     });
+  }
+  if (inkStorageReady(username)) {
+    for (const key of items.keys()) if (isDurableInkKey(key)) items.delete(key);
+    for (const entry of listDurableInk(username)) if (entry.key.startsWith(prefix)) items.set(entry.key, entry);
   }
   return [...items.values()];
 }
@@ -189,13 +276,16 @@ export function migrateLegacyUserStorage(username) {
 
 export async function listAccounts() {
   const database = await openAuthDatabase();
+  let users;
   try {
     const transaction = database.transaction(USERS_STORE, "readonly");
-    const users = await requestResult(transaction.objectStore(USERS_STORE).getAll());
-    return users.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    users = await requestResult(transaction.objectStore(USERS_STORE).getAll());
   } finally {
     database.close();
   }
+  const migrated = [];
+  for (const account of users) migrated.push(await migrateAndroidPasswordVerifier(account));
+  return migrated.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
 export async function getAccount(username) {
@@ -203,7 +293,8 @@ export async function getAccount(username) {
   const database = await openAuthDatabase();
   try {
     const transaction = database.transaction(USERS_STORE, "readonly");
-    return await requestResult(transaction.objectStore(USERS_STORE).get(username));
+    const account = await requestResult(transaction.objectStore(USERS_STORE).get(username));
+    return await migrateAndroidPasswordVerifier(account);
   } finally {
     database.close();
   }
@@ -217,25 +308,24 @@ export async function saveAccountPassword(username, password, { createOnly = fal
   if (createOnly && existing) throw new Error("这个账号已经存在");
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const passwordHash = await derivePassword(password, salt);
-  const database = await openAuthDatabase();
-  try {
-    const transaction = database.transaction(USERS_STORE, "readwrite");
-    const store = transaction.objectStore(USERS_STORE);
-    store.put({
-      ...(existing || {}),
-      username: normalizedUsername,
-      createdAt: existing?.createdAt || Date.now(),
-      passwordHash,
-      passwordSalt: bytesToBase64(salt),
-      passwordIterations: PASSWORD_ITERATIONS,
-      passwordVersion: 1,
-      passwordUpdatedAt: Date.now(),
-    });
-    await transactionDone(transaction);
-    return normalizedUsername;
-  } finally {
-    database.close();
+  const next = {
+    ...(existing || {}),
+    username: normalizedUsername,
+    createdAt: existing?.createdAt || Date.now(),
+    passwordHash,
+    passwordSalt: bytesToBase64(salt),
+    passwordIterations: PASSWORD_ITERATIONS,
+    passwordVersion: 1,
+    passwordUpdatedAt: Date.now(),
+  };
+  const secureStore = androidSecureStore();
+  if (secureStore?.get && secureStore?.set) {
+    await writeAndroidPasswordVerifier(normalizedUsername, passwordVerifierFromAccount(next), secureStore);
+    await putAccountRecord(accountWithoutPasswordVerifier(next));
+  } else {
+    await putAccountRecord(next);
   }
+  return normalizedUsername;
 }
 
 export async function verifyAccountPassword(username, password) {

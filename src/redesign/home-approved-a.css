@@ -1,0 +1,112 @@
+
+/* Approved A home: presentation only. Keep planner actions and all six metrics. */
+.ds-shell .home-page { background: #faf8f4; }
+/* User explicitly removed this explanation entry; prerequisite logic is unchanged. */
+.ds-shell .home-page .study-planner-blocked { display: none; }
+.ds-shell .home-main { gap: 14px; padding-top: 30px; }
+.home-greeting { min-height: 70px; }
+.home-greeting h1 { font-family: var(--ds-sans); font-weight: 700; font-size: clamp(28px, 2.6vw, 36px); }
+.home-greeting p { margin: 10px 0 0; color: var(--ds-ink-soft); font-size: 14px; line-height: 1.6; }
+.home-greeting p strong { font-weight: 500; }
+.ds-shell .home-page .today-tasks,
+.ds-shell .home-page .home-overview,
+.ds-shell .home-page .recent-section {
+  padding: 20px; border: 1px solid #e3ddd3; border-radius: 16px;
+  background: rgba(255,255,255,.62); box-shadow: none;
+}
+.ds-shell .home-page .study-planner-heading { display: flex; margin-bottom: 14px; }
+.ds-shell .home-page .study-planner-heading h2,
+.ds-shell .home-page .home-overview-title,
+.ds-shell .home-page .recent-section h2 { margin: 0; font: 650 20px/1.4 var(--ds-sans); color: var(--ds-ink); }
+.ds-shell .home-page .study-planner-heading small { display: none; }
+.ds-shell .home-page .study-planner-budget { padding: 12px 16px; border-color: #e3ddd3; background: transparent; }
+.ds-shell .home-page .study-planner-budget-options { gap: 8px; flex-wrap: wrap; }
+.ds-shell .home-page .study-planner-budget-options button { min-height: 40px; padding-inline: 18px; font-size: 13px; border-radius: 8px; }
+.ds-shell .home-page .study-planner-budget-options button.active { background: var(--ds-teal-deep); border-color: var(--ds-teal-deep); color: white; }
+.ds-shell .home-page .study-planner-summary { background: transparent; padding: 10px 0; border: 0; }
+.ds-shell .home-page .study-planner-section > h3 { color: var(--ds-ink-soft); font-size: 13px; }
+.ds-shell .home-page .planner-task-row { min-height: 100px; padding: 16px 20px; border-color: #e5dfd5; border-radius: 12px; background: #fdfcf9; }
+.ds-shell .home-page .planner-task-main strong { font-size: 17px; line-height: 1.5; }
+.ds-shell .home-page .planner-task-subtitle { font-size: 13px; line-height: 1.6; }
+.ds-shell .home-page .planner-task-reason { font-size: 12px; line-height: 1.5; }
+.ds-shell .home-page .planner-task-estimate { font-size: 12px; }
+.ds-shell .home-page .planner-task-actions .primary-button,
+.ds-shell .home-page .planner-continue-side .primary-button { min-width: 104px; min-height: 40px; border-radius: 8px; border-color: #176b75; background: linear-gradient(110deg,#127681,#1c6872); color: white; box-shadow: none; font-size: 15px; }
+.ds-shell .home-page .planner-defer-button,
+.ds-shell .home-page .planner-skip-button { min-height: 32px; font: 12px/1.4 var(--ds-sans); text-decoration: none; }
+.ds-shell .home-page .today-support-links { margin-top: 12px; padding: 8px 12px; min-height: 48px; border: 1px solid #e5dfd5; border-radius: 10px; }
+.ds-shell .home-page .today-archive-link { margin-left: auto; border-color: #acc4c9; border-radius: 8px; background: transparent; }
+/* Keep the existing archive handler/modal, but present its trigger in the requested
+   upper-right title area on tablets and desktops. */
+@media (min-width: 761px) {
+  .ds-shell .home-main { position: relative; }
+  .ds-shell .home-page .today-archive-link {
+    position: absolute;
+    z-index: 1;
+    top: 30px;
+    right: 0;
+    margin: 0;
+    min-height: 40px;
+    padding-inline: 14px;
+    background: var(--ds-surface-elevated);
+  }
+  .ds-shell .home-page .home-greeting time { margin-right: 160px; }
+  .ds-shell .home-page .today-support-links:has(> .today-archive-link:only-child) { display: contents; }
+}
+.ds-shell .home-page .home-overview { overflow: visible; }
+.ds-shell .home-page .home-overview-title { margin-bottom: 14px; }
+.ds-shell .home-page .overview-metrics {
+  grid-template-columns: minmax(210px,1.25fr) repeat(6,minmax(0, .5fr));
+  grid-template-rows: repeat(2,minmax(96px,auto)); gap: 0; min-height: 212px;
+}
+.ds-shell .home-page .overview-metrics article { min-height: 0; padding: 16px 24px; gap: 12px; grid-column: span 2; border: 0; border-left: 1px solid #e5dfd5; background: #fdfcf9; }
+.ds-shell .home-page .overview-metrics .overview-score { grid-column: 1; grid-row: 1 / 3; margin-right: 20px; padding: 20px; border: 1px solid #cedde0; border-radius: 10px; background: #f0f6f5; }
+.ds-shell .home-page .overview-metrics article:nth-child(2) { border-top: 1px solid #e5dfd5; border-top-left-radius: 10px; }
+.ds-shell .home-page .overview-metrics article:nth-child(3) { border-top: 1px solid #e5dfd5; }
+.ds-shell .home-page .overview-metrics article:nth-child(4) { border-top: 1px solid #e5dfd5; border-right: 1px solid #e5dfd5; border-top-right-radius: 10px; }
+.ds-shell .home-page .overview-metrics article:nth-child(5) { grid-column: 2 / 5; border-top: 1px solid #e5dfd5; border-bottom: 1px solid #e5dfd5; border-bottom-left-radius: 10px; }
+.ds-shell .home-page .overview-metrics article:nth-child(6) { grid-column: 5 / 8; border: 1px solid #e5dfd5; border-bottom-right-radius: 10px; }
+.ds-shell .home-page .overview-metrics article > strong { font-family: var(--ds-sans); font-size: clamp(28px, 2.5vw, 38px); font-weight: 600; line-height: 1.2; }
+.ds-shell .home-page .overview-metrics article > span { font-size: 13px; line-height: 1.5; }
+.ds-shell .home-page .overview-metrics article > small { color: var(--ds-ink-soft); font-size: 13px; }
+.ds-shell .home-page .overview-score-total { font-size: .53em; font-weight: 400; color: var(--ds-ink-soft); white-space: nowrap; }
+.ds-shell .home-page .overview-rank-detail { align-self: start; min-height: 32px; font-size: 13px; }
+.overview-score-progress { display: block; width: 100%; height: 8px; border: 0; border-radius: 999px; overflow: hidden; appearance: none; background: #d9e5e6; color: var(--ds-teal); }
+.overview-score-progress::-webkit-progress-bar { background: #d9e5e6; border-radius: 999px; }
+.overview-score-progress::-webkit-progress-value { background: #177681; border-radius: 999px; }
+.overview-score-progress::-moz-progress-bar { background: #177681; border-radius: 999px; }
+.ds-shell .home-page .recent-card { min-height: 108px; padding: 18px; border: 1px solid #e3ddd3; border-radius: 10px; background: #fdfbf7; text-align: left; }
+.ds-shell .home-page .recent-card strong { font: 650 16px/1.5 var(--ds-sans); }
+.ds-shell .home-page .recent-card > span { color: var(--ds-ink-soft); font-size: 12px; }
+.ds-shell .home-page button:focus-visible { outline: 2px solid #176b75; outline-offset: 3px; }
+@media (max-width: 1000px) {
+  .ds-shell .home-page .overview-metrics { grid-template-columns: minmax(180px,1.2fr) repeat(6,minmax(0,.5fr)); }
+  .ds-shell .home-page .overview-metrics article { padding: 14px; }
+  .ds-shell .home-page .overview-metrics .overview-score { margin-right: 12px; padding: 16px; }
+}
+@media (max-width: 760px) {
+  .ds-shell .home-page .home-main { width: calc(100% - 24px); gap: 12px; padding-top: 20px; }
+  .home-greeting { align-items: start; flex-direction: column; gap: 8px; }
+  .home-greeting h1 { font-size: 28px; }
+  .home-greeting p { font-size: 13px; }
+  .home-greeting time { font-size: 12px; }
+  .ds-shell .home-page .today-tasks,
+  .ds-shell .home-page .home-overview,
+  .ds-shell .home-page .recent-section { padding: 14px; border-radius: 14px; }
+  .ds-shell .home-page .study-planner-budget { padding: 10px; }
+  .ds-shell .home-page .study-planner-budget-options { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .ds-shell .home-page .study-planner-budget-options button { min-height: 44px; padding-inline: 4px; }
+  .ds-shell .home-page .planner-task-row { padding: 14px; gap: 12px; }
+  .ds-shell .home-page .planner-task-main strong { font-size: 15px; }
+  .ds-shell .home-page .planner-task-actions { flex-wrap: wrap; }
+  .ds-shell .home-page .planner-task-actions .primary-button,
+  .ds-shell .home-page .planner-defer-button,
+  .ds-shell .home-page .planner-skip-button { min-height: 44px; }
+  .ds-shell .home-page .overview-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: auto; gap: 0; }
+  .ds-shell .home-page .overview-metrics article:nth-child(n) { grid-column: auto; grid-row: auto; padding: 16px 12px; border: 0; border-bottom: 1px solid #e3ddd3; border-radius: 0; text-align: left; align-items: stretch; }
+  .ds-shell .home-page .overview-metrics article.overview-score { grid-column: 1 / -1; margin: 0 0 6px; padding: 18px; border: 1px solid #cedde0; border-radius: 10px; }
+  .ds-shell .home-page .overview-metrics article > strong { font-size: 30px; }
+  .ds-shell .home-page .overview-metrics .overview-score > strong { font-size: 40px; }
+  .ds-shell .home-page .overview-metrics article:nth-child(6) { grid-column: 1 / -1; }
+  .ds-shell .home-page .recent-grid { grid-template-columns: 1fr; }
+}

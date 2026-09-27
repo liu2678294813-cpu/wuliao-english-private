@@ -22,7 +22,7 @@ async function loadDictionary() {
 }
 
 export async function lookupUnknownWordMeaning(word) {
-  dictionaryPromise ||= loadDictionary();
+  dictionaryPromise ||= loadDictionary().catch((reason) => { dictionaryPromise = null; throw reason; });
   const dictionary = await dictionaryPromise;
   return dictionary.get(normalizeUnknownWord(word)) || "";
 }

@@ -1,0 +1,39 @@
+.translation-unit-tools { position: relative; }
+.translation-ocr-tools {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+  background: #fff;
+}
+.translation-ocr-button {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid #bbd7d5;
+  border-radius: 8px;
+  background: #eef7f5;
+  color: #0b6f6b;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.translation-has-transcript > .deep-writing-lines { color: transparent; caret-color: transparent; }
+.translation-has-transcript > .deep-writing-lines::selection { color: transparent; background: transparent; }
+.translation-ocr-preview { margin: 14px 0; }
+.translation-ocr-preview figcaption, .translation-ocr-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: #41596a; }
+.translation-ocr-preview img { display: block; max-width: 100%; max-height: 220px; object-fit: contain; border: 1px solid #e3e9e9; border-radius: 6px; }
+.translation-ocr-notice, .translation-ocr-legacy { padding: 10px 12px; border-radius: 8px; background: #fff7e6; color: #865b18; font-size: 12px; line-height: 1.6; }
+.translation-ocr-legacy { margin: 12px 0; }
+.translation-ocr-legacy p { white-space: pre-wrap; }
+.translation-ocr-legacy small { display: block; }
+.translation-ocr-legacy button { margin-top: 8px; border: 1px solid #d7bd8a; background: white; border-radius: 6px; padding: 8px; color: inherit; cursor: pointer; }
+.translation-ocr-actions button:disabled { opacity: .55; cursor: default; }
+.translation-ocr-panel .transcription-input[readonly] { background: #f6f8f8; }
+.exporting-pdf .translation-ocr-tools { display: none; }
+@media (max-width: 600px) {
+  .translation-ocr-actions { gap: 6px; }
+  .translation-ocr-actions button { padding-inline: 8px; }
+}

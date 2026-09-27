@@ -1,0 +1,1490 @@
+/* Reader Chrome / Deep Sea
+   Presentation-only overrides. The workbook and PDF surfaces keep their
+   existing DOM, measurements, events, persistence, and ink layers. */
+
+.reader-page {
+
+  --reader-header-height: 66px;
+  --reader-stage-height: 48px;
+  --reader-sticky-top: calc(var(--reader-header-height) + var(--reader-stage-height));
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, .92), transparent 46%),
+    var(--ds-canvas, #f4efe5);
+  color: var(--ds-ink, #092231);
+
+}
+
+.custom-workbook-page {
+
+  --reader-header-height: 56px;
+  --reader-stage-height: 43px;
+  /* Panels sit below the real toolbar row, not its nominal height after the
+     reader has collapsed that row. */
+  --reader-panel-toolbar-height: var(--reader-toolbar-height);
+
+}
+
+/* 三宿主共享同一 Toolbar 行高契约（42px reserved row，勿改）：
+   精读 = custom-workbook 预留行（历史 normalized ink 对齐），完形 / 考试复用同一共享值。
+   控件视觉 40px、伪元素 44px 命中区见文末 visual-only contract。 */
+.custom-workbook-page,
+.cloze-reader-page,
+.exam-session {
+  --reader-toolbar-height: 42px;
+}
+
+/* Context bar */
+.reader-page > .reader-header {
+
+  height: var(--reader-header-height);
+  padding-inline: clamp(14px, 2vw, 28px);
+  border-bottom: 1px solid var(--ds-line, #d8d0c1);
+  background: rgba(253, 251, 246, .98);
+  color: var(--ds-ink, #092231);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+
+}
+
+.reader-page > .reader-header .back-button.light {
+
+  color: var(--ds-ink-soft, #50636b);
+
+}
+
+.reader-page > .reader-header .back-button.light:hover {
+
+  color: var(--ds-teal-deep, #176467);
+
+}
+
+.reader-page > .reader-header .reader-title {
+
+  gap: 3px;
+
+}
+
+.reader-page > .reader-header .reader-title small {
+
+  color: var(--ds-teal, #2f7f7d);
+  font-size: 7px;
+  font-weight: 750;
+  letter-spacing: .12em;
+
+}
+
+.reader-page > .reader-header .reader-title strong {
+
+  color: var(--ds-ink, #092231);
+  font-family: var(--ds-serif, Georgia, serif);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: .02em;
+
+}
+
+.reader-page > .reader-header .reader-status {
+
+  color: var(--ds-ink-soft, #50636b);
+
+}
+
+.reader-page > .reader-header .reader-status span {
+
+  background: #20a176;
+  box-shadow: 0 0 0 4px rgba(32, 161, 118, .1);
+
+}
+
+.custom-workbook-page > .reader-header .export-pdf-button,
+.custom-workbook-page > .reader-header .source-button {
+
+  min-height: 31px;
+  border: 1px solid rgba(23, 100, 103, .46);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ds-teal-deep, #176467);
+  box-shadow: none;
+
+}
+
+.custom-workbook-page > .reader-header .export-pdf-button {
+
+  background: #edf6f3;
+
+}
+
+/* Seven structured stages / eight original-PDF stages stay separate. */
+.reader-page > .stage-nav {
+
+  top: var(--reader-header-height);
+  min-height: var(--reader-stage-height);
+  height: var(--reader-stage-height);
+  padding-inline: clamp(10px, 2vw, 28px);
+  border-bottom: 1px solid var(--ds-line, #d8d0c1);
+  background: rgba(250, 248, 243, .98);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+
+}
+
+.reader-page > .stage-nav button {
+
+  min-height: var(--reader-stage-height);
+  padding-inline: clamp(9px, 1.15vw, 17px);
+  color: var(--ds-ink-soft, #50636b);
+  font-size: var(--ds-text-md, 14px);
+  font-weight: 650;
+
+}
+
+.reader-page > .stage-nav button span {
+
+  width: 20px;
+  height: 20px;
+  border: 1px solid #aeb9b9;
+  background: #fbfaf6;
+  color: var(--ds-ink, #092231);
+  font-family: var(--ds-serif, Georgia, serif);
+  font-size: 11px;
+
+}
+
+.reader-page > .stage-nav button.active,
+.reader-page > .stage-nav button.current,
+.reader-page > .stage-nav button.completed {
+
+  color: var(--ds-teal-deep, #176467);
+
+}
+
+.reader-page > .stage-nav button.active::after {
+
+  right: 8px;
+  left: 8px;
+  height: 2px;
+  background: var(--ds-teal, #2f7f7d);
+
+}
+
+.reader-page > .stage-nav button.active span,
+.reader-page > .stage-nav button.current span,
+.reader-page > .stage-nav button.completed span {
+
+  border-color: var(--ds-teal, #2f7f7d);
+  background: var(--ds-teal, #2f7f7d);
+  color: white;
+
+}
+
+.reader-page > .stage-nav button.locked {
+
+  opacity: .68;
+
+}
+
+.custom-workbook-page .flow-task-chip {
+
+  min-height: 29px;
+  padding-left: 14px;
+  border-left: 1px solid var(--ds-line, #d8d0c1);
+  color: var(--ds-ink-soft, #50636b);
+
+}
+
+.custom-workbook-page .flow-task-chip button {
+
+  border-radius: 6px;
+  background: transparent;
+
+}
+
+/* Normal-flow sticky toolbar. The structured reader deliberately overlaps
+   its existing 42px blank top padding so every workbook section stays at the
+   same document coordinate and historic normalized ink remains aligned. */
+.reader-page > .annotation-toolbar,
+.cloze-reader-page > .annotation-toolbar,
+.exam-session > .annotation-toolbar {
+
+  position: sticky;
+  z-index: var(--ds-z-sticky, 40);
+  top: var(--reader-sticky-top);
+  right: auto;
+  left: auto;
+  width: 100%;
+  max-width: 100%;
+  height: var(--reader-toolbar-height);
+  min-height: var(--reader-toolbar-height);
+  margin: 0;
+  padding: 4px clamp(12px, 2vw, 28px);
+  box-sizing: border-box;
+  gap: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 0;
+  border-bottom: 1px solid var(--ds-line, #d8d0c1);
+  border-radius: 0;
+  background: rgba(253, 251, 246, .98);
+  color: var(--ds-ink, #092231);
+  box-shadow: 0 8px 18px rgba(9, 34, 49, .055);
+  backdrop-filter: blur(14px);
+  scrollbar-color: rgba(47, 127, 125, .35) transparent;
+  scrollbar-width: none;
+
+}
+
+.reader-page > .annotation-toolbar > button,
+.cloze-reader-page > .annotation-toolbar > button,
+.exam-session > .annotation-toolbar > button,
+.reader-page > .annotation-toolbar .input-mode-picker button,
+.cloze-reader-page > .annotation-toolbar .input-mode-picker button,
+.exam-session > .annotation-toolbar .input-mode-picker button,
+.reader-page > .annotation-toolbar .tool-mode-picker button,
+.cloze-reader-page > .annotation-toolbar .tool-mode-picker button,
+.exam-session > .annotation-toolbar .tool-mode-picker button {
+
+  color: var(--ds-ink-soft, #50636b);
+
+}
+
+.reader-page > .annotation-toolbar > button.active,
+.cloze-reader-page > .annotation-toolbar > button.active,
+.exam-session > .annotation-toolbar > button.active,
+.reader-page > .annotation-toolbar .input-mode-picker button.active,
+.cloze-reader-page > .annotation-toolbar .input-mode-picker button.active,
+.exam-session > .annotation-toolbar .input-mode-picker button.active,
+.reader-page > .annotation-toolbar .tool-mode-picker button.active,
+.cloze-reader-page > .annotation-toolbar .tool-mode-picker button.active,
+.exam-session > .annotation-toolbar .tool-mode-picker button.active {
+
+  background: #e8f2ef;
+  color: var(--ds-teal-deep, #176467);
+
+}
+
+.reader-page > .annotation-toolbar > button.toolbar-collapse-toggle,
+.cloze-reader-page > .annotation-toolbar > button.toolbar-collapse-toggle,
+.exam-session > .annotation-toolbar > button.toolbar-collapse-toggle {
+
+  border: 1px solid rgba(23, 100, 103, .34);
+  background: transparent;
+  color: var(--ds-teal-deep, #176467);
+
+}
+
+.reader-page > .annotation-toolbar .input-mode-picker,
+.cloze-reader-page > .annotation-toolbar .input-mode-picker,
+.exam-session > .annotation-toolbar .input-mode-picker,
+.reader-page > .annotation-toolbar .tool-mode-picker,
+.cloze-reader-page > .annotation-toolbar .tool-mode-picker,
+.exam-session > .annotation-toolbar .tool-mode-picker {
+
+  border-color: #d8ded8;
+  background: #f5f3ed;
+
+}
+
+.reader-page > .annotation-toolbar .toolbar-divider,
+.cloze-reader-page > .annotation-toolbar .toolbar-divider,
+.exam-session > .annotation-toolbar .toolbar-divider {
+
+  background: var(--ds-line, #d8d0c1);
+
+}
+
+.reader-page > .annotation-toolbar small,
+.cloze-reader-page > .annotation-toolbar small,
+.exam-session > .annotation-toolbar small {
+
+  color: var(--ds-ink-soft, #50636b);
+
+}
+
+.custom-workbook-page > .annotation-toolbar + .deep-reader-content {
+
+  margin-top: calc(-1 * var(--reader-toolbar-height));
+
+}
+
+.custom-workbook-page.top-area-collapsed > .annotation-toolbar {
+
+  top: 8px;
+
+}
+
+.custom-workbook-page.top-area-collapsed > .annotation-toolbar + .deep-reader-content {
+
+  margin-top: 22px;
+
+}
+
+.custom-workbook-page.top-area-collapsed {
+
+  --reader-sticky-top: 0px;
+  --reader-panel-toolbar-height: var(--reader-toolbar-height);
+
+}
+
+/* Multi-passage custom PDFs add one real 54px chrome row. Keep its sticky
+   order explicit so legacy high-specificity top values cannot stack the
+   toolbar over the first paper section. */
+.custom-workbook-page.has-passage-switcher > .passage-switcher {
+
+  top: var(--reader-sticky-top);
+
+}
+
+.custom-workbook-page.has-passage-switcher > .annotation-toolbar {
+
+  top: calc(var(--reader-sticky-top) + 54px);
+
+}
+
+.custom-workbook-page.has-passage-switcher.top-area-collapsed > .annotation-toolbar {
+
+  top: 8px;
+
+}
+
+/* Original PDF: reserve a 51px toolbar row and reduce only the reader-main
+   blank top area by the same amount. The canvas stack itself is untouched. */
+.reader-page:not(.custom-workbook-page) > .reader-main {
+
+  padding-top: 15px;
+  transition: none;
+
+}
+
+.reader-page:not(.custom-workbook-page).top-area-collapsed > .annotation-toolbar {
+
+  top: 8px;
+
+}
+
+.reader-page:not(.custom-workbook-page).top-area-collapsed > .reader-main {
+
+  padding-top: 13px;
+
+}
+
+/* The common paper surface owns text and committed ink. Side panels never reflow it. */
+.custom-workbook-page .deep-reader-content,
+.custom-workbook-page.drawer-open .deep-reader-content,
+.custom-workbook-page.drawer-open.drawer-docked .deep-reader-content,
+.custom-workbook-page.ai-open .deep-reader-content {
+  width: min(920px, calc(100% - 36px));
+  margin-right: auto;
+  margin-left: auto;
+  transform-origin: 0 0;
+  transition: none;
+  overflow-anchor: none;
+}
+.custom-workbook-page .deep-translation > .translation-paragraph {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+}
+@media (min-width: 1400px) {
+  .reader-page:not(.custom-workbook-page) > .reader-main { padding-right: 356px; }
+}
+
+.custom-workbook-page > .annotation-toolbar + .deep-reader-content,
+.custom-workbook-page.drawer-open > .annotation-toolbar + .deep-reader-content,
+.custom-workbook-page.drawer-open.drawer-docked > .annotation-toolbar + .deep-reader-content,
+.custom-workbook-page.ai-open > .annotation-toolbar + .deep-reader-content {
+
+  margin-top: calc(-1 * var(--reader-toolbar-height));
+
+}
+
+.custom-workbook-page.top-area-collapsed > .annotation-toolbar + .deep-reader-content,
+.custom-workbook-page.top-area-collapsed.drawer-open > .annotation-toolbar + .deep-reader-content,
+.custom-workbook-page.top-area-collapsed.ai-open > .annotation-toolbar + .deep-reader-content {
+
+  margin-top: 22px;
+
+}
+
+/* Right-side reader rail. These are still the original independent controls. */
+.reader-page .ai-float-button,
+.reader-page .question-fab {
+
+  width: 54px;
+  border: 1px solid rgba(23, 100, 103, .22);
+  border-radius: 13px 0 0 13px;
+  background: rgba(244, 248, 245, .96);
+  color: var(--ds-teal-deep, #176467);
+  box-shadow: -8px 10px 24px rgba(9, 34, 49, .1);
+  backdrop-filter: blur(12px);
+
+}
+
+.reader-page .ai-float-button > span,
+.reader-page .question-fab > span {
+
+  background: rgba(47, 127, 125, .12);
+
+}
+
+.reader-page .ai-float-button small,
+.reader-page .question-fab small {
+
+  color: var(--ds-teal, #2f7f7d);
+
+}
+
+.reader-page .question-drawer,
+.reader-page .ai-float-window {
+
+  border-color: var(--ds-line, #d8d0c1);
+  background: #fdfbf6;
+  box-shadow: -16px 20px 52px rgba(9, 34, 49, .16);
+
+}
+
+.reader-page .question-drawer[data-motion-state="closed"] { visibility: hidden; }
+.reader-page .question-drawer[data-motion-state="opening"],
+.reader-page .question-drawer[data-motion-state="open"],
+.reader-page .question-drawer[data-motion-state="closing"] { visibility: visible; }
+
+/* The rail is visible at 1100+. Question panels reserve their reading lane via
+   the single-commit geometry above; docked presentation starts at 1400px. */
+/* Reader contract: phone <=760, tablet <=899, wide-tablet <=1099, docked >=1400. */
+@media (min-width: 1400px) {
+
+  .reader-page .ai-float-window,
+.reader-page .question-drawer.docked {
+
+    top: calc(var(--reader-sticky-top) + var(--reader-panel-toolbar-height, var(--reader-toolbar-height)));
+    bottom: 0;
+    height: auto;
+    max-height: none;
+    border-radius: 0;
+
+}
+
+}
+
+@media (min-width: 1100px) and (max-width: 1399px) {
+
+  .reader-page .ai-float-window,
+.reader-page .question-drawer.open {
+
+    top: calc(var(--reader-sticky-top) + var(--reader-panel-toolbar-height, var(--reader-toolbar-height)) + 10px);
+    right: 14px;
+    bottom: auto;
+    left: auto;
+    width: 340px;
+    max-width: calc(100vw - 28px);
+    height: calc(100vh - var(--reader-sticky-top) - var(--reader-panel-toolbar-height, var(--reader-toolbar-height)) - 24px);
+    max-height: none;
+    border: 1px solid var(--ds-line, #d8d0c1);
+    border-radius: 12px;
+
+}
+
+  .reader-main.drawer-open,
+.reader-main.drawer-open.drawer-docked {
+
+    padding-right: 16px;
+
+}
+
+}
+
+@media (max-width: 1099px) {
+
+  .reader-page .ai-float-window,
+.reader-page .question-drawer.open {
+
+    border: 1px solid var(--ds-line, #d8d0c1);
+
+}
+
+  .reader-main.drawer-open,
+.reader-main.drawer-open.drawer-docked {
+
+    padding-right: 16px;
+
+}
+
+}
+
+@media (max-width: 760px) {
+
+  .reader-page:not(.custom-workbook-page) {
+
+    --reader-header-height: 58px;
+    --reader-stage-height: 46px;
+
+}
+
+  .reader-page:not(.custom-workbook-page) > .reader-main {
+
+    padding-top: 11px;
+
+}
+
+  .reader-page > .reader-header {
+
+    padding-inline: 12px;
+
+}
+
+  .custom-workbook-page > .reader-header {
+
+    grid-template-columns: 68px minmax(0, 1fr) auto;
+
+}
+
+  .custom-workbook-page > .reader-header .reader-title strong {
+
+    max-width: 26vw;
+    font-size: 11px;
+
+}
+
+  .custom-workbook-page > .reader-header .reader-title small,
+.custom-workbook-page > .reader-header .reader-status {
+
+    display: none;
+
+}
+
+  .custom-workbook-page > .reader-header .reader-header-actions {
+
+    gap: 4px;
+
+}
+
+  .custom-workbook-page > .reader-header .export-pdf-button,
+.custom-workbook-page > .reader-header .source-button {
+
+    max-width: 78px;
+    min-height: 29px;
+    padding-inline: 7px;
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+}
+
+  .reader-page > .stage-nav {
+
+    justify-content: flex-start;
+
+}
+
+  .custom-workbook-page .flow-task-chip {
+
+    padding-left: 10px;
+
+}
+
+  .reader-page > .annotation-toolbar,
+.cloze-reader-page > .annotation-toolbar,
+.exam-session > .annotation-toolbar {
+
+    padding-inline: 8px;
+
+}
+
+  .reader-page > .annotation-toolbar small,
+.cloze-reader-page > .annotation-toolbar small,
+.exam-session > .annotation-toolbar small {
+
+    display: none;
+
+}
+
+  /* Legacy mobile workbook pages use an 18px top inset (not the desktop
+     42px). Match that reserved inset so the sticky row never covers paper,
+     while preserving the original mobile document width and inner offsets. */
+  .custom-workbook-page .deep-reader-content,
+.custom-workbook-page.drawer-open .deep-reader-content,
+.custom-workbook-page.drawer-open.drawer-docked .deep-reader-content,
+.custom-workbook-page.ai-open .deep-reader-content {
+
+    width: calc(100% - 16px);
+
+}
+
+  .custom-workbook-page > .annotation-toolbar + .deep-reader-content,
+.custom-workbook-page.drawer-open > .annotation-toolbar + .deep-reader-content,
+.custom-workbook-page.drawer-open.drawer-docked > .annotation-toolbar + .deep-reader-content,
+.custom-workbook-page.ai-open > .annotation-toolbar + .deep-reader-content {
+
+    margin-top: -18px;
+
+}
+
+}
+
+@media (max-width: 760px) {
+
+  .reader-page .ai-float-window {
+
+    top: 82px;
+    right: 10px;
+    left: 10px !important;
+    width: auto;
+    max-width: none;
+    height: min(620px, calc(100vh - 94px));
+
+}
+
+  .reader-page .question-drawer.open {
+
+    top: auto !important;
+    right: 0 !important;
+    bottom: var(--ds-shell-bottom-offset);
+    left: 0 !important;
+    width: 100%;
+    height: min(78dvh, 720px);
+    border-radius: 18px 18px 0 0;
+    transform: translateY(0);
+
+}
+
+  .reader-page .question-drawer:not(.open) {
+    transform: translateY(105%);
+  }
+
+}
+
+@media print {
+
+  .reader-page > .annotation-toolbar,
+.cloze-reader-page > .annotation-toolbar,
+.exam-session > .annotation-toolbar,
+.reader-page .ai-float-button,
+.reader-page .ai-float-window {
+
+    display: none !important;
+
+}
+
+}
+
+.native-pdf-export .reader-page > .annotation-toolbar,
+.native-pdf-export .reader-page .ai-float-button,
+.native-pdf-export .reader-page .ai-float-window {
+
+  display: none !important;
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question-drawer,
+  .ai-float-window,
+  .ds-rail::before {
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Android / tablet annotation bar.  The legacy tablet rules were more
+   specific than the reader chrome layer, so they kept the former dark pill
+   treatment even after the surrounding Reader had moved to the paper UI.
+   These overrides are deliberately presentation-only: the 42px reserved
+   toolbar row, DOM order, controls, pointer handlers and ink geometry stay
+   exactly as they are. */
+.reader-page > .annotation-toolbar.tablet-ink-toolbar,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar {
+
+  position: sticky;
+  top: var(--reader-sticky-top);
+  right: 0;
+  left: 0;
+  width: 100%;
+  max-width: 100%;
+  height: var(--reader-toolbar-height);
+  min-height: var(--reader-toolbar-height);
+  margin: 0;
+  padding: 4px clamp(12px, 2vw, 28px);
+  gap: 5px;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid var(--ds-line, #d8d0c1);
+  border-radius: 0;
+  background: rgba(253, 251, 246, .98);
+  color: var(--ds-ink, #092231);
+  box-shadow: 0 8px 18px rgba(9, 34, 49, .055);
+  backdrop-filter: blur(14px);
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar::-webkit-scrollbar,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar::-webkit-scrollbar,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar::-webkit-scrollbar {
+
+  display: none;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button {
+
+  min-height: 32px;
+  height: 32px;
+  padding-inline: 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ds-ink-soft, #50636b);
+  font-size: 10px;
+  font-weight: 650;
+  box-shadow: none;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button:hover:not(:disabled),
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button:hover:not(:disabled),
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button:hover:not(:disabled),
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button:focus-visible,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button:focus-visible,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button:focus-visible {
+
+  border-color: rgba(23, 100, 103, .3);
+  background: #edf6f3;
+  color: var(--ds-teal-deep, #176467);
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button.active,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button.active,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button.active {
+
+  border-color: rgba(23, 100, 103, .32);
+  background: #e8f2ef;
+  color: var(--ds-teal-deep, #176467);
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button.toolbar-collapse-toggle,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button.toolbar-collapse-toggle,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button.toolbar-collapse-toggle {
+
+  border-color: rgba(23, 100, 103, .42);
+  background: transparent;
+  color: var(--ds-teal-deep, #176467);
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker {
+
+  height: 32px;
+  border: 1px solid #d8ded8;
+  border-radius: 6px;
+  background: #f5f3ed;
+  box-shadow: none;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button {
+
+  min-height: 30px;
+  padding-inline: 9px;
+  border-radius: 5px;
+  color: var(--ds-ink-soft, #50636b);
+  font-size: 10px;
+  font-weight: 650;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button.active,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button.active,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button.active,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button.active,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button.active,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button.active {
+
+  background: #e2f0ec;
+  color: var(--ds-teal-deep, #176467);
+  box-shadow: inset 0 0 0 1px rgba(23, 100, 103, .16);
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control {
+
+  height: 32px;
+  gap: 6px;
+  color: var(--ds-ink-soft, #50636b);
+  font-size: 10px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track {
+
+  width: clamp(76px, 8vw, 108px);
+  height: 9px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb {
+
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border-width: 1px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control output,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control output,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control output {
+
+  min-width: 17px;
+  color: var(--ds-ink, #092231);
+  font-size: 10px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker {
+
+  gap: 5px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button {
+
+  position: relative;
+  width: 19px;
+  height: 19px;
+  border: 2px solid #fffdf8;
+  box-shadow: 0 0 0 1px rgba(9, 34, 49, .22);
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active {
+
+  box-shadow: 0 0 0 2px var(--ds-teal-deep, #176467);
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .toolbar-divider,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .toolbar-divider,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .toolbar-divider {
+
+  width: 1px;
+  height: 24px;
+  margin-inline: 3px;
+  background: var(--ds-line, #d8d0c1);
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > small,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > small,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > small {
+
+  display: none;
+
+}
+
+@media (pointer: coarse) {
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar {
+
+    padding-top: 1px;
+    padding-bottom: 1px;
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button {
+
+    min-height: 40px;
+    height: 40px;
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker {
+
+    height: 42px;
+    padding: 0;
+    box-sizing: border-box;
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button {
+
+    min-height: 40px;
+    height: 40px;
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button {
+
+    width: 40px;
+    height: 40px;
+    padding: 9px;
+    box-sizing: border-box;
+    background-clip: content-box;
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control {
+
+    height: 40px;
+
+}
+
+  .reader-page > .reader-header .back-button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button {
+
+    position: relative;
+
+}
+
+  .reader-page > .reader-header .back-button::before,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button::before,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button::before,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button::before {
+
+    position: absolute;
+    inset: -5px;
+    content: "";
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button::before {
+
+    position: absolute;
+    inset: -11px;
+    content: "";
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track {
+
+    height: 36px;
+    background: transparent;
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track::before {
+
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(23, 58, 98, .14);
+    content: "";
+    transform: translateY(-50%);
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-fill,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-fill,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-fill {
+
+    top: calc(50% - 2px);
+    bottom: auto;
+    height: 4px;
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb {
+
+    width: 16px;
+    height: 16px;
+
+}
+
+}
+
+@media (max-width: 760px) {
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar {
+
+    padding-inline: 8px;
+
+}
+
+  .reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button {
+
+    padding-inline: 8px;
+
+}
+
+}
+
+/* R5 · Collapsed toolbar releases its reserved flow row completely.
+   The full-width bar collapses to zero height (no flow placeholder), the
+   compact expand pill is absolutely anchored to the zero-height sticky box,
+   and the content compensations shrink so the reading area moves up. The
+   pill keeps a >=44px hit target without occupying a full-width row.
+
+   R6 · Pin the pill to the reader viewport top-left with position: fixed
+   instead of relying on the zero-height sticky bar (some WebViews do not
+   stick zero-height elements, which let the pill scroll into the text).
+   Ancestors have no transform/filter, so fixed anchors to the viewport. */
+.reader-page > .annotation-toolbar.collapsed,
+.cloze-reader-page > .annotation-toolbar.collapsed,
+.exam-session > .annotation-toolbar.collapsed,
+.reader-page > .annotation-toolbar.collapsed.tablet-ink-toolbar,
+.cloze-reader-page > .annotation-toolbar.collapsed.tablet-ink-toolbar,
+.exam-session > .annotation-toolbar.collapsed.tablet-ink-toolbar {
+
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+
+}
+
+.reader-page > .annotation-toolbar.collapsed .toolbar-collapse-toggle,
+.cloze-reader-page > .annotation-toolbar.collapsed .toolbar-collapse-toggle,
+.exam-session > .annotation-toolbar.collapsed .toolbar-collapse-toggle {
+
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: clamp(12px, 2vw, 28px);
+  display: inline-flex;
+  min-width: 118px;
+  min-height: 44px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid rgba(23, 100, 103, .4);
+  border-radius: 999px;
+  background: rgba(253, 251, 246, .97);
+  color: var(--ds-teal-deep, #176467);
+  box-shadow: 0 6px 16px rgba(9, 34, 49, .14);
+  backdrop-filter: blur(10px);
+  touch-action: none;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+
+}
+
+.reader-page > .annotation-toolbar.collapsed .toolbar-stage-hint,
+.cloze-reader-page > .annotation-toolbar.collapsed .toolbar-stage-hint,
+.exam-session > .annotation-toolbar.collapsed .toolbar-stage-hint {
+
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: calc(clamp(12px, 2vw, 28px) + 128px);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(253, 251, 246, .92);
+  color: var(--ds-ink-soft, #50636b);
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+  pointer-events: none;
+
+}
+
+/* Workbook: collapsed bar no longer reserves a row; only the paper's own
+   padding separates the floating pill from the first section on wide
+   screens, so the effective reading area starts right at the top. */
+.custom-workbook-page.top-area-collapsed > .annotation-toolbar.collapsed + .deep-reader-content,
+.custom-workbook-page.top-area-collapsed.drawer-open > .annotation-toolbar.collapsed + .deep-reader-content,
+.custom-workbook-page.top-area-collapsed.drawer-docked > .annotation-toolbar.collapsed + .deep-reader-content,
+.custom-workbook-page.top-area-collapsed.ai-open > .annotation-toolbar.collapsed + .deep-reader-content {
+
+  margin-top: 2px;
+
+}
+
+/* Original PDF: keep a small reserved lane so the floating pill never covers
+   the top of the PDF page, while still releasing the former full bar. */
+.reader-page:not(.custom-workbook-page).top-area-collapsed > .annotation-toolbar.collapsed + .reader-main {
+
+  padding-top: 46px;
+
+}
+
+/* Mobile: paper padding shrinks, so the pill needs its own lane. */
+@media (max-width: 760px) {
+
+  .custom-workbook-page.top-area-collapsed > .annotation-toolbar.collapsed + .deep-reader-content,
+.custom-workbook-page.top-area-collapsed.drawer-open > .annotation-toolbar.collapsed + .deep-reader-content,
+.custom-workbook-page.top-area-collapsed.ai-open > .annotation-toolbar.collapsed + .deep-reader-content {
+
+    margin-top: 46px;
+
+}
+
+}
+
+/* Anchor offsets shrink with the collapsed chrome so jumped-to sections do
+   not land with a large empty gap above them. */
+.custom-workbook-page.top-area-collapsed .deep-paper,
+.custom-workbook-page.top-area-collapsed .deep-translation {
+
+  scroll-margin-top: 64px;
+
+}
+
+.custom-workbook-page.has-passage-switcher.top-area-collapsed .deep-paper,
+.custom-workbook-page.has-passage-switcher.top-area-collapsed .deep-translation {
+
+  scroll-margin-top: 64px;
+
+}
+
+/* Toolbar visual-only contract.  Do not change the 42px reserved row or its
+   negative-margin/canvas relationship: controls use their own 40px visual
+   box and a 44px pseudo hit target. */
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button {
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  width: auto;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  line-height: 1;
+  gap: 4px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .toolbar-icon,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .toolbar-icon,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .toolbar-icon {
+
+  display: inline-block;
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  font-size: 19px;
+  line-height: 1;
+  text-align: center;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker {
+
+  height: 40px;
+  box-sizing: border-box;
+  border-radius: 9px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control {
+
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  min-width: 158px;
+  margin-inline: 2px;
+  padding-inline: 10px;
+  gap: 8px;
+  border-left: 1px solid rgba(23, 58, 98, .12);
+  color: var(--ds-ink-soft, #50636b);
+  font-size: 14px;
+  line-height: 1;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track {
+
+  width: clamp(96px, 10vw, 120px);
+  height: 36px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-track::before,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-fill,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-fill,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-fill {
+
+  height: 4px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control .tool-size-range-thumb {
+
+  width: 16px;
+  height: 16px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control output,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-size-control output,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-size-control output {
+
+  min-width: 22px;
+  font-size: 14px;
+  text-align: right;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker {
+
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  gap: 2px;
+  padding-inline: 3px;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button {
+
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  border: 0;
+  border-radius: 50%;
+  background-clip: content-box;
+  box-shadow: none;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active {
+
+  box-shadow: none;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active::after,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active::after,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button.active::after {
+
+  position: absolute;
+  inset: 5px;
+  border: 2px solid var(--ds-teal-deep, #176467);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+
+}
+
+/* Keep the 44px interaction envelope on desktop Chrome too.  The pseudo
+   element extends only the hit area; it does not change the 40px visual box. */
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button {
+
+  position: relative;
+
+}
+
+.reader-page > .annotation-toolbar.tablet-ink-toolbar > button::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar > button::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar > button::before,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .input-mode-picker button::before,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .tool-mode-picker button::before,
+.reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button::before,
+.cloze-reader-page > .annotation-toolbar.tablet-ink-toolbar .color-picker button::before,
+.exam-session > .annotation-toolbar.tablet-ink-toolbar .color-picker button::before {
+
+  position: absolute;
+  inset: -2px;
+  content: "";
+
+}
+
+/* Shared side lane for structured reading and cloze. */
+:is(.custom-workbook-page, .cloze-reader-page) { overflow-anchor: none; }
+:is(.custom-workbook-page, .cloze-reader-page) .reader-side-panel {
+  position: fixed;
+  z-index: var(--ds-z-floating, 300);
+  top: calc(var(--reader-sticky-top) + var(--reader-panel-toolbar-height, var(--reader-toolbar-height)) + 10px);
+  right: 18px;
+  bottom: 14px;
+  width: var(--reader-side-width, 320px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--paper, #fffaf3);
+  border: 1px solid #dce2e3;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: -8px 4px 24px #122a4014;
+  transform: translateX(calc(100% + 24px));
+  transition: transform 200ms cubic-bezier(.2,.8,.2,1);
+}
+:is(.custom-workbook-page, .cloze-reader-page) .reader-side-panel[data-motion-state="open"] { transform: translateX(0); }
+:is(.custom-workbook-page, .cloze-reader-page) .reader-side-panel[data-motion-state="closed"] { visibility: hidden; }
+:is(.custom-workbook-page, .cloze-reader-page).top-area-collapsed .reader-side-panel {
+  top: calc(8px + env(safe-area-inset-top, 0px) + var(--reader-panel-toolbar-height, 0px));
+  height: auto;
+}
+:is(.custom-workbook-page, .cloze-reader-page) > .annotation-toolbar.collapsed {
+  z-index: calc(var(--ds-z-floating, 300) + 1);
+}
+:is(.custom-workbook-page, .cloze-reader-page) > .annotation-toolbar.collapsed .toolbar-stage-hint {
+  pointer-events: none;
+}
+.reader-side-tabs { display: flex; flex: 0 0 44px; border-bottom: 1px solid #dce2e3; padding: 4px 8px; gap: 8px; }
+.reader-side-tabs button { flex: 1; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+.reader-side-tabs button[aria-selected="true"] { background: #def1ed; color: #216c61; font-weight: 700; }
+.reader-side-pane { flex: 1; min-height: 0; display: flex; }
+.reader-side-pane[hidden] { display: none; }
+:is(.custom-workbook-page, .cloze-reader-page) .reader-side-pane > .question-drawer,
+:is(.custom-workbook-page, .cloze-reader-page) .reader-side-pane > .ai-float-window {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition: none;
+  pointer-events: auto;
+}
+:is(.custom-workbook-page, .cloze-reader-page) .reader-side-pane .ai-float-header { flex-wrap: wrap; gap: 6px; }
+@media (max-width: 760px) {
+  :is(.custom-workbook-page, .cloze-reader-page) .reader-side-panel { top: auto; right: 8px; bottom: 8px; width: calc(100% - 16px); height: 48dvh; transform: translateY(calc(100% + 16px)); }
+  :is(.custom-workbook-page, .cloze-reader-page).top-area-collapsed .reader-side-panel { top: calc(8px + env(safe-area-inset-top, 0px) + var(--reader-panel-toolbar-height, 0px)); height: auto; }
+  .cloze-reader-page.top-area-collapsed .reader-side-tabs { padding-left: 126px; }
+  :is(.custom-workbook-page, .cloze-reader-page) .reader-side-panel[data-motion-state="open"] { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.custom-workbook-page, .cloze-reader-page) .reader-side-panel { transition: none; }
+}
+@media print {
+  .custom-workbook-page .reader-side-panel { display: none; }
+  .custom-workbook-page .deep-reader-content { transform: none !important; margin-bottom: 0 !important; }
+}
+
+.wuliao-exporting .custom-workbook-page .deep-reader-content { transform: none !important; margin-bottom: 0 !important; }
+.wuliao-exporting .reader-side-panel { display: none; }
+/* Reader opt-in: chrome collapses while the complete toolbar stays mounted. */
+.reader-page.top-area-collapsed > .annotation-toolbar.chrome-only-toolbar,
+.custom-workbook-page.has-passage-switcher.top-area-collapsed > .annotation-toolbar.chrome-only-toolbar {
+  top: max(0px, env(safe-area-inset-top));
+}
+.custom-workbook-page.top-area-collapsed > .annotation-toolbar.chrome-only-toolbar + .deep-reader-content {
+  margin-top: 0;
+}
+.reader-page.top-area-collapsed:has(> .chrome-only-toolbar) {
+  --reader-sticky-top: env(safe-area-inset-top, 0px);
+}
+.evidence-select-mode [data-sentence-scope] { cursor: pointer; }
+.evidence-editor-bar .evidence-note-input { width: 100%; min-height: 56px; resize: vertical; }

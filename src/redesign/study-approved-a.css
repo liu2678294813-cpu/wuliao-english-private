@@ -1,0 +1,107 @@
+/* A palette shared by reading, cloze and writing. Paper geometry is unchanged. */
+:root {
+  --ds-canvas: #faf8f4;
+  --ds-line: #e3ddd3;
+  --study-a-canvas: #faf8f4;
+  --study-a-paper: #fdfcf9;
+  --study-a-border: #e3ddd3;
+  --study-a-active: #e7f0ef;
+}
+.reader-page,
+.ds-shell .cloze-reader-page,
+.writing-workspace-frame,
+.writing-workspace,
+.writing-library { background: var(--study-a-canvas); }
+.reader-page > .reader-header,
+.reader-page > .stage-nav,
+.reader-page > .custom-workbook-stage,
+.ds-shell .cloze-reader-header,
+.ds-shell .cloze-stage-nav,
+.writing-workspace .writing-stage-header,
+.writing-workspace .writing-compact-toolbar,
+.writing-workspace .writing-progress {
+  background: var(--study-a-paper);
+  border-color: var(--study-a-border);
+  box-shadow: none;
+}
+.reader-page .stage-nav button.active,
+.reader-page .custom-workbook-stage button.active,
+.ds-shell .cloze-stage-nav button.active,
+.writing-workspace .writing-progress .is-current {
+  color: var(--ds-teal-deep);
+  background: var(--study-a-active);
+  border-color: var(--ds-teal-deep);
+}
+.reader-page .annotation-toolbar,
+.cloze-reader-page .annotation-toolbar,
+.exam-session .annotation-toolbar,
+.writing-workspace .annotation-toolbar {
+  background: var(--study-a-paper);
+  border-color: var(--study-a-border);
+  color: var(--ds-ink);
+  box-shadow: none;
+}
+:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .annotation-toolbar > button,
+:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .input-mode-picker button,
+:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .tool-mode-picker button {
+  border-color: var(--study-a-border);
+  border-radius: 8px;
+  color: var(--ds-ink-soft);
+  background: transparent;
+  box-shadow: none;
+}
+:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .annotation-toolbar > button.active,
+:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .input-mode-picker button.active,
+:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .tool-mode-picker button.active {
+  color: white;
+  background: #176f79;
+  border-color: #176f79;
+}
+:is(.reader-page,.cloze-reader-page,.writing-workspace,.writing-library) .primary-button:not(:disabled) {
+  background: linear-gradient(110deg,#127681,#1c6872);
+  border-color: #176b75;
+  color: white;
+  box-shadow: none;
+}
+.custom-workbook-page .reader-side-panel,
+.ds-shell .cloze-question-panel,
+.writing-workspace .writing-ai-panel,
+.writing-library .writing-sample-card {
+  background: var(--study-a-paper);
+  border-color: var(--study-a-border);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(8,43,58,.05);
+}
+.reader-side-tabs { border-color: var(--study-a-border); }
+.reader-side-tabs button[aria-selected="true"] { background: var(--study-a-active); color: var(--ds-teal-deep); }
+.writing-workspace .writing-notice { border-color: var(--study-a-border); border-left-color: var(--ds-teal); background: #f0f6f4; }
+.writing-workspace .writing-notice-error { border-color: #e2b7ac; border-left-color: #a94837; background: #f8eae5; }
+.ds-shell .resource-card,
+.ds-shell .cloze-resource-card,
+.writing-library .writing-library-card,
+.writing-library .writing-question-card {
+  border-color: var(--study-a-border);
+  background: var(--study-a-paper);
+  box-shadow: none;
+}
+.ds-shell .resource-card:hover,
+.writing-library .writing-library-card:hover { border-color: #acc4c9; }
+.ds-rail .ds-nav > button { font-size: 15px; }
+:is(.reader-page,.cloze-reader-page,.writing-workspace,.writing-library) button:focus-visible { outline: 2px solid #176b75; outline-offset: 2px; }
+/* Selected colors and persisted ink coordinates retain their original values. */
+/* Desktop uses the same legible controls inside the existing reserved row. */
+.reader-page > .annotation-toolbar:not(.tablet-ink-toolbar):not(.collapsed),
+.cloze-reader-page > .annotation-toolbar:not(.tablet-ink-toolbar):not(.collapsed) { padding-block: 0; flex-wrap: nowrap; }
+:is(.reader-page,.cloze-reader-page) > .annotation-toolbar:not(.tablet-ink-toolbar):not(.collapsed) > button,
+:is(.reader-page,.cloze-reader-page) > .annotation-toolbar:not(.tablet-ink-toolbar):not(.collapsed) :is(.input-mode-picker,.tool-mode-picker) button {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto; min-height: 40px; height: 40px; padding: 0 12px;
+  font: 500 14px/1 var(--ds-sans); gap: 4px;
+}
+:is(.reader-page,.cloze-reader-page) > .annotation-toolbar:not(.tablet-ink-toolbar) .toolbar-icon { font-size: 18px; }
+:is(.reader-page,.cloze-reader-page) > .annotation-toolbar:not(.tablet-ink-toolbar) .tool-size-control { font-size: 12px; }
+:is(.reader-page,.cloze-reader-page) > .annotation-toolbar:not(.tablet-ink-toolbar) :is(.input-mode-picker,.tool-mode-picker) { flex: 0 0 auto; }
+:is(.reader-page,.cloze-reader-page,.writing-workspace) .annotation-toolbar:not(.collapsed) > button.active,
+:is(.reader-page,.cloze-reader-page,.writing-workspace) .annotation-toolbar:not(.collapsed) :is(.input-mode-picker,.tool-mode-picker) button.active {
+  background: #176f79; border-color: #176f79; color: white;
+}

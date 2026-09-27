@@ -1,18 +1,20 @@
 import { getCurrentUsername, getUserItem, listUserItems, setUserItem } from "./userData";
+import { AppEvent } from "./events/eventTypes";
+import { emitAppEvent } from "./events/appEvents";
 
 const ACTIVITY_PREFIX = "wuliao:reading-activity:";
 const MAIN_DB_NAME = "KaoyanVocabDB";
 const MAIN_LIST_STORE = "wordLists";
 const MEMORY_DB_NAME = "KaoyanVocabMemorizeDB";
 const IMPORT_WORD_STORE = "importedWords";
-const RANK_EVENT = "wuliao:rank-updated";
+const RANK_EVENT = AppEvent.RANK_UPDATED;
 const VOCABULARY_TARGET = 6515;
 const VOCABULARY_MAX_SCORE = 1500;
 const READING_TARGET = 68;
 const READING_MAX_SCORE = 1000;
 const MAX_SCORE = VOCABULARY_MAX_SCORE + READING_MAX_SCORE;
 
-const RANKS = [
+export const RANKS = [
   { name: "启程", min: 0 },
   { name: "筑基", min: 250 },
   { name: "进阶", min: 625 },
@@ -48,11 +50,10 @@ function writeActivity(resource, passage, updates) {
     updatedAt: Date.now(),
     ...updates,
   }));
-  window.dispatchEvent(new Event(RANK_EVENT));
+  emitAppEvent(RANK_EVENT);
 }
 
-export function markReadingStarted(resource, passage) {
-  const current = readJson(activityKey(resource.id, passage.id));
+export function markReadingStarted(resource, passage) {  const current = readJson(activityKey(resource.id, passage.id));
   if (!current) writeActivity(resource, passage, { completed: false });
 }
 
@@ -71,6 +72,18 @@ function readReadingStats() {
   const records = [];
   for (const { key } of listUserItems(ACTIVITY_PREFIX)) {
     const record = readJson(key);
+    if (record) records.push(record);
+  }
+  const started = records.length;
+  const completed = records.filter((record) => record.completed).length;
+  return { started, completed, completionRate: started ? completed / started : 0 };
+}
+
+// R3：复用 LearningStateSnapshot 的 activities（同一 revision 内不再重复
+// 扫描 localStorage）。语义与 readReadingStats 完全一致。
+function readingStatsFromSnapshot(scan) {
+  const records = [];
+  for (const record of scan?.activities?.values?.() || []) {
     if (record) records.push(record);
   }
   const started = records.length;
@@ -225,10 +238,10 @@ export function calculateStudyScore(familiarWords, completed) {
   };
 }
 
-export async function getStudyRank() {
+export async function getStudyRank({ scan = null } = {}) {
   const [familiarWords, reading] = await Promise.all([
     readFamiliarWordCount(),
-    Promise.resolve(readReadingStats()),
+    Promise.resolve(scan ? readingStatsFromSnapshot(scan) : readReadingStats()),
   ]);
   const scores = calculateStudyScore(familiarWords, reading.completed);
   return {

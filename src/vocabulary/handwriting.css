@@ -1,0 +1,40 @@
+.vocab-screening-modes { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #eeeadf; margin-left: auto; }
+.vocab-screening-modes button { border: 0; border-radius: 9px; padding: 9px 14px; background: transparent; color: #25474e; white-space: nowrap; cursor: pointer; }
+.vocab-screening-modes button[aria-pressed="true"] { color: #fff; background: #126e70; }
+.vocab-handwriting { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; background: #f8f6ee; color: #24404b; padding: 18px; gap: 10px; overflow: hidden; }
+.vocabulary-frame-wrap { position: relative; }
+.vocab-handwriting-controls button, .vocab-handwriting-message button, .vocab-ink-row button, .vocab-ink-row select { font: inherit; border: 1px solid #ded8c9; border-radius: 9px; padding: 8px 12px; color: #24404b; background: #fffdf7; cursor: pointer; }
+.vocab-handwriting button:disabled { opacity: .5; cursor: default; }
+.vocab-handwriting-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.vocab-handwriting-controls > div { margin-right: auto; }
+.vocab-handwriting-controls small { display: block; color: #748080; margin-top: 5px; }
+.vocab-handwriting-controls > button { color: white; background: #126e70; min-width: 84px; }
+.vocab-handwriting .vocab-ink-toolbar-host { padding: 0; border: 0; min-height: 42px; flex-shrink: 0; }
+.vocab-handwriting .annotation-toolbar { position: relative; inset: auto; transform: none; max-width: 100%; margin: 0; z-index: 2; }
+.vocab-handwriting-message { min-height: 25px; font-size: 13px; line-height: 1.6; color: #697978; }
+.vocab-handwriting-message button { padding: 2px 8px; margin-left: 8px; }
+.vocab-handwriting-scroll { flex: 1; min-height: 0; overflow: auto; overflow-anchor: none; overscroll-behavior: contain; touch-action: pan-x pan-y; border: 1px solid #e1dccf; border-radius: 14px; background: #fffdf8; }
+.vocab-handwriting-list { position: relative; min-width: 760px; }
+.vocab-ink-row { position: absolute; top: 0; left: 0; width: 100%; height: 120px; box-sizing: border-box; padding: 0 12px; border-bottom: 1px solid #eae5da; }
+.vocab-ink-row-main { height: 78px; display: grid; grid-template-columns: minmax(0, 1fr) 90px; align-items: center; gap: 10px; }
+.vocab-ink-row:nth-child(even) { background: #f7f4ec; }
+.vocab-ink-row.is-active { box-shadow: inset 3px 0 #147e79; }
+.vocab-ink-answer-area { position: relative; height: 100%; display: grid; grid-template-columns: minmax(130px, .7fr) minmax(160px, 1fr) minmax(260px, 1.7fr); gap: 14px; align-items: center; }
+.vocab-ink-english { padding: 0 !important; text-align: left; background: none !important; border: none !important; font-weight: 700 !important; font-size: 18px !important; }
+.vocab-ink-english small { color: #137d78; }
+.vocab-ink-transcript { min-width: 0; }
+.vocab-ink-transcript textarea { display: block; width: 100%; height: 39px; resize: none; border: none; background: transparent; font: inherit; padding: 4px; line-height: 1.4; color: inherit; }
+.vocab-ink-transcript textarea:focus { outline: 1px solid #177d78; border-radius: 5px; }
+.vocab-verdict { display: block; height: 18px; font-size: 11px; color: #947939; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.vocab-verdict.correct { color: #147957; }.vocab-verdict.wrong { color: #ae493b; }
+.vocab-ink-pad { height: 64px; border-left: 1px dashed #d6d4c7; padding-left: 8px; touch-action: pan-y; }
+.vocab-handwriting .writing-ink-surface, .vocab-handwriting .writing-ink-content { min-height: 0 !important; height: 64px; padding: 0; border: 0; background: transparent; }
+.vocab-ink-paper { height: 64px; width: 100%; touch-action: pan-y; }
+.vocab-handwriting .writing-ink-warning { position: absolute; z-index: 2; font-size: 10px; margin: 0; background: #fff6d8; }
+.vocab-ink-row-actions { display: grid; grid-template-columns: 1fr; gap: 3px; }
+.vocab-ink-row-actions button, .vocab-ink-row-actions select { padding: 3px 4px; font-size: 11px; min-height: 22px; }
+.vocab-ink-reference { height: 36px; overflow: auto; padding: 0 4px; color: #38615a; font-size: 13px; line-height: 18px; }
+.vocab-ink-reference strong { color: #748080; font-size: 11px; margin-right: 8px; }
+.vocab-ink-row.is-masked .vocab-ink-answer-area::after { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 14px; margin-top: -7px; border-radius: 2px; background: #070e11; z-index: 3; pointer-events: none; }
+.vocab-ink-row.is-masked .vocab-ink-answer-area > * { visibility: hidden; }
+@media (max-width: 800px) { .vocab-handwriting { padding: 10px; }.vocabulary-shell-header { flex-wrap: wrap; }.vocab-handwriting-controls { gap: 7px; }.vocab-handwriting-controls > span { font-size: 12px; } }
