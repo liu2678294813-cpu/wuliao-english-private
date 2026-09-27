@@ -4,11 +4,12 @@ android {
     namespace = "com.wuliao.english"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.wuliao.english"
+        // Optional isolated device QA installation; production identity is unchanged.
+        applicationId project.findProperty("qaApplicationId") ?: "com.wuliao.english"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 31
-        versionName "1.0.30"
+        versionCode 79
+        versionName "1.0.73"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

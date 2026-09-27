@@ -3,60 +3,219 @@ package com.wuliao.english;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Rect;
-import android.graphics.Typeface;
-import android.graphics.pdf.PdfDocument;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.ParcelFileDescriptor;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintJob;
+import android.print.PrintManager;
 import android.provider.MediaStore;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Base64;
 import android.util.Log;
+import android.view.ActionMode;
+import android.view.MotionEvent;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
-import android.view.PixelCopy;
 import android.widget.Toast;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
 
+import androidx.activity.OnBackPressedCallback;
 import com.getcapacitor.BridgeActivity;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
 import java.util.Locale;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 import org.json.JSONObject;
 
 public class MainActivity extends BridgeActivity {
     private AndroidSpeech androidSpeech;
+    private volatile boolean suppressSelectionMenu = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        WebView.enableSlowWholeDocumentDraw();
         super.onCreate(savedInstanceState);
-        getBridge().getWebView().addJavascriptInterface(
+        WebView webView = getBridge().getWebView();
+        webView.setOnTouchListener((view, event) -> {
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+                int tool = event.getToolType(event.getActionIndex());
+                if (tool == MotionEvent.TOOL_TYPE_STYLUS || tool == MotionEvent.TOOL_TYPE_ERASER) {
+                    // Deliver real pen samples promptly; keep WebView's normal
+                    // event handling and leave finger-only scrolling buffered.
+                    view.requestUnbufferedDispatch(event);
+                }
+            }
+            return false;
+        });
+        webView.addJavascriptInterface(
             new AndroidFileSaver(this),
             "AndroidFileSaver"
         );
-        getBridge().getWebView().addJavascriptInterface(
+        webView.addJavascriptInterface(
             new AndroidPdfExporter(this),
             "AndroidPdfExporter"
         );
+        webView.addJavascriptInterface(
+            new AndroidSecureStore(this),
+            "AndroidSecureStore"
+        );
+        webView.addJavascriptInterface(
+            new AndroidPrivateWritingSamples(this),
+            "AndroidPrivateWritingSamples"
+        );
         androidSpeech = new AndroidSpeech(this);
-        getBridge().getWebView().addJavascriptInterface(androidSpeech, "AndroidSpeech");
+        webView.addJavascriptInterface(androidSpeech, "AndroidSpeech");
+        webView.addJavascriptInterface(new AndroidSelectionUi(this), "WuliaoSelectionUi");
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView webView = getBridge().getWebView();
+                if (webView == null) {
+                    moveTaskToBack(true);
+                    return;
+                }
+                webView.evaluateJavascript(
+                    "(window.__wuliaoHandleHardwareBack ? window.__wuliaoHandleHardwareBack() : false)",
+                    value -> {
+                        if (!"true".equals(value)) {
+                            moveTaskToBack(true);
+                        }
+                    }
+                );
+            }
+        });
+    }
+
+    @Override
+    public void onActionModeStarted(ActionMode mode) {
+        if (suppressSelectionMenu) {
+            Log.i("WuliaoSelectionUi", "Suppressing selection action mode");
+            mode.finish();
+            return;
+        }
+        super.onActionModeStarted(mode);
+    }
+
+    private static final class AndroidSelectionUi {
+        private final MainActivity activity;
+
+        AndroidSelectionUi(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @JavascriptInterface
+        public void setSuppressSelectionMenu(boolean value) {
+            activity.suppressSelectionMenu = value;
+        }
+    }
+
+    private static final class AndroidSecureStore {
+        private static final String PREF_NAME = "wuliao_secure_store";
+        private static final String KEYSTORE = "AndroidKeyStore";
+        private static final String KEY_ALIAS = "wuliao_secure_store_master";
+        private final SharedPreferences preferences;
+
+        AndroidSecureStore(Context context) {
+            this.preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+            ensureKey();
+        }
+
+        private void ensureKey() {
+            try {
+                KeyStore keyStore = KeyStore.getInstance(KEYSTORE);
+                keyStore.load(null);
+                if (keyStore.containsAlias(KEY_ALIAS)) return;
+                KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE);
+                generator.init(new KeyGenParameterSpec.Builder(
+                    KEY_ALIAS,
+                    KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT
+                )
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .setKeySize(256)
+                    .build());
+                generator.generateKey();
+            } catch (Exception ignored) {
+                // 不写入明文；WebView 侧的 write/read-back 校验会阻止正式 AI 请求。
+            }
+        }
+
+        private SecretKey loadKey() {
+            try {
+                KeyStore keyStore = KeyStore.getInstance(KEYSTORE);
+                keyStore.load(null);
+                return (SecretKey) keyStore.getKey(KEY_ALIAS, null);
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
+
+        @JavascriptInterface
+        public String get(String key) {
+            String stored = preferences.getString(String.valueOf(key), "");
+            if (stored == null || stored.isEmpty()) return "";
+            SecretKey secretKey = loadKey();
+            if (secretKey == null) return "";
+            try {
+                String[] parts = stored.split(":", 2);
+                if (parts.length != 2) return "";
+                byte[] iv = Base64.decode(parts[0], Base64.NO_WRAP);
+                byte[] ciphertext = Base64.decode(parts[1], Base64.NO_WRAP);
+                Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+                cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(128, iv));
+                return new String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8);
+            } catch (Exception ignored) {
+                return "";
+            }
+        }
+
+        @JavascriptInterface
+        public void set(String key, String value) {
+            if (value == null || value.isEmpty()) {
+                remove(key);
+                return;
+            }
+            SecretKey secretKey = loadKey();
+            if (secretKey == null) return;
+            try {
+                Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+                byte[] ciphertext = cipher.doFinal(String.valueOf(value).getBytes(StandardCharsets.UTF_8));
+                String stored = Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP)
+                    + ":" + Base64.encodeToString(ciphertext, Base64.NO_WRAP);
+                preferences.edit().putString(String.valueOf(key), stored).apply();
+            } catch (Exception ignored) {
+                // 加密失败不写入明文。
+            }
+        }
+
+        @JavascriptInterface
+        public void remove(String key) {
+            preferences.edit().remove(String.valueOf(key)).apply();
+        }
     }
 
     private static final class AndroidPdfExporter {
         private final MainActivity activity;
+        private PrintJob activeJob;
+        private WebView activeWebView;
+        private int pollAttempts;
 
         AndroidPdfExporter(MainActivity activity) {
             this.activity = activity;
@@ -65,224 +224,61 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void exportCurrentDocument(String requestedName) {
             activity.runOnUiThread(() -> {
-                WebView webView = activity.getBridge().getWebView();
-                webView.evaluateJavascript(
-                    "(()=>{document.documentElement.classList.add('native-pdf-export');"
-                        + "void document.documentElement.offsetHeight;"
-                        + "const content=document.querySelector('.deep-reader-content');"
-                        + "const top=content ? content.getBoundingClientRect().top + window.scrollY : 0;"
-                        + "const bottom=content ? content.getBoundingClientRect().bottom + window.scrollY : document.documentElement.scrollHeight;"
-                        + "return {contentTop:Math.max(0,top),contentHeight:Math.max(1,bottom-top),"
-                        + "viewportHeight:window.innerHeight,originalScrollY:window.scrollY};})()",
-                    setupJson -> {
-                        try {
-                            JSONObject setup = new JSONObject(setupJson);
-                            String fileName = safePdfFileName(requestedName);
-                            PdfTarget target = createPdfTarget(activity, fileName);
-                            PdfExportSession session = new PdfExportSession(
-                                webView,
-                                target,
-                                setup.optDouble("contentTop", 0),
-                                setup.optDouble("contentHeight", 1),
-                                setup.optDouble("viewportHeight", 1),
-                                setup.optDouble("originalScrollY", 0)
-                            );
-                            webView.postDelayed(session::captureNextPage, 180);
-                        } catch (Exception error) {
-                            cleanupExportLayout(webView, 0);
-                            dispatchResult(false, "", error.getMessage());
-                        }
-                    }
-                );
+                if (activeJob != null && !activeJob.isCompleted() && !activeJob.isCancelled() && !activeJob.isFailed()) {
+                    dispatchResult(false, "", "已有 PDF 打印任务正在进行");
+                    return;
+                }
+                try {
+                    String fileName = safePdfFileName(requestedName);
+                    WebView webView = activity.getBridge().getWebView();
+                    PrintManager printManager = (PrintManager) activity.getSystemService(Context.PRINT_SERVICE);
+                    if (printManager == null) throw new IllegalStateException("系统打印服务不可用");
+                    PrintDocumentAdapter adapter = webView.createPrintDocumentAdapter(fileName.replaceFirst("(?i)\\.pdf$", ""));
+                    PrintAttributes attributes = new PrintAttributes.Builder()
+                        .setMediaSize(PrintAttributes.MediaSize.ISO_A4.asPortrait())
+                        .setColorMode(PrintAttributes.COLOR_MODE_COLOR)
+                        .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+                        .build();
+                    activeWebView = webView;
+                    activeJob = printManager.print(fileName, adapter, attributes);
+                    pollAttempts = 0;
+                    Toast.makeText(activity, "请在系统打印界面选择“保存为 PDF”并确认位置", Toast.LENGTH_LONG).show();
+                    webView.postDelayed(this::pollPrintJob, 500);
+                } catch (Exception error) {
+                    dispatchResult(false, "", error.getMessage() == null ? "无法启动系统打印" : error.getMessage());
+                }
             });
         }
 
-        private final class PdfExportSession {
-            final int pageWidth = 595;
-            final int pageHeight = 842;
-            final int margin = 28;
-            final WebView webView;
-            final PdfTarget target;
-            final double contentTop;
-            final double viewportHeight;
-            final double originalScrollY;
-            final boolean originalVerticalScrollBar;
-            final boolean originalHorizontalScrollBar;
-            final int pageCount;
-            final PdfDocument document = new PdfDocument();
-            int pageIndex;
-
-            PdfExportSession(
-                WebView webView,
-                PdfTarget target,
-                double contentTop,
-                double contentHeight,
-                double viewportHeight,
-                double originalScrollY
-            ) {
-                this.webView = webView;
-                this.target = target;
-                this.contentTop = contentTop;
-                this.viewportHeight = Math.max(1, viewportHeight);
-                this.originalScrollY = originalScrollY;
-                this.pageCount = Math.max(1, (int) Math.ceil(contentHeight / this.viewportHeight));
-                this.originalVerticalScrollBar = webView.isVerticalScrollBarEnabled();
-                this.originalHorizontalScrollBar = webView.isHorizontalScrollBarEnabled();
-                webView.setVerticalScrollBarEnabled(false);
-                webView.setHorizontalScrollBarEnabled(false);
+        private void pollPrintJob() {
+            PrintJob job = activeJob;
+            WebView webView = activeWebView;
+            if (job == null || webView == null) return;
+            if (job.isCompleted()) {
+                finishJob(true, "系统打印服务所选位置", "");
+                return;
             }
-
-            void captureNextPage() {
-                if (pageIndex >= pageCount) {
-                    finishSuccess();
-                    return;
-                }
-                double scrollTarget = contentTop + pageIndex * viewportHeight;
-                webView.evaluateJavascript(
-                    "window.scrollTo(0," + scrollTarget + ");window.scrollY;",
-                    ignored -> webView.postDelayed(this::drawCurrentViewport, 95)
-                );
+            if (job.isCancelled()) {
+                finishJob(false, "", "已取消系统打印");
+                return;
             }
-
-            private void drawCurrentViewport() {
-                try {
-                    int viewWidth = webView.getWidth();
-                    int viewHeight = webView.getHeight();
-                    if (viewWidth <= 0 || viewHeight <= 0) {
-                        throw new IllegalStateException("页面尚未完成排版，请稍后重试");
-                    }
-                    Bitmap bitmap = Bitmap.createBitmap(
-                        viewWidth,
-                        viewHeight,
-                        Bitmap.Config.ARGB_8888
-                    );
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        int[] location = new int[2];
-                        webView.getLocationInWindow(location);
-                        Rect source = new Rect(
-                            location[0],
-                            location[1],
-                            location[0] + viewWidth,
-                            location[1] + viewHeight
-                        );
-                        PixelCopy.request(
-                            activity.getWindow(),
-                            source,
-                            bitmap,
-                            result -> {
-                                if (result != PixelCopy.SUCCESS) {
-                                    bitmap.recycle();
-                                    finishFailure(new IllegalStateException("页面截图失败：" + result));
-                                    return;
-                                }
-                                drawBitmapPage(bitmap);
-                            },
-                            new Handler(Looper.getMainLooper())
-                        );
-                        return;
-                    }
-                    webView.draw(new Canvas(bitmap));
-                    drawBitmapPage(bitmap);
-                } catch (Exception error) {
-                    finishFailure(error);
-                }
+            if (job.isFailed()) {
+                finishJob(false, "", "系统打印任务失败");
+                return;
             }
-
-            private void drawBitmapPage(Bitmap bitmap) {
-                try {
-                    PdfDocument.PageInfo info = new PdfDocument.PageInfo.Builder(
-                        pageWidth,
-                        pageHeight,
-                        pageIndex + 1
-                    ).create();
-                    PdfDocument.Page page = document.startPage(info);
-                    Canvas canvas = page.getCanvas();
-                    canvas.drawColor(Color.WHITE);
-                    float availableWidth = pageWidth - margin * 2f;
-                    float availableHeight = pageHeight - margin * 2f;
-                    int viewWidth = bitmap.getWidth();
-                    int viewHeight = bitmap.getHeight();
-                    float scale = Math.min(availableWidth / viewWidth, availableHeight / viewHeight);
-                    float left = margin + (availableWidth - viewWidth * scale) / 2f;
-                    float top = margin + (availableHeight - viewHeight * scale) / 2f;
-                    int contentSave = canvas.save();
-                    canvas.clipRect(margin, margin, pageWidth - margin, pageHeight - margin);
-                    canvas.translate(left, top);
-                    canvas.scale(scale, scale);
-                    canvas.drawBitmap(bitmap, 0, 0, new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG));
-                    canvas.restoreToCount(contentSave);
-                    drawWatermark(canvas, pageWidth, pageHeight);
-                    document.finishPage(page);
-                    bitmap.recycle();
-                    pageIndex += 1;
-                    webView.post(this::captureNextPage);
-                } catch (Exception error) {
-                    if (!bitmap.isRecycled()) bitmap.recycle();
-                    finishFailure(error);
-                }
+            pollAttempts += 1;
+            if (pollAttempts >= 600) {
+                finishJob(false, "", "系统打印任务尚未完成，请检查打印界面");
+                return;
             }
-
-            private void finishSuccess() {
-                try {
-                    cleanupExportLayout(webView, originalScrollY);
-                    restoreScrollBars();
-                    try (FileOutputStream output = new FileOutputStream(target.descriptor.getFileDescriptor())) {
-                        document.writeTo(output);
-                        output.flush();
-                    }
-                    document.close();
-                    finishTarget(target, true);
-                    dispatchResult(true, target.location, "");
-                } catch (Exception error) {
-                    finishFailure(error);
-                }
-            }
-
-            private void finishFailure(Exception error) {
-                try {
-                    document.close();
-                } catch (Exception ignored) {
-                    // Best-effort cleanup after a failed page capture.
-                }
-                cleanupExportLayout(webView, originalScrollY);
-                restoreScrollBars();
-                finishTarget(target, false);
-                dispatchResult(
-                    false,
-                    "",
-                    error.getMessage() == null ? "生成失败" : error.getMessage()
-                );
-            }
-
-            private void restoreScrollBars() {
-                webView.setVerticalScrollBarEnabled(originalVerticalScrollBar);
-                webView.setHorizontalScrollBarEnabled(originalHorizontalScrollBar);
-            }
+            webView.postDelayed(this::pollPrintJob, 500);
         }
 
-        private static void cleanupExportLayout(WebView webView, double originalScrollY) {
-            webView.evaluateJavascript(
-                "document.documentElement.classList.remove('native-pdf-export');"
-                    + "window.scrollTo(0," + Math.max(0, originalScrollY) + ");",
-                null
-            );
-        }
-
-        private static void drawWatermark(Canvas canvas, int pageWidth, int pageHeight) {
-            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(Color.rgb(16, 46, 78));
-            paint.setAlpha(26);
-            paint.setTextSize(18f);
-            paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
-            paint.setTextAlign(Paint.Align.CENTER);
-            int save = canvas.save();
-            canvas.rotate(-32f, pageWidth / 2f, pageHeight / 2f);
-            for (float y = -pageHeight; y < pageHeight * 2f; y += 105f) {
-                for (float x = -pageWidth; x < pageWidth * 2f; x += 185f) {
-                    canvas.drawText("无聊英语app", x, y, paint);
-                }
-            }
-            canvas.restoreToCount(save);
+        private void finishJob(boolean success, String location, String message) {
+            activeJob = null;
+            activeWebView = null;
+            pollAttempts = 0;
+            dispatchResult(success, location, message);
         }
 
         private void dispatchResult(boolean success, String location, String message) {
@@ -310,85 +306,45 @@ public class MainActivity extends BridgeActivity {
             return fileName;
         }
 
-        private static PdfTarget createPdfTarget(Context context, String fileName) throws Exception {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ContentResolver resolver = context.getContentResolver();
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
-                values.put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
-                values.put(
-                    MediaStore.MediaColumns.RELATIVE_PATH,
-                    Environment.DIRECTORY_DOWNLOADS + File.separator + "无聊英语"
-                );
-                values.put(MediaStore.MediaColumns.IS_PENDING, 1);
-                Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-                if (uri == null) throw new IllegalStateException("无法创建 PDF 文件");
-                ParcelFileDescriptor descriptor = resolver.openFileDescriptor(uri, "w");
-                if (descriptor == null) {
-                    resolver.delete(uri, null, null);
-                    throw new IllegalStateException("无法写入 PDF 文件");
-                }
-                return new PdfTarget(
-                    uri,
-                    descriptor,
-                    null,
-                    "Download/无聊英语/" + fileName,
-                    resolver
-                );
-            }
+    }
 
-            File directory = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-            if (directory == null) throw new IllegalStateException("下载目录不可用");
-            if (!directory.exists() && !directory.mkdirs()) throw new IllegalStateException("无法创建下载目录");
-            File file = new File(directory, fileName);
-            ParcelFileDescriptor descriptor = ParcelFileDescriptor.open(
-                file,
-                ParcelFileDescriptor.MODE_CREATE
-                    | ParcelFileDescriptor.MODE_TRUNCATE
-                    | ParcelFileDescriptor.MODE_WRITE_ONLY
-            );
-            return new PdfTarget(null, descriptor, file, file.getAbsolutePath(), null);
+    private static final class AndroidPrivateWritingSamples {
+        private static final String SEED_FILE = "writing-private-samples-seed.json";
+        private static final int MAX_SEED_BYTES = 8 * 1024 * 1024;
+        private final Context context;
+
+        AndroidPrivateWritingSamples(Context context) {
+            this.context = context.getApplicationContext();
         }
 
-        private static void finishTarget(PdfTarget target, boolean success) {
-            try {
-                target.descriptor.close();
-            } catch (Exception ignored) {
-                // The print adapter may already have closed the descriptor.
-            }
-            if (target.uri != null && target.resolver != null) {
-                if (!success) {
-                    target.resolver.delete(target.uri, null, null);
-                    return;
+        private File seedFile() {
+            return new File(context.getNoBackupFilesDir(), SEED_FILE);
+        }
+
+        @JavascriptInterface
+        public String readPendingSeed() {
+            File file = seedFile();
+            long length = file.length();
+            if (!file.isFile() || length <= 0 || length > MAX_SEED_BYTES) return "";
+            byte[] bytes = new byte[(int) length];
+            try (FileInputStream input = new FileInputStream(file)) {
+                int offset = 0;
+                while (offset < bytes.length) {
+                    int count = input.read(bytes, offset, bytes.length - offset);
+                    if (count < 0) return "";
+                    offset += count;
                 }
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.MediaColumns.IS_PENDING, 0);
-                target.resolver.update(target.uri, values, null, null);
-            } else if (!success && target.file != null && target.file.exists()) {
-                target.file.delete();
+                return new String(bytes, StandardCharsets.UTF_8);
+            } catch (Exception error) {
+                Log.e("PrivateWritingSamples", "Unable to read pending seed", error);
+                return "";
             }
         }
 
-        private static final class PdfTarget {
-            final Uri uri;
-            final ParcelFileDescriptor descriptor;
-            final File file;
-            final String location;
-            final ContentResolver resolver;
-
-            PdfTarget(
-                Uri uri,
-                ParcelFileDescriptor descriptor,
-                File file,
-                String location,
-                ContentResolver resolver
-            ) {
-                this.uri = uri;
-                this.descriptor = descriptor;
-                this.file = file;
-                this.location = location;
-                this.resolver = resolver;
-            }
+        @JavascriptInterface
+        public boolean clearPendingSeed() {
+            File file = seedFile();
+            return !file.exists() || file.delete();
         }
     }
 

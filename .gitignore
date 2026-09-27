@@ -9,8 +9,21 @@ __pycache__/
 # and must never be included in the source history.
 .android-sdk/
 .android-toolchain/
+.gradle-user-home/
 output/
 .playwright-cli/
+test-results/
+playwright-report/
+.reasonix/
+
+# Stray local shell artifact.
+/([{]text
 
 # Local Netlify folder
 .netlify
+.wrangler/
+
+# Local developer configuration and generated diagnostics
+.env.local
+.env.*.local
+eval-results/
