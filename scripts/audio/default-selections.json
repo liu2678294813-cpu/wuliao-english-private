@@ -1,0 +1,192 @@
+{
+  "selected": {
+    "conduct": {
+      "pos": "verb",
+      "sourceWordId": "word_0102",
+      "sourceChinese": "实施；表现；指挥",
+      "reason": "首义“实施”明确为动词，“指挥”也支持动词；不让名词义“表现”决定默认重音。"
+    },
+    "produce": {
+      "pos": "verb",
+      "sourceWordId": "word_1583",
+      "sourceChinese": "生产；生育；制造",
+      "reason": "生产、生育、制造均为动词义。"
+    },
+    "content": {
+      "pos": "noun",
+      "sourceWordId": "word_0012",
+      "sourceChinese": "内容；含量；目录",
+      "reason": "内容、含量、目录均为名词义。"
+    },
+    "object": {
+      "pos": "noun",
+      "sourceWordId": "word_0494",
+      "sourceChinese": "物体；目的；对象",
+      "reason": "物体、目的、对象均为名词义。"
+    },
+    "contract": {
+      "pos": "noun",
+      "sourceWordId": "word_0016",
+      "sourceChinese": "合同；契约；使",
+      "reason": "优先释义“合同、契约”为名词；末项“使”不完整，不据此改判。"
+    },
+    "subject": {
+      "pos": "noun",
+      "sourceWordId": "word_0480",
+      "sourceChinese": "主题；话题；学科",
+      "reason": "主题、话题、学科均为名词义。"
+    },
+    "project": {
+      "pos": "noun",
+      "sourceWordId": "word_1672",
+      "sourceChinese": "计划；方案；项目",
+      "reason": "首义“计划”可能名动，但紧随的“方案、项目”明确支持本词库优先名词义。"
+    },
+    "present": {
+      "pos": "noun",
+      "sourceWordId": "word_0292",
+      "sourceChinese": "目前；礼物；在场的",
+      "reason": "“目前、礼物”支持名词读法；“在场的”为形容词，与名词同为首音节重读。"
+    },
+    "live": {
+      "pos": "verb",
+      "sourceWordId": "word_5256",
+      "sourceChinese": "生活；居住；活着",
+      "reason": "首义生活、居住、活着均为动词。"
+    },
+    "close": {
+      "pos": "verb",
+      "sourceWordId": "word_1114",
+      "sourceChinese": "关闭；使接近；接近的",
+      "reason": "首义关闭是动词，末音为浊辅音/z/。"
+    },
+    "permit": {
+      "pos": "verb",
+      "sourceWordId": "word_2964",
+      "sourceChinese": "允许；准许；通行证",
+      "reason": "首义允许、准许是动词，采用末音节重音。"
+    },
+    "attribute": {
+      "pos": "verb",
+      "sourceWordId": "word_1631",
+      "sourceChinese": "由引起；把归因于；认为是创作的",
+      "reason": "依据词库首义“由引起”选择verb；音素采用 CMU 美音词典。"
+    },
+    "console": {
+      "pos": "verb",
+      "sourceWordId": "word_0134",
+      "sourceChinese": "安慰；慰问；控制台",
+      "reason": "依据词库首义“安慰”选择verb；音素采用 CMU 美音词典。"
+    },
+    "convict": {
+      "pos": "verb",
+      "sourceWordId": "word_4026",
+      "sourceChinese": "定罪；宣判有罪；罪犯",
+      "reason": "依据词库首义“定罪”选择verb；音素采用 CMU 美音词典。"
+    },
+    "coordinate": {
+      "pos": "verb",
+      "sourceWordId": "word_3723",
+      "sourceChinese": "协调；使配合；搭配",
+      "reason": "依据词库首义“协调”选择verb；音素采用 CMU 美音词典。"
+    },
+    "digest": {
+      "pos": "noun",
+      "sourceWordId": "word_2065",
+      "sourceChinese": "摘要；文摘；消化",
+      "reason": "依据词库首义“摘要”选择noun；音素采用 CMU 美音词典。"
+    },
+    "excuse": {
+      "pos": "verb",
+      "sourceWordId": "word_3883",
+      "sourceChinese": "饶恕；借口；致歉",
+      "reason": "依据词库首义“饶恕”选择verb；音素采用 CMU 美音词典。"
+    },
+    "rebel": {
+      "pos": "verb",
+      "sourceWordId": "word_2777",
+      "sourceChinese": "反抗；造反；叛逆者",
+      "reason": "依据词库首义“反抗”选择verb；音素采用 CMU 美音词典。"
+    },
+    "suspect": {
+      "pos": "verb",
+      "sourceWordId": "word_1865",
+      "sourceChinese": "猜想；怀疑；嫌疑犯",
+      "reason": "依据词库首义“猜想”选择verb；音素采用 CMU 美音词典。"
+    },
+    "alternate": {
+      "pos": "adjective",
+      "sourceWordId": "word_1250",
+      "sourceChinese": "交替的；轮流的；间隔的",
+      "reason": "依据词库首义“交替的”选择adjective；音素采用 CMU 美音词典。",
+      "reference": "https://dictionary.cambridge.org/us/pronunciation/english/alternate"
+    }
+  },
+  "ambiguous": {
+    "record": {
+      "sourceWordId": "word_4931",
+      "sourceChinese": "记录；唱片；录制",
+      "reason": "记录可名可动，另含唱片和录制；词库无词性，保留当前base并明确歧义。"
+    },
+    "increase": {
+      "sourceWordId": "word_1353",
+      "sourceChinese": "增加；增长；增多",
+      "reason": "增加、增长、增多未标明名词或动词；不能仅凭中文强判重音，保留当前base并明确歧义。"
+    },
+    "conflict": {
+      "sourceWordId": "word_0197",
+      "sourceChinese": "冲突；矛盾；抵触",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "contrast": {
+      "sourceWordId": "word_0019",
+      "sourceChinese": "对照；反差；对立",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "decrease": {
+      "sourceWordId": "word_0908",
+      "sourceChinese": "减少；降低",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "estimate": {
+      "sourceWordId": "word_0232",
+      "sourceChinese": "估算；估价",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "export": {
+      "sourceWordId": "word_1641",
+      "sourceChinese": "输出；出口",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "import": {
+      "sourceWordId": "word_1411",
+      "sourceChinese": "进口；输入；重要性",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "insult": {
+      "sourceWordId": "word_1976",
+      "sourceChinese": "侮辱；辱骂",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "progress": {
+      "sourceWordId": "word_4912",
+      "sourceChinese": "进展；进步；缓慢前进",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "protest": {
+      "sourceWordId": "word_4350",
+      "sourceChinese": "抗议；抗议活动",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "transfer": {
+      "sourceWordId": "word_0317",
+      "sourceChinese": "转移；转让；调任",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    },
+    "transport": {
+      "sourceWordId": "word_0166",
+      "sourceChinese": "运输",
+      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
+    }
+  }
+}

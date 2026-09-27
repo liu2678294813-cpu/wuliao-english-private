@@ -1,0 +1,97 @@
+import { chromium, expect } from '@playwright/test';
+import { CRBrowserContext } from '../node_modules/.pnpm/playwright-core@1.57.0/node_modules/playwright-core/lib/server/chromium/crBrowser.js';
+import { execFileSync } from 'node:child_process';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+const initialize = CRBrowserContext.prototype._initialize;
+CRBrowserContext.prototype._initialize = function () { this._options.acceptDownloads = 'internal-browser-default'; return initialize.call(this); };
+const app = 'com.wuliao.english.recallqa', out = resolve('output/recall-handwriting-20260920/device'); mkdirSync(out, { recursive: true });
+const adb = resolve('.android-sdk/platform-tools/adb.exe');
+const run = (...args) => execFileSync(adb, args, { encoding: 'utf8', windowsHide: true }).trim();
+const pid = run('shell', 'pidof', app); if (!/^\d+$/.test(pid)) throw Error('Isolated recall QA app must be running');
+run('forward', 'tcp:9232', `localabstract:webview_devtools_remote_${pid}`);
+const browser = await chromium.connectOverCDP('http://127.0.0.1:9232');
+const page = browser.contexts()[0].pages().find(p => p.url().startsWith('https://localhost'));
+const cdp = await page.context().newCDPSession(page);
+const report = { app, version: '1.0.69', device: run('shell', 'getprop', 'ro.product.model'), errors: [], scenarios: [], provider: 'intercepted test responses, no real credential' };
+page.on('pageerror', error => report.errors.push(error.message)); page.on('dialog', dialog => dialog.dismiss());
+const nav = async label => { await page.locator('.ds-rail .ds-nav button', { hasText: label }).first().click(); };
+const snap = name => page.screenshot({ path: resolve(out, `${name}.png`) });
+const send = (type, x, y) => cdp.send('Input.dispatchMouseEvent', { type, x, y, button: type === 'mouseMoved' ? 'none' : 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, pointerType: 'pen' });
+const readInk = () => page.evaluate(async () => { const db = await new Promise(ok => { const r = indexedDB.open('wuliao-english'); r.onsuccess = () => ok(r.result); }); const rows = await new Promise(ok => { const r = db.transaction('writing-ink').objectStore('writing-ink').getAll(); r.onsuccess = () => ok(r.result); }); db.close(); return rows.filter(r => r.surfaceId.startsWith('vocabulary:')); });
+try {
+  await page.locator('.account-card').waitFor({ timeout: 30000 });
+  const username = `recall-qa-${Date.now()}`;
+  await page.locator('input[autocomplete="username"]').fill(username);
+  await page.locator('input[type="password"]').nth(0).fill('isolated-qa-123'); await page.locator('input[type="password"]').nth(1).fill('isolated-qa-123');
+  await page.locator('.account-submit').click(); await page.locator('.home-page').waitFor({ timeout: 30000 });
+  await nav('词库'); await expect(page.locator('.vocabulary-frame.loaded')).toBeVisible();
+  const fixture = await page.evaluate(async username => {
+    const assets = await (await fetch('/vocabulary/word-assets.json')).json(); const chunks = await Promise.all(Object.values(assets).slice(0, 4).map(path => import(path)));
+    const words = chunks.flatMap(m => m.default.entries).slice(0, 1735);
+    const listId = await new Promise((ok, no) => { const r = indexedDB.open('KaoyanVocabDB'); r.onsuccess = () => { const db = r.result, tx = db.transaction('wordLists', 'readwrite'); const add = tx.objectStore('wordLists').add({ username, name: '手写与背词隔离验收 1735 词', type: 'raw', round: 1, wordIds: words.map(w => w.wordId), createdAt: Date.now() }); tx.oncomplete = () => { db.close(); ok(add.result); }; tx.onabort = () => no(tx.error); }; });
+    localStorage.setItem('wuliao:vocab:last-source-list-' + username, String(listId)); return { listId, words };
+  }, username);
+  await nav('背诵'); await expect(page.locator('.vocabulary-frame.loaded')).toBeVisible();
+  let frame = page.frames().find(f => f.url().includes('/vocabulary/memorize.html'));
+  await expect(frame.locator('#listSelect option').filter({ hasText: '隔离验收' })).toHaveCount(1);
+  await frame.locator('#listSelect').selectOption(await frame.locator('#listSelect option').filter({ hasText: '隔离验收' }).getAttribute('value'));
+  const first = frame.locator('.word-row').first();
+  for (let count = 1; count <= 3; count++) { await first.locator('.mark-button').click(); await expect(first.locator('.mark-button')).toContainText(`${count}/3`); if (count < 3) await expect(first).not.toHaveClass(/masked/); }
+  await expect(first).toHaveClass(/masked/); await frame.locator('[data-memory-rule="cycle"]').click(); await expect(first.locator('.mark-button')).toBeDisabled();
+  const second = frame.locator('.word-row').nth(1); await second.locator('.mark-button').click(); await expect(second).toHaveClass(/masked/);
+  await frame.locator('[data-memory-rule="default"]').click(); await expect(second).toHaveClass(/masked/); await expect(second.locator('.mark-button')).toContainText('1/3');
+  await second.locator('.mark-button').click(); await expect(second.locator('.mark-button')).toContainText('2/3'); await expect(second).toHaveClass(/masked/);
+  await frame.locator('[data-memory-input="swipe"]').click(); const box = await second.locator('.word-content').boundingBox();
+  await send('mousePressed', box.x + 70, box.y + 25); await send('mouseMoved', box.x + 230, box.y + 25); await send('mouseReleased', box.x + 230, box.y + 25);
+  await expect(second.locator('.mark-button')).toContainText('3/3'); await snap('shared-memory');
+  await page.reload(); await page.locator('.ds-rail').waitFor(); await nav('背诵'); await expect(page.locator('.vocabulary-frame.loaded')).toBeVisible();
+  frame = page.frames().find(f => f.url().includes('/vocabulary/memorize.html')); await expect(frame.locator('#maskSummary')).toContainText('2');
+  report.scenarios.push('three clicks; shared partial mask; default swipe completes; reload preserves');
+  await nav('筛查'); await expect(page.locator('.vocabulary-frame.loaded')).toBeVisible(); frame = page.frames().find(f => f.url().includes('/vocabulary/index.html')); await frame.waitForFunction(() => window.__wuliaoScreeningContext);
+  await page.getByRole('button', { name: '手写模式', exact: true }).click(); await expect(page.locator('.vocab-ink-paper').first()).toBeVisible();
+  await page.evaluate(username => {
+    const p = `wuliao:user:${encodeURIComponent(username)}:`;
+    localStorage.setItem(p + 'wuliao:writing:vision-api-config:v1', JSON.stringify({ baseUrl: 'https://vision.example.com/v1' }));
+    localStorage.setItem(p + 'wuliao:writing:vision-model:v1', 'test-vision');
+    window.AndroidSecureStore.set('ai:vision-apikey:' + encodeURIComponent(username), 'test-native-legacy-vision');
+    localStorage.setItem(p + 'wuliao:ai:api-config', JSON.stringify({ baseUrl: 'https://api.deepseek.com' }));
+    localStorage.setItem(p + 'wuliao:ai:apikey', 'test-text'); localStorage.setItem(p + 'wuliao:ai:model', 'deepseek-chat');
+  }, username);
+  let vision = 0, judged = 0;
+  await page.route('https://vision.example.com/**', async route => { const blocks = route.request().postDataJSON().messages.at(-1).content; const count = blocks.filter(b => b.type === 'image_url').length; vision += count; await route.fulfill({ json: { choices: [{ message: { content: JSON.stringify({ items: Array.from({ length: count }, (_, i) => ({ id: String(i), text: '手写中文', unsure: false })) }) } }] } }); });
+  await page.route('https://api.deepseek.com/**', async route => { const rows = JSON.parse(route.request().postDataJSON().messages.at(-1).content); judged += rows.length; await route.fulfill({ json: { choices: [{ message: { content: JSON.stringify({ items: rows.map(r => ({ id: r.id, verdict: 'correct', reason: '隔离测试' })) }) } }] } }); });
+  const at = async index => { await page.locator('.vocab-handwriting-scroll').evaluate((el, index) => { el.scrollTop = index * 120; }, index); const row = page.locator(`.vocab-ink-row[data-index="${index}"]`); await expect(row).toBeVisible(); return row; };
+  let row = await at(0), b = await row.locator('.vocab-ink-paper').boundingBox();
+  const stroke = async (b, x) => { await send('mousePressed', b.x + x, b.y + 28); await send('mouseMoved', b.x + x + 40, b.y + 28); await send('mouseReleased', b.x + x + 40, b.y + 28); };
+  await stroke(b, 35); await stroke(b, 140); await expect.poll(async () => (await readInk())[0]?.strokes.length).toBe(2);
+  await send('mousePressed', b.x + 20, b.y + 14); await page.waitForTimeout(750); await expect(page.locator('.vocab-handwriting-message')).toContainText('临时自由套索');
+  for (const [x, y] of [[90, 14], [90, 44], [20, 44], [20, 14]]) await send('mouseMoved', b.x + x, b.y + y);
+  await send('mouseReleased', b.x + 20, b.y + 14); await expect.poll(async () => (await readInk())[0]?.strokes.length).toBe(1);
+  await stroke(b, 220); await expect.poll(async () => (await readInk())[0]?.strokes.length).toBe(2);
+  await page.getByRole('button', { name: '撤销', exact: true }).click(); await expect.poll(async () => (await readInk())[0]?.strokes.length).toBe(1);
+  report.scenarios.push('Android pen long press circle erase; resumed writing; undo');
+  for (const index of [34, 79]) { row = await at(index); b = await row.locator('.vocab-ink-paper').boundingBox(); await stroke(b, 35); }
+  await page.getByRole('button', { name: '对照', exact: true }).click(); await expect(page.locator('.vocab-handwriting-message')).toContainText('3 个已手写'); expect(vision).toBe(0);
+  for (const index of [0, 34, 79]) await expect((await at(index)).locator('.vocab-ink-reference')).toBeVisible();
+  await expect((await at(1)).locator('.vocab-ink-reference')).toHaveCount(0);
+  await page.getByRole('button', { name: '识别', exact: true }).click(); await expect(page.locator('.vocab-handwriting-message')).toContainText('已完成 3 词'); expect(vision).toBe(3); expect(judged).toBe(3);
+  await page.getByRole('button', { name: '识别', exact: true }).click(); await expect(page.locator('.vocab-handwriting-message')).toContainText('没有新增'); expect(vision).toBe(3);
+  report.credentialMigration = await page.evaluate(username => { const profile = JSON.parse(localStorage.getItem(`wuliao:user:${encodeURIComponent(username)}:wuliao:ai:provider-profile:v2:vision`)); return { bound: !!window.AndroidSecureStore.get(`ai:credential:v2:${encodeURIComponent(username)}:${profile.credentialScopeId}`), originalRetained: !!window.AndroidSecureStore.get('ai:vision-apikey:' + encodeURIComponent(username)) }; }, username);
+  expect(report.credentialMigration).toEqual({ bound: true, originalRetained: true });
+  const restoredRow = await at(0);
+  await expect.poll(() => restoredRow.locator('canvas').evaluateAll(canvases => canvases.some(canvas => {
+    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    return pixels.some((value, index) => index % 4 === 3 && value > 0);
+  }))).toBe(true);
+  await snap('handwriting-reference');
+  report.scenarios.push('offscreen words 1/35/80; manual reference; automatic recognition and classification; duplicate suppression; native credential migration');
+  await at(79); const scrollTop = await page.locator('.vocab-handwriting-scroll').evaluate(el => el.scrollTop);
+  await page.getByRole('button', { name: '选择模式', exact: true }).click(); await page.getByRole('button', { name: '手写模式', exact: true }).click();
+  await expect.poll(() => page.locator('.vocab-handwriting-scroll').evaluate(el => el.scrollTop)).toBe(scrollTop);
+  await expect((await at(79)).locator('textarea')).toHaveValue('手写中文'); expect(await page.locator('.vocab-ink-row').count()).toBeLessThan(30);
+  await expect(page.locator('.vocab-handwriting footer')).toHaveCount(0); expect(report.errors).toEqual([]);
+  report.scenarios.push('continuous list, bounded canvases, saved scroll, restored handwriting'); report.passed = true;
+  console.log(JSON.stringify(report, null, 2));
+} catch (error) { report.failed = error.message; await snap('failure').catch(() => {}); throw error; }
+finally { writeFileSync(resolve(out, 'result.json'), JSON.stringify(report, null, 2)); await browser.close(); run('forward', '--remove', 'tcp:9232'); }

@@ -1,25 +1,37 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 import { readProgress, saveProgress } from "./library";
 import { extractQuestions } from "./questions";
+import { AnnotationToolbar } from "./ui/AnnotationToolbar";
 import {
-  coalescedPointerPoints,
+  drawInkStroke,
   eraseAnnotationsInPolygon,
   inkPixelRatio,
   normalizePenMode,
   normalizePenSize,
   PEN_MODE_STORAGE_KEY,
   PEN_SIZE_STORAGE_KEY,
-  pointerPointFromSample,
   renderInkLayer,
   resizeInkCanvas,
 } from "./annotationTools";
 import { isAndroidApp } from "./platform";
+import { ReaderStageMarker } from "./ui/ReaderChrome";
+import { installPenScrollGuard } from "./inkEngine";
+import { useStructuredInk } from "./ink/useStructuredInk";
+import { exposeInkHandoffStats, recordInkHandoff } from "./inkDebug";
+import { getTelemetry } from "./telemetry/telemetry";
 import { getUserItem, setUserItem } from "./userData";
+import { onOtherPanelOpen, openPanel } from "./panelBus";
+import { useBackHandler } from "./ui/BackContext";
+import { BACK_PRIORITY } from "./ui/backController";
+import { useMotionPresence } from "./ui/useMotionPresence";
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
+import { useSaveBoundary } from "./useSaveBoundary.js";
+import { backgroundSave, saveBeforeNavigation, scheduleInkSave, cancelScheduledInkSave } from "./saveCoordinator.js";
+import { getCurrentUsername, setUserItem as writeOwnedUserItem } from "./userData.js";
 const annotationKey = (resourceId, page) => `wuliao:ink:${resourceId}:${page}`;
 const answerKey = (resourceId) => `wuliao:answers:${resourceId}`;
 
@@ -48,7 +60,7 @@ function StageNavigation({ page, total, onNavigate }) {
     <nav className="stage-nav" aria-label="精读流程">
       {stages.map(([label, target], index) => (
         <button key={`${label}-${index}`} className={active.includes(label) || (active === "第一次作答" && label === "初做") || (active === "正式重做" && label === "重做") || (active === "全文压缩" && label === "压缩") ? "active" : ""} onClick={() => onNavigate(target)}>
-          <span>{index + 1}</span>{label}
+          <ReaderStageMarker index={index} />{label}
         </button>
       ))}
     </nav>
@@ -56,6 +68,7 @@ function StageNavigation({ page, total, onNavigate }) {
 }
 
 export function QuestionDrawer({
+  embedded = false,
   open,
   onClose,
   questions,
@@ -65,19 +78,134 @@ export function QuestionDrawer({
   correctAnswers = {},
   correctionVisible = false,
   onToggleCorrection,
+  onRequestAiHint,
+  getDiagnosisLabel,
+  onRequestDiagnosis,
+  docked = true,
+  onDockedChange,
+  avoidAiWindow = false,
+  focusQuestionId = null,
+  evidenceForQuestion = null,
+  onRequestEvidence = null,
+  capabilitiesForQuestion = null,
 }) {
   const [expanded, setExpanded] = useState(null);
+  const [pos, setPos] = useState(() => {
+    try {
+      const parsed = JSON.parse(getUserItem("wuliao:question-drawer-pos"));
+      return parsed && Number.isFinite(parsed.x) && Number.isFinite(parsed.y) ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
+  const posRef = useRef(pos);
+  const drawerRef = useRef(null);
+  const dragRef = useRef(null);
+  const dragFrameRef = useRef(0);
+  const defaultLeft = avoidAiWindow ? 12 : Math.max(12, window.innerWidth - 340 - 16);
+  const motion = useMotionPresence(open);
+
+  useEffect(() => {
+    if (open && !embedded) openPanel("questions");
+  }, [open, embedded]);
+
+  useEffect(() => embedded ? undefined : onOtherPanelOpen("questions", (panel) => {
+    if (!open) return;
+    if (panel === "ai") return; // AI 窗打开时保持共存，由外层自动切到缩小模式
+    onClose();
+  }), [open, onClose, embedded]);
+
+  useBackHandler(() => {
+    if (!open) return false;
+    onClose();
+    return true;
+  }, {
+    enabled: open,
+    priority: BACK_PRIORITY.drawer,
+  });
+
+  useEffect(() => { posRef.current = pos; }, [pos]);
+
+  useEffect(() => () => {
+    if (dragFrameRef.current) window.cancelAnimationFrame(dragFrameRef.current);
+  }, []);
+
+  function startDrawerDrag(event) {
+    if (event.target.closest("button")) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const drawerRect = drawerRef.current?.getBoundingClientRect();
+    const baseLeft = drawerRect?.left ?? posRef.current?.x ?? defaultLeft;
+    const baseTop = drawerRect?.top ?? posRef.current?.y ?? 90;
+    drawerRef.current?.setAttribute("data-dragging", "true");
+    dragRef.current = { startX, startY, baseLeft, baseTop };
+    const move = (moveEvent) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const next = {
+        x: Math.min(Math.max(0, drag.baseLeft + moveEvent.clientX - drag.startX), Math.max(0, window.innerWidth - 340)),
+        y: Math.min(Math.max(0, drag.baseTop + moveEvent.clientY - drag.startY), Math.max(0, window.innerHeight - 96)),
+      };
+      drag.next = next;
+      posRef.current = next;
+      if (dragFrameRef.current) return;
+      dragFrameRef.current = window.requestAnimationFrame(() => {
+        dragFrameRef.current = 0;
+        const active = dragRef.current;
+        const node = drawerRef.current;
+        if (!active?.next || !node) return;
+        node.style.transform = `translate(${active.next.x - active.baseLeft}px, ${active.next.y - active.baseTop}px)`;
+      });
+    };
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      if (dragFrameRef.current) {
+        window.cancelAnimationFrame(dragFrameRef.current);
+        dragFrameRef.current = 0;
+      }
+      const next = dragRef.current?.next || posRef.current;
+      if (next && drawerRef.current) {
+        drawerRef.current.style.left = `${next.x}px`;
+        drawerRef.current.style.top = `${next.y}px`;
+        drawerRef.current.style.transform = "";
+        setPos(next);
+      }
+      drawerRef.current?.removeAttribute("data-dragging");
+      dragRef.current = null;
+      if (next) setUserItem("wuliao:question-drawer-pos", JSON.stringify(next));
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  }
+
   useEffect(() => {
     if (questions.length && !questions.some((question) => question.number === expanded)) {
       setExpanded(questions[0].number);
     }
   }, [questions, expanded]);
 
+  useEffect(() => {
+    if (!focusQuestionId) return;
+    const question = questions.find((item) => item.id === focusQuestionId);
+    if (question) setExpanded(question.number);
+  }, [focusQuestionId, questions]);
+
   return (
-    <aside className={`question-drawer ${open ? "open" : ""}`} aria-hidden={!open}>
-      <div className="drawer-header">
+    <aside
+      ref={drawerRef}
+      className={`question-drawer ${motion.visible ? "open" : ""} ${docked ? "docked" : "floating"}`}
+      data-motion-state={motion.state}
+      style={motion.present && !docked ? { left: pos?.x ?? defaultLeft, top: pos?.y ?? 90, right: "auto", bottom: "auto" } : undefined}
+      aria-hidden={motion.state === "closed"}
+    >
+      <div className="drawer-header" onPointerDown={docked ? undefined : startDrawerDrag}>
         <div><small>QUESTION PANEL</small><h2>悬浮习题窗</h2></div>
         <div className="drawer-header-actions">
+          {!avoidAiWindow && onDockedChange && <button className="drawer-mode-button" onClick={() => onDockedChange(!docked)}>{docked ? "缩小" : "放大"}</button>}
           {questions.length > 0 && onToggleCorrection && <button className={`correction-button ${correctionVisible ? "active" : ""}`} onClick={onToggleCorrection}>{correctionVisible ? "隐藏订正" : "订正"}</button>}
           <button className="icon-button" onClick={onClose} aria-label="关闭题窗">×</button>
         </div>
@@ -92,23 +220,68 @@ export function QuestionDrawer({
       <div className="question-list">
         {questions.map((question) => {
           const isExpanded = expanded === question.number;
+          const capabilities = capabilitiesForQuestion?.(question) || {
+            canEditAnswer: true,
+            showCorrection: correctionVisible,
+            showEvidence: Boolean(onRequestEvidence && evidenceForQuestion),
+            showAiHint: Boolean(onRequestAiHint),
+            showDiagnosis: Boolean(getDiagnosisLabel && onRequestDiagnosis),
+          };
           return (
-            <section className={`question-item ${isExpanded ? "expanded" : ""}`} key={question.number}>
+            <section className={`question-item ${isExpanded ? "expanded" : ""}`} key={question.number} data-question-id={question.id}>
               <button className="question-stem" onClick={() => setExpanded(isExpanded ? null : question.number)}>
-                <span>{question.number}</span><strong>{question.stem}</strong><i>{isExpanded ? "−" : "+"}</i>
+                <strong>{question.number}. {question.stem}</strong><i>{isExpanded ? "−" : "+"}</i>
               </button>
               {isExpanded && (
                 <div className="question-options">
                   {question.options.map((option) => (
                     <button key={option.key} className={[
                       answers[question.number] === option.key ? "selected" : "",
-                      correctionVisible && correctAnswers[question.number] === option.key ? "correct" : "",
-                    ].filter(Boolean).join(" ")} onClick={() => onAnswer(question.number, option.key)}>
+                      capabilities.showCorrection && correctAnswers[question.number] === option.key ? "correct" : "",
+                    ].filter(Boolean).join(" ")} disabled={!capabilities.canEditAnswer} onClick={() => capabilities.canEditAnswer && onAnswer(question.number, option.key)}>
                       <span>{option.key}</span><p>{option.text}</p>
                     </button>
                   ))}
                 </div>
               )}
+              {isExpanded && capabilities.showAiHint && onRequestAiHint && (
+                <div className="question-ai-hint-row">
+                  <button type="button" className="question-ai-hint-button" onClick={() => onRequestAiHint(question)}>
+                    AI 提示
+                  </button>
+                  {capabilities.showDiagnosis && getDiagnosisLabel && onRequestDiagnosis && (() => {
+                    const diagnosisLabel = getDiagnosisLabel(question);
+                    return diagnosisLabel ? (
+                      <button
+                        type="button"
+                        className="question-ai-hint-button question-diagnosis-button"
+                        onClick={() => onRequestDiagnosis(question)}
+                      >
+                        {diagnosisLabel}
+                      </button>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+              {isExpanded && capabilities.showEvidence && onRequestEvidence && evidenceForQuestion && (() => {
+                const evidence = evidenceForQuestion(question);
+                if (!evidence) return null;
+                const label = evidence.hasEvidence
+                  ? `原文证据 · ${evidence.label || "已标记"}`
+                  : (evidence.legacy ? "历史作答 · 未记录原文证据" : "原文证据 · 尚未标记");
+                return (
+                  <div className="question-evidence-row">
+                    <span>{label}</span>
+                    <button
+                      type="button"
+                      className="question-evidence-action"
+                      onClick={() => onRequestEvidence(question)}
+                    >
+                      {evidence.hasEvidence ? "查看原文/修改" : "去原文定位"}
+                    </button>
+                  </div>
+                );
+              })()}
             </section>
           );
         })}
@@ -120,98 +293,12 @@ export function QuestionDrawer({
   );
 }
 
-export function AnnotationToolbar({
-  tool,
-  color,
-  annotations,
-  onTool,
-  onColor,
-  onUndo,
-  onClear,
-  noteMode,
-  onToggleNoteMode,
-  penSize = 2.6,
-  penMode = "ballpoint",
-  eraserMode = "normal",
-  eraserSize = 24,
-  onEraserMode,
-  onEraserSize,
-  collapsible = false,
-  onCollapsedChange,
-  unknownEnabled = false,
-  tabletInk = false,
-}) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  function toggleCollapsed() {
-    const next = !collapsed;
-    setCollapsed(next);
-    onCollapsedChange?.(next);
-  }
-
-  return (
-    <div className={`annotation-toolbar ${collapsible && collapsed ? "collapsed" : ""} ${tabletInk ? "tablet-ink-toolbar" : ""}`} aria-label="批注工具">
-      {collapsible && (
-        <button
-          type="button"
-          className="toolbar-collapse-toggle"
-          aria-expanded={!collapsed}
-          onClick={toggleCollapsed}
-        >
-          {collapsed ? "⌄ 展开工具" : "⌃ 收起工具"}
-        </button>
-      )}
-      {onToggleNoteMode && (
-        <div className="input-mode-picker" aria-label="输入方式">
-          <button className={!noteMode ? "active" : ""} onClick={() => { if (noteMode) onToggleNoteMode(); }}>⌨ 键盘输入</button>
-          <button className={noteMode ? "active" : ""} onClick={() => { if (!noteMode) onToggleNoteMode(); }}>✍ 手写批注</button>
-        </div>
-      )}
-      <button className={tool === "pen" && (noteMode ?? true) ? "active" : ""} onClick={() => onTool("pen")}><span>✎</span>笔</button>
-      <button className={tool === "eraser" && (noteMode ?? true) ? "active" : ""} onClick={() => onTool("eraser")}><span>◇</span>橡皮</button>
-      {unknownEnabled && <button className={tool === "unknown" && (noteMode ?? true) ? "active" : ""} onClick={() => onTool("unknown")}><span>词</span>陌生词</button>}
-      {tool === "pen" && (
-        <>
-          {tabletInk && (
-            <div className="tool-mode-picker" aria-label="画笔模式">
-              <button className={penMode === "fountain" ? "active" : ""} onClick={() => onPenMode?.("fountain")}>钢笔</button>
-              <button className={penMode === "ballpoint" ? "active" : ""} onClick={() => onPenMode?.("ballpoint")}>圆珠笔</button>
-            </div>
-          )}
-          <label className="tool-size-control">粗细
-            <input type="range" min="1" max="10" step="0.5" value={penSize} onChange={(event) => onPenSize?.(Number(event.target.value))} aria-label="画笔粗细" />
-            <output>{penSize}</output>
-          </label>
-          <div className="color-picker" aria-label="笔迹颜色">
-            {["#173a62", "#0b7b77", "#e26f51"].map((value) => (
-              <button key={value} className={color === value ? "active" : ""} style={{ backgroundColor: value }} onClick={() => onColor(value)} aria-label={`选择颜色 ${value}`} />
-            ))}
-          </div>
-        </>
-      )}
-      {tool === "eraser" && (
-        <>
-          <div className="tool-mode-picker" aria-label="橡皮模式">
-            <button className={eraserMode === "normal" ? "active" : ""} onClick={() => onEraserMode?.("normal")}>普通</button>
-            <button className={eraserMode === "lasso" ? "active" : ""} onClick={() => onEraserMode?.("lasso")}>自由套索</button>
-          </div>
-          {eraserMode === "normal" && (
-            <label className="tool-size-control">大小
-              <input type="range" min="10" max="54" step="2" value={eraserSize} onChange={(event) => onEraserSize?.(Number(event.target.value))} aria-label="普通橡皮大小" />
-              <output>{eraserSize}</output>
-            </label>
-          )}
-        </>
-      )}
-      <span className="toolbar-divider" />
-      <button onClick={onUndo} disabled={!annotations.length}>↶ 撤销</button>
-      <button onClick={onClear} disabled={!annotations.length}>清空本页</button>
-      <small>{!noteMode ? "键盘输入模式：横线文本框接收文字" : tool === "unknown" ? "用笔点按或划过英文单词，自动加入陌生词库" : tool === "eraser" && eraserMode === "lasso" ? "虚线随笔尖移动，松笔后删除真实圈选范围" : tool === "pen" && penMode === "fountain" ? "钢笔直接跟随笔尖并保留笔压；长按临时橡皮" : tool === "pen" ? "圆珠笔直接跟随笔尖并保持固定粗细；长按临时橡皮" : "普通橡皮；手指仍可上下滑动"}</small>
-    </div>
-  );
-}
-
+// 兼容旧 import：共享 Toolbar 已抽至 src/ui/AnnotationToolbar.jsx（唯一实现）。
+export { AnnotationToolbar };
 export default function PdfReader({ resource, onClose }) {
+  const storageUsername = useRef(getCurrentUsername()).current;
+  const setUserItem = (key, value) => writeOwnedUserItem(key, value, storageUsername);
+  const closeAfterSave = () => saveBeforeNavigation(onClose, storageUsername);
   const androidApp = isAndroidApp();
   const [pdfDocument, setPdfDocument] = useState(null);
   const [page, setPage] = useState(() => Math.max(1, readProgress(resource.id)?.page || 1));
@@ -232,24 +319,25 @@ export default function PdfReader({ resource, onClose }) {
   const [parseInfo, setParseInfo] = useState({ status: "loading" });
   const [answers, setAnswers] = useState(() => loadJson(answerKey(resource.id), {}));
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerDocked, setDrawerDocked] = useState(() => loadJson("wuliao:question-drawer-mode", "docked") !== "floating");
   const [hint, setHint] = useState("");
   const [topAreaCollapsed, setTopAreaCollapsed] = useState(false);
+  const [reloadAttempt, setReloadAttempt] = useState(0);
 
   const containerRef = useRef(null);
   const stackRef = useRef(null);
   const pdfCanvasRef = useRef(null);
   const inkCanvasRef = useRef(null);
   const inkPreviewCanvasRef = useRef(null);
-  const previewRenderFrameRef = useRef(null);
-  const pendingPreviewStrokeRef = useRef(null);
+  const tailCanvasRef = useRef(null);
   const activePointerRef = useRef(null);
-  const touchScrollRef = useRef(null);
   const toolRef = useRef(tool);
   const colorRef = useRef(color);
   const penSizeRef = useRef(penSize);
   const penModeRef = useRef(penMode);
   const eraserModeRef = useRef(eraserMode);
   const eraserSizeRef = useRef(eraserSize);
+  const noteModeRef = useRef(noteMode);
   const annotationsRef = useRef(annotations);
   const pendingAnnotationSaveRef = useRef(null);
   const annotationSaveTimerRef = useRef(null);
@@ -260,6 +348,7 @@ export default function PdfReader({ resource, onClose }) {
   useEffect(() => { penModeRef.current = penMode; }, [penMode]);
   useEffect(() => { eraserModeRef.current = eraserMode; }, [eraserMode]);
   useEffect(() => { eraserSizeRef.current = eraserSize; }, [eraserSize]);
+  useEffect(() => { noteModeRef.current = noteMode; }, [noteMode]);
   useEffect(() => { annotationsRef.current = annotations; }, [annotations]);
   useEffect(() => {
     if (noteMode && document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -275,23 +364,59 @@ export default function PdfReader({ resource, onClose }) {
     return () => {
       window.removeEventListener("pagehide", flushOnHide);
       document.removeEventListener("visibilitychange", flushWhenHidden);
-      flushPendingAnnotationSave();
+      backgroundSave(flushPendingAnnotationSave);
     };
   }, []);
 
-  useEffect(() => () => {
-    if (previewRenderFrameRef.current) window.cancelAnimationFrame(previewRenderFrameRef.current);
+  // 共享 Ink Runtime 的 dispose（卸载时清理 rAF 与未结束会话）由 useStructuredInk 内部注册。
+
+  useEffect(() => {
+    exposeInkHandoffStats();
   }, []);
+
+  useEffect(() => {
+    if (!noteMode || !containerRef.current) return undefined;
+    return installPenScrollGuard({
+      root: containerRef,
+      ownsPointer: (pointerId) => activePointerRef.current?.id === pointerId,
+      hasActiveSession: () => Boolean(activePointerRef.current),
+    });
+  }, [noteMode]);
+
+  // 共享 Ink Runtime：与精读 / 普通完形 / 模拟考试使用同一份笔系统实现。
+  // PdfReader 使用单 committed canvas 策略（append-only 提交 + 结构性整层重绘）。
+  const inkController = useStructuredInk({
+    canInteract: () => noteModeRef.current,
+    surfaceRef: inkCanvasRef,
+    previewCanvasRef: inkPreviewCanvasRef,
+    tailCanvasRef,
+    strokesRef: annotationsRef,
+    activeRef: activePointerRef,
+    toolRef,
+    colorRef,
+    penSizeRef,
+    penModeRef,
+    eraserModeRef,
+    eraserSizeRef,
+    commitAppendStroke: commitStrokeToCommittedLayer,
+    renderCommitted: (extraStroke = null) => {
+      return extraStroke ? renderEraserPreview(extraStroke) : redrawCommittedLayer();
+    },
+    persistStrokes: (next) => { setAndPersistAnnotations(next); },
+    engineForPen: () => isAndroidApp(),
+    onHint: setHint,
+  });
 
   useEffect(() => {
     let cancelled = false;
     let task = null;
+    const controller = new AbortController();
     const sourceUrl = new URL(resource.source, window.location.href).href;
     const pdfAssetBase = new URL(`${import.meta.env.BASE_URL}pdfjs/`, window.location.href).href;
     setLoading(true);
     setError("");
     (async () => {
-      const response = await fetch(sourceUrl, { cache: "no-store" });
+      const response = await fetch(sourceUrl, { cache: "no-store", signal: controller.signal });
       if (!response.ok) throw new Error(`PDF 文件读取失败（${response.status}）`);
       const data = new Uint8Array(await response.arrayBuffer());
       if (cancelled) return;
@@ -300,6 +425,7 @@ export default function PdfReader({ resource, onClose }) {
         cMapUrl: `${pdfAssetBase}cmaps/`,
         cMapPacked: true,
         standardFontDataUrl: `${pdfAssetBase}standard_fonts/`,
+        signal: controller.signal,
       });
       const document = await task.promise;
       if (cancelled) return;
@@ -317,15 +443,16 @@ export default function PdfReader({ resource, onClose }) {
         if (!cancelled) setParseInfo({ status: "text-only" });
       }
     })().catch((reason) => {
-      if (cancelled) return;
+      if (cancelled || reason?.name === "AbortError") return;
       setError(reason?.message || "PDF 无法打开");
       setLoading(false);
     });
     return () => {
       cancelled = true;
+      controller.abort();
       task?.destroy();
     };
-  }, [resource.source]);
+  }, [resource.source, reloadAttempt]);
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -337,6 +464,7 @@ export default function PdfReader({ resource, onClose }) {
 
   useEffect(() => {
     if (!pdfDocument) return undefined;
+    inkController.finishActiveForGeometryChange();
     let cancelled = false;
     let renderTask = null;
     (async () => {
@@ -358,6 +486,7 @@ export default function PdfReader({ resource, onClose }) {
       canvas.style.height = `${viewport.height}px`;
       resizeInkCanvas(inkCanvas, viewport.width, viewport.height, inkRatio);
       resizeInkCanvas(inkPreviewCanvas, viewport.width, viewport.height, inkRatio);
+      resizeInkCanvas(tailCanvasRef.current, viewport.width, viewport.height, inkRatio);
       stack.style.width = canvas.style.width;
       stack.style.height = canvas.style.height;
       const context = canvas.getContext("2d", { alpha: false });
@@ -385,10 +514,11 @@ export default function PdfReader({ resource, onClose }) {
   }, [resource.id, page]);
 
   useEffect(() => {
+    // 只由页面渲染/尺寸/加载变化触发整层重绘；普通新增笔画由 append-only commit 完成。
     const canvas = inkCanvasRef.current;
     if (!canvas || !canvasSize.width) return;
-    renderInkLayer(canvas, annotations, canvasSize.width, canvasSize.height, canvasSize.inkRatio);
-  }, [annotations, canvasSize]);
+    redrawCommittedLayer();
+  }, [canvasSize, page, resource.id]);
 
   useEffect(() => {
     if (pdfDocument) saveProgress(resource, page, total);
@@ -397,212 +527,70 @@ export default function PdfReader({ resource, onClose }) {
   const stage = useMemo(() => stageForPage(page, total), [page, total]);
 
   function navigate(nextPage) {
-    setPage(Math.max(1, Math.min(total, nextPage)));
-    containerRef.current?.scrollTo?.({ top: 0, behavior: "smooth" });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    void saveBeforeNavigation(() => {
+      setPage(Math.max(1, Math.min(total, nextPage)));
+      containerRef.current?.scrollTo?.({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, storageUsername);
   }
 
   function setAndPersistAnnotations(updater) {
     const next = typeof updater === "function" ? updater(annotationsRef.current) : updater;
     annotationsRef.current = next;
-    setAnnotations(next);
+    startTransition(() => setAnnotations(next));
     pendingAnnotationSaveRef.current = {
       key: annotationKey(resource.id, page),
       annotations: next,
     };
-    if (annotationSaveTimerRef.current) window.clearTimeout(annotationSaveTimerRef.current);
-    annotationSaveTimerRef.current = window.setTimeout(flushPendingAnnotationSave, 300);
+    if (annotationSaveTimerRef.current) cancelScheduledInkSave(annotationSaveTimerRef.current);
+    annotationSaveTimerRef.current = scheduleInkSave(flushPendingAnnotationSave);
   }
 
   function flushPendingAnnotationSave() {
-    if (annotationSaveTimerRef.current) window.clearTimeout(annotationSaveTimerRef.current);
+    if (annotationSaveTimerRef.current) cancelScheduledInkSave(annotationSaveTimerRef.current);
     annotationSaveTimerRef.current = null;
     const pending = pendingAnnotationSaveRef.current;
     if (!pending) return;
+    const startedAt = performance.now();
     setUserItem(pending.key, JSON.stringify(pending.annotations));
+    try {
+      getTelemetry().recordTiming({ metric: "ink.save", durationMs: performance.now() - startedAt });
+    } catch {
+      // Telemetry 异常绝不影响笔迹保存
+    }
     pendingAnnotationSaveRef.current = null;
   }
-
-  function pointFromEvent(event) {
-    return pointerPointFromSample(event, inkCanvasRef.current.getBoundingClientRect(), event.pointerType === "pen");
-  }
-
-  function coalescedPointsFromEvent(event) {
-    return coalescedPointerPoints(event, inkCanvasRef.current.getBoundingClientRect());
-  }
-
-  function clearInkPreview() {
-    if (previewRenderFrameRef.current) window.cancelAnimationFrame(previewRenderFrameRef.current);
-    previewRenderFrameRef.current = null;
-    pendingPreviewStrokeRef.current = null;
-    const canvas = inkPreviewCanvasRef.current;
-    if (canvas) renderInkLayer(canvas, [], canvasSize.width, canvasSize.height, canvasSize.inkRatio);
-  }
-
-  function renderInkPreview(stroke) {
-    pendingPreviewStrokeRef.current = stroke;
-    if (previewRenderFrameRef.current) return;
-    previewRenderFrameRef.current = window.requestAnimationFrame(() => {
-      previewRenderFrameRef.current = null;
-      const canvas = inkPreviewCanvasRef.current;
-      const pending = pendingPreviewStrokeRef.current;
-      pendingPreviewStrokeRef.current = null;
-      if (!canvas || !canvasSize.width || !pending) return;
-      renderInkLayer(canvas, [pending], canvasSize.width, canvasSize.height, canvasSize.inkRatio);
-    });
-  }
+  useSaveBoundary(() => {
+    inkController.finishActiveForGeometryChange();
+    flushPendingAnnotationSave();
+  });
 
   function renderEraserPreview(stroke) {
+    recordInkHandoff("fullRedraw");
     const canvas = inkCanvasRef.current;
-    if (!canvas || !canvasSize.width) return;
-    renderInkLayer(canvas, [...annotationsRef.current, stroke], canvasSize.width, canvasSize.height, canvasSize.inkRatio);
+    if (!canvas || !canvasSize.width) return false;
+    return renderInkLayer(canvas, [...annotationsRef.current, stroke], canvasSize.width, canvasSize.height, canvasSize.inkRatio);
   }
 
-  function capturePointer(event) {
-    try {
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-    } catch {
-      // Some Android WebView interruptions reject capture; drawing can continue without it.
-    }
+  // 普通新增笔画：append-only，直接绘制这一条 stroke，不 clear、不重画历史。
+  function commitStrokeToCommittedLayer(stroke) {
+    recordInkHandoff("incrementalCommit");
+    const canvas = inkCanvasRef.current;
+    if (!canvas || !canvasSize.width || !canvasSize.height || !stroke?.points?.length) return false;
+    const context = canvas.getContext("2d", { alpha: true });
+    context.save();
+    context.scale(canvasSize.inkRatio, canvasSize.inkRatio);
+    drawInkStroke(context, stroke, canvasSize.width, canvasSize.height);
+    context.restore();
+    return true;
   }
 
-  function handlePointerDown(event) {
-    if (!noteMode) return;
-    if (event.pointerType === "touch") {
-      event.preventDefault();
-      capturePointer(event);
-      touchScrollRef.current = {
-        id: event.pointerId,
-        startY: event.clientY,
-        startScrollY: window.scrollY,
-      };
-      return;
-    }
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    event.preventDefault();
-    capturePointer(event);
-    const point = pointFromEvent(event);
-    const active = {
-      id: event.pointerId,
-      startPixel: point.pixel,
-      moved: false,
-      temporaryEraser: false,
-      stroke: {
-        tool: toolRef.current === "eraser" && eraserModeRef.current === "lasso" ? "lasso" : toolRef.current,
-        color: toolRef.current === "eraser" && eraserModeRef.current === "lasso" ? "#e26f51" : colorRef.current,
-        width: toolRef.current === "eraser" ? (eraserModeRef.current === "normal" ? eraserSizeRef.current : 2) : penSizeRef.current,
-        version: toolRef.current === "eraser" && eraserModeRef.current === "normal" ? 2 : undefined,
-        engine: toolRef.current === "pen" && isAndroidApp() ? "direct-ink" : undefined,
-        penMode: toolRef.current === "pen" && isAndroidApp() ? penModeRef.current : undefined,
-        points: [point.normalized],
-      },
-      timer: null,
-    };
-    if (active.stroke.tool !== "eraser") renderInkPreview(active.stroke);
-    if (event.pointerType === "pen" && toolRef.current === "pen") {
-      active.timer = window.setTimeout(() => {
-        const point = active.stroke.points[active.stroke.points.length - 1];
-        const temporaryMode = eraserModeRef.current === "lasso" ? "lasso" : "normal";
-        active.temporaryEraser = true;
-        active.stroke = {
-          tool: temporaryMode === "lasso" ? "lasso" : "eraser",
-          color: temporaryMode === "lasso" ? "#e26f51" : colorRef.current,
-          width: temporaryMode === "lasso" ? 2 : eraserSizeRef.current,
-          version: temporaryMode === "normal" ? 2 : undefined,
-          points: [point],
-        };
-        clearInkPreview();
-        if (temporaryMode === "lasso") renderInkPreview(active.stroke);
-        else renderEraserPreview(active.stroke);
-        toolRef.current = "eraser";
-        setTool("eraser");
-        setHint(temporaryMode === "lasso" ? "临时自由套索：圈选后抬笔删除" : "临时普通橡皮：保持按压并移动");
-        navigator.vibrate?.(35);
-      }, 620);
-    }
-    activePointerRef.current = active;
-  }
-
-  function handlePointerMove(event) {
-    const touchScroll = touchScrollRef.current;
-    if (event.pointerType === "touch" && touchScroll?.id === event.pointerId) {
-      event.preventDefault();
-      window.scrollTo(0, touchScroll.startScrollY + touchScroll.startY - event.clientY);
-      return;
-    }
-    const active = activePointerRef.current;
-    if (!active || active.id !== event.pointerId) return;
-    event.preventDefault();
-    const points = coalescedPointsFromEvent(event);
-    const point = points[points.length - 1];
-    const distance = Math.hypot(point.pixel.x - active.startPixel.x, point.pixel.y - active.startPixel.y);
-    if (!active.moved && distance < 3) return;
-    active.moved = true;
-    if (active.timer) {
-      window.clearTimeout(active.timer);
-      active.timer = null;
-    }
-    active.stroke.points.push(...points.map((sample) => sample.normalized));
-    if (active.stroke.tool !== "eraser") {
-      renderInkPreview(active.stroke);
-      return;
-    }
-    renderEraserPreview(active.stroke);
-  }
-
-  function appendPointerUpPoint(active, event) {
-    if (event.type !== "pointerup") return;
-    const point = pointFromEvent(event);
-    const last = active.stroke.points[active.stroke.points.length - 1];
-    if (!last || Math.hypot(last.x - point.normalized.x, last.y - point.normalized.y) > 0.00002) {
-      active.stroke.points.push(point.normalized);
-    }
-  }
-
-  function finishPointer(event) {
-    if (event.pointerType === "touch" && touchScrollRef.current?.id === event.pointerId) {
-      event.preventDefault();
-      touchScrollRef.current = null;
-      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-      return;
-    }
-    const active = activePointerRef.current;
-    if (!active || active.id !== event.pointerId) return;
-    if (active.timer) window.clearTimeout(active.timer);
-    appendPointerUpPoint(active, event);
-    // Put the finished outline on the committed layer before removing the live layer.
-    // This keeps the tip visually continuous at pen-up instead of flashing a blank frame.
-    if (active.stroke.tool !== "lasso") renderEraserPreview(active.stroke);
-    clearInkPreview();
-    if (active.stroke.tool === "lasso") {
-      if (active.moved && active.stroke.points.length > 2) {
-        const next = eraseAnnotationsInPolygon(annotationsRef.current, active.stroke.points);
-        const deleted = annotationsRef.current.length - next.length;
-        if (deleted) setAndPersistAnnotations(next);
-        setHint(deleted ? `已删除真实圈选范围内 ${deleted} 条笔迹` : "圈选范围内没有笔迹");
-        window.setTimeout(() => setHint(""), 1600);
-      }
-      setAnnotations((current) => [...current]);
-    } else {
-      setAndPersistAnnotations((current) => [...current, active.stroke]);
-    }
-    if (active.temporaryEraser) {
-      toolRef.current = "pen";
-      setTool("pen");
-      setHint("已恢复画笔");
-      window.setTimeout(() => setHint(""), 900);
-    }
-    activePointerRef.current = null;
-  }
-
-  function cancelPointer(event) {
-    if (event.pointerType === "touch" && touchScrollRef.current?.id === event.pointerId) {
-      touchScrollRef.current = null;
-      return;
-    }
-    finishPointer(event);
+  // 结构性变化（初始加载/页面变化/resize/undo/clear/删除）才整层重绘。
+  function redrawCommittedLayer() {
+    recordInkHandoff("fullRedraw");
+    const canvas = inkCanvasRef.current;
+    if (!canvas || !canvasSize.width) return false;
+    return renderInkLayer(canvas, annotationsRef.current, canvasSize.width, canvasSize.height, canvasSize.inkRatio);
   }
 
   function handleAnswer(number, option) {
@@ -614,7 +602,10 @@ export default function PdfReader({ resource, onClose }) {
   }
 
   function clearPage() {
-    if (annotations.length && window.confirm("清除这一页的全部笔迹？")) setAndPersistAnnotations([]);
+    if (annotations.length && window.confirm("清除这一页的全部笔迹？")) {
+      setAndPersistAnnotations([]);
+      redrawCommittedLayer();
+    }
   }
 
   function chooseEraserMode(value) {
@@ -646,15 +637,20 @@ export default function PdfReader({ resource, onClose }) {
     });
   }
 
+  function changeDrawerDocked(next) {
+    setDrawerDocked(next);
+    setUserItem("wuliao:question-drawer-mode", next ? "docked" : "floating");
+  }
+
   return (
-    <div className={`reader-page ${androidApp ? "android-reader-page" : ""} ${topAreaCollapsed ? "top-area-collapsed" : ""}`}>
+    <div className={`reader-page ${androidApp ? "android-reader-page" : ""} ${topAreaCollapsed ? "top-area-collapsed" : ""} ${drawerOpen ? "drawer-open" : ""} ${drawerOpen && drawerDocked ? "drawer-docked" : ""}`}>
       <header className="reader-header">
-        <button className="back-button light" onClick={onClose}>{androidApp ? "← 退出 PDF" : "← 资料库"}</button>
+        <button className="back-button light" onClick={closeAfterSave}>{androidApp ? "← 退出 PDF" : "← 资料库"}</button>
         <div className="reader-title"><small>{resource.subtitle}</small><strong>{resource.title}</strong></div>
         <div className="reader-status"><span /> 本地模式</div>
       </header>
 
-      {androidApp && <button type="button" className="pdf-exit-button" onClick={onClose} aria-label="退出 PDF">×<span>退出 PDF</span></button>}
+      {androidApp && <button type="button" className="pdf-exit-button" onClick={closeAfterSave} aria-label="退出 PDF">×<span>退出 PDF</span></button>}
 
       <StageNavigation page={page} total={total} onNavigate={navigate} />
 
@@ -674,29 +670,36 @@ export default function PdfReader({ resource, onClose }) {
         onPenMode={choosePenMode}
         onEraserMode={chooseEraserMode}
         onEraserSize={setEraserSize}
-        onUndo={() => setAndPersistAnnotations((current) => current.slice(0, -1))}
+        onUndo={() => {
+          setAndPersistAnnotations((current) => current.slice(0, -1));
+          redrawCommittedLayer();
+        }}
         onClear={clearPage}
         collapsible
+        collapsed={topAreaCollapsed}
+        collapseMode="chrome-only"
         onCollapsedChange={changeTopAreaCollapsed}
+        stageHint={stage}
         tabletInk={androidApp}
       />
 
-      <main ref={containerRef} className={`reader-main ${drawerOpen ? "drawer-open" : ""}`}>
+      <main ref={containerRef} className={`reader-main ${drawerOpen ? "drawer-open" : ""} ${drawerOpen && drawerDocked ? "drawer-docked" : ""}`}>
         <div className="page-context"><span>{stage}</span><strong>第 {page} / {total} 页</strong></div>
         {loading && <div className="pdf-loading"><span /><strong>正在打开精读材料</strong><p>PDF 只在当前设备解析</p></div>}
-        {error && <div className="pdf-error"><strong>没有成功打开这一页</strong><p>{error}</p></div>}
+        {error && <div className="pdf-error"><strong>没有成功打开这一页</strong><p>{error}</p><button type="button" className="primary-button" onClick={() => setReloadAttempt((value) => value + 1)}>重新加载</button></div>}
         <div ref={stackRef} className="canvas-stack" style={{ visibility: loading || error ? "hidden" : "visible" }}>
           <canvas ref={pdfCanvasRef} className="pdf-canvas" />
           <canvas
             ref={inkCanvasRef}
             className={`ink-canvas tool-${tool} ${noteMode ? "note-mode" : ""}`}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={finishPointer}
-            onPointerCancel={cancelPointer}
-            onLostPointerCapture={finishPointer}
+            onPointerDown={inkController.handlePointerDown}
+            onPointerMove={inkController.handlePointerMove}
+            onPointerUp={inkController.handlePointerUp}
+            onPointerCancel={inkController.handlePointerCancel}
+            onLostPointerCapture={inkController.handlePointerUp}
           />
           <canvas ref={inkPreviewCanvasRef} className="ink-preview-canvas" aria-hidden="true" />
+          <canvas ref={tailCanvasRef} className="ink-tail-canvas" aria-hidden="true" />
         </div>
       </main>
 
@@ -704,7 +707,7 @@ export default function PdfReader({ resource, onClose }) {
         <span>题</span><strong>习题</strong><small>{questions.length || "·"}</small>
       </button>
 
-      <QuestionDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} questions={questions} parseInfo={parseInfo} answers={answers} onAnswer={handleAnswer} />
+      <QuestionDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} questions={questions} parseInfo={parseInfo} answers={answers} onAnswer={handleAnswer} docked={drawerDocked} onDockedChange={changeDrawerDocked} />
 
       <nav className="page-navigation" aria-label="翻页">
         <button onClick={() => navigate(page - 1)} disabled={page === 1}>← 上一页</button>

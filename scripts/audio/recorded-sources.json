@@ -1,0 +1,87 @@
+{
+  "abandon": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/dd/En-us-abandon.ogg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "descriptionurl": "https://commons.wikimedia.org/wiki/File:En-us-abandon.ogg",
+    "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=1755007",
+    "extmetadata": {
+      "DateTime": {
+        "value": "2007-03-07 15:09:34",
+        "source": "mediawiki-metadata",
+        "hidden": ""
+      },
+      "ObjectName": {
+        "value": "En-us-abandon",
+        "source": "mediawiki-metadata"
+      },
+      "CommonsMetadataExtension": {
+        "value": 1.2,
+        "source": "extension",
+        "hidden": ""
+      },
+      "Categories": {
+        "value": "U.S. English pronunciation|GFDL|CC-BY-SA-2.5,2.0,1.0|License migration redundant|Self-published work",
+        "source": "commons-categories",
+        "hidden": ""
+      },
+      "Assessments": {
+        "value": "",
+        "source": "commons-categories",
+        "hidden": ""
+      },
+      "ImageDescription": {
+        "value": "Audio pronunciation of the term 'abandon' in United States English.",
+        "source": "commons-desc-page"
+      },
+      "DateTimeOriginal": {
+        "value": "2007-03-07",
+        "source": "commons-desc-page"
+      },
+      "Credit": {
+        "value": "Self, recorded using the program <a href=\"//commons.wikimedia.org/wiki/Commons:Shtooka\" title=\"Commons:Shtooka\">Shtooka</a>.",
+        "source": "commons-desc-page"
+      },
+      "Artist": {
+        "value": "<a href=\"//commons.wikimedia.org/wiki/User:Dvortygirl\" title=\"User:Dvortygirl\">Dvortygirl</a>",
+        "source": "commons-desc-page"
+      },
+      "Permission": {
+        "value": "Dual licensed per GFDL Version 1.2 or later / Creative Commons Attribution ShareAlike license versions 2.5, 2.0, and 1.0 as noted.",
+        "source": "commons-desc-page",
+        "hidden": ""
+      },
+      "LicenseShortName": {
+        "value": "CC BY-SA 3.0",
+        "source": "commons-desc-page",
+        "hidden": ""
+      },
+      "UsageTerms": {
+        "value": "Creative Commons Attribution-Share Alike 3.0",
+        "source": "commons-desc-page"
+      },
+      "AttributionRequired": {
+        "value": "true",
+        "source": "commons-desc-page",
+        "hidden": ""
+      },
+      "LicenseUrl": {
+        "value": "http://creativecommons.org/licenses/by-sa/3.0/",
+        "source": "commons-desc-page"
+      },
+      "Copyrighted": {
+        "value": "True",
+        "source": "commons-desc-page",
+        "hidden": ""
+      },
+      "Restrictions": {
+        "value": "",
+        "source": "commons-desc-page",
+        "hidden": ""
+      },
+      "License": {
+        "value": "cc-by-sa-3.0",
+        "source": "commons-templates",
+        "hidden": ""
+      }
+    }
+  }
+}

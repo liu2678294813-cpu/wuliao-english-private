@@ -1,0 +1,32 @@
+import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import assert from 'node:assert/strict';
+const adb = resolve('.android-sdk/platform-tools/adb.exe');
+const run = (...args) => execFileSync(adb, args, { encoding: 'utf8', windowsHide: true }).trim();
+const appPid = run('shell', 'pidof', 'com.wuliao.english').split(/\s+/)[0];
+run('forward', 'tcp:9223', `localabstract:webview_devtools_remote_${appPid}`);
+const tabs = await (await fetch('http://127.0.0.1:9223/json')).json();
+const ws = new WebSocket(tabs[0].webSocketDebuggerUrl);
+await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
+const result = await new Promise((resolve, reject) => {
+  const timer = setTimeout(() => reject(new Error('Launch inspection timed out')), 15000);
+  ws.onmessage = event => {
+    const message = JSON.parse(event.data);
+    if (message.id !== 1) return;
+    clearTimeout(timer);
+    resolve(message.result.result.value);
+  };
+  ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: `JSON.stringify({ready:document.readyState,rootMounted:!!document.querySelector('#root')?.children.length,errorPage:!!document.querySelector('.app-error-fallback'),localStorageEntries:localStorage.length})`, returnByValue: true } }));
+});
+ws.close();
+const state = JSON.parse(result);
+assert.equal(state.errorPage, false);
+assert.equal(state.rootMounted, true);
+const path = resolve('output/save-models-20260909/upgrade-results.json');
+const upgrade = JSON.parse(readFileSync(path, 'utf8'));
+upgrade.launch = state;
+writeFileSync(path, JSON.stringify(upgrade, null, 2));
+run('forward', '--remove', 'tcp:9223');
+run('forward', '--remove', 'tcp:9224');
+console.log(JSON.stringify(state));

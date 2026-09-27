@@ -1,0 +1,137 @@
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
+import { canonicalWritingJson, computeWritingFingerprint } from "../src/writing/writingRepository.js";
+import { getWritingQuestion } from "../src/writing/writingQuestionBank.js";
+
+export const WRITING_SAMPLE_SOURCE_PATH = resolve("content/writing-samples/samples.json");
+export const WRITING_SAMPLE_MANIFEST_PATH = resolve("content/writing-samples/manifest.json");
+export const WRITING_SAMPLE_GENERATED_PATH = resolve("src/writing/generatedWritingSampleCatalog.js");
+
+const SHA256 = /^[0-9a-f]{64}$/i;
+
+function readJson(path) {
+  return JSON.parse(readFileSync(path, "utf8").replace(/^\uFEFF/, ""));
+}
+
+function requiredText(value, field) {
+  const text = String(value || "").trim();
+  if (!text) throw new Error(`${field} is required.`);
+  return text;
+}
+
+function requiredSha256(value, field) {
+  const text = requiredText(value, field).toLowerCase();
+  if (!SHA256.test(text)) throw new Error(`${field} must be SHA-256.`);
+  return text;
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export async function createBundledWritingSampleCatalog({
+  sourcePath = WRITING_SAMPLE_SOURCE_PATH,
+  manifestPath = WRITING_SAMPLE_MANIFEST_PATH,
+} = {}) {
+  const source = readJson(sourcePath);
+  const manifest = readJson(manifestPath);
+  if (source?.format !== "wuliao-writing-sample-catalog-source" || source?.catalogSchemaVersion !== 1 || !Array.isArray(source.items)) {
+    throw new Error("Writing sample source format is invalid.");
+  }
+  if (manifest?.catalogSchemaVersion !== 1 || !Array.isArray(manifest.retiredSamples)) {
+    throw new Error("Writing sample manifest format is invalid.");
+  }
+  const catalogVersion = requiredText(manifest.catalogVersion, "catalogVersion");
+  const questionIds = new Set();
+  const essayFingerprints = new Set();
+  const items = [];
+  for (const [index, raw] of source.items.entries()) {
+    const field = `items[${index}]`;
+    const questionId = requiredText(raw.questionId, `${field}.questionId`);
+    if (questionIds.has(questionId)) throw new Error(`Duplicate Writing sample questionId: ${questionId}`);
+    const question = getWritingQuestion(questionId);
+    if (!question) throw new Error(`Writing sample question is not in the question bank: ${questionId}`);
+    if (raw.year !== question.year || raw.taskType !== question.taskType || raw.promptFingerprint !== question.fingerprint) {
+      throw new Error(`Writing sample question identity mismatch: ${questionId}`);
+    }
+    const referenceEssay = requiredText(raw.referenceEssay, `${field}.referenceEssay`);
+    const referenceEssayFingerprint = await computeWritingFingerprint({ referenceEssay });
+    if (essayFingerprints.has(referenceEssayFingerprint)) throw new Error(`Duplicate referenceEssay body: ${questionId}`);
+    questionIds.add(questionId);
+    essayFingerprints.add(referenceEssayFingerprint);
+    items.push({
+      questionId,
+      year: question.year,
+      taskType: question.taskType,
+      promptFingerprint: question.fingerprint,
+      referenceEssay,
+      referenceEssayFingerprint,
+      sourceFingerprint: requiredSha256(raw.sourceFingerprint, `${field}.sourceFingerprint`),
+      sourceLabel: requiredText(raw.sourceLabel, `${field}.sourceLabel`),
+      sourceLocator: String(raw.sourceLocator || "").trim() || null,
+    });
+  }
+  items.sort((left, right) => right.year - left.year || left.taskType.localeCompare(right.taskType));
+
+  const retiredQuestionIds = new Set();
+  const retiredSamples = manifest.retiredSamples.map((raw, index) => {
+    const field = `retiredSamples[${index}]`;
+    const questionId = requiredText(raw.questionId, `${field}.questionId`);
+    if (questionIds.has(questionId)) throw new Error(`Active Writing sample is also retired: ${questionId}`);
+    if (retiredQuestionIds.has(questionId)) throw new Error(`Duplicate retired Writing sample: ${questionId}`);
+    retiredQuestionIds.add(questionId);
+    return {
+      questionId,
+      promptFingerprint: requiredSha256(raw.promptFingerprint, `${field}.promptFingerprint`),
+      referenceEssayFingerprint: requiredSha256(raw.referenceEssayFingerprint, `${field}.referenceEssayFingerprint`),
+      sourceFingerprint: requiredSha256(raw.sourceFingerprint, `${field}.sourceFingerprint`),
+    };
+  }).sort((left, right) => left.questionId.localeCompare(right.questionId));
+
+  const content = {
+    catalogSchemaVersion: 1,
+    catalogVersion,
+    activeQuestionIds: items.map((item) => item.questionId),
+    retiredQuestionIds: retiredSamples.map((item) => item.questionId),
+    retiredSamples,
+    items,
+  };
+  return { ...content, contentHash: sha256(canonicalWritingJson(content)) };
+}
+
+export function serializeBundledWritingSampleCatalog(catalog) {
+  return `// Generated by scripts/build-writing-sample-catalog.mjs. Do not edit by hand.\n`
+    + `function deepFreeze(value) {\n  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;\n  Object.values(value).forEach(deepFreeze);\n  return Object.freeze(value);\n}\n\n`
+    + `export const BUNDLED_WRITING_SAMPLE_CATALOG = deepFreeze(${JSON.stringify(catalog, null, 2)});\n`;
+}
+
+export async function runWritingSampleCatalogBuild({ check = false } = {}) {
+  const catalog = await createBundledWritingSampleCatalog();
+  const expected = serializeBundledWritingSampleCatalog(catalog);
+  if (check) {
+    if (!existsSync(WRITING_SAMPLE_GENERATED_PATH) || readFileSync(WRITING_SAMPLE_GENERATED_PATH, "utf8") !== expected) {
+      throw new Error("Generated Writing sample catalog is stale. Run pnpm build:writing-samples and commit the result.");
+    }
+  } else {
+    writeFileSync(WRITING_SAMPLE_GENERATED_PATH, expected, "utf8");
+  }
+  console.log(JSON.stringify({
+    status: check ? "current" : "generated",
+    catalogSchemaVersion: catalog.catalogSchemaVersion,
+    catalogVersion: catalog.catalogVersion,
+    itemCount: catalog.items.length,
+    yearRange: catalog.items.length ? [Math.min(...catalog.items.map((item) => item.year)), Math.max(...catalog.items.map((item) => item.year))] : [],
+    contentHash: catalog.contentHash,
+  }));
+  return catalog;
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
+  runWritingSampleCatalogBuild({ check: process.argv.includes("--check") }).catch((error) => {
+    console.error(error?.stack || error);
+    process.exit(1);
+  });
+}

@@ -1,0 +1,238 @@
+{
+  "record": {
+    "noun": {
+      "phonemes": "ɹˈɛkəɹd",
+      "arpabet": "R EH1 K ER0 D",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "ɹɪkˈɔɹd",
+      "arpabet": "R IH0 K AO1 R D",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "present": {
+    "noun": {
+      "phonemes": "pɹˈɛzənt",
+      "arpabet": "P R EH1 Z AH0 N T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "pɹizˈɛnt",
+      "arpabet": "P R IY0 Z EH1 N T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "increase": {
+    "noun": {
+      "phonemes": "ˈɪnkɹˌis",
+      "arpabet": "IH1 N K R IY2 S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "ˌɪnkɹˈis",
+      "arpabet": "IH2 N K R IY1 S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "content": {
+    "noun": {
+      "phonemes": "kˈɑntɛnt",
+      "arpabet": "K AA1 N T EH0 N T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "adjective": {
+      "phonemes": "kəntˈɛnt",
+      "arpabet": "K AH0 N T EH1 N T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "object": {
+    "noun": {
+      "phonemes": "ˈɑbdʒɛkt",
+      "arpabet": "AA1 B JH EH0 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "əbdʒˈɛkt",
+      "arpabet": "AH0 B JH EH1 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "contract": {
+    "noun": {
+      "phonemes": "kˈɑntɹˌækt",
+      "arpabet": "K AA1 N T R AE2 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "kəntɹˈækt",
+      "arpabet": "K AH0 N T R AE1 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "conduct": {
+    "noun": {
+      "phonemes": "kˈɑndəkt",
+      "arpabet": "K AA1 N D AH0 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "kɑndˈʌkt",
+      "arpabet": "K AA0 N D AH1 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "produce": {
+    "noun": {
+      "phonemes": "pɹˈoʊdus",
+      "arpabet": "P R OW1 D UW0 S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "pɹədˈus",
+      "arpabet": "P R AH0 D UW1 S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "subject": {
+    "noun": {
+      "phonemes": "sˈʌbdʒɪkt",
+      "arpabet": "S AH1 B JH IH0 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "səbdʒˈɛkt",
+      "arpabet": "S AH0 B JH EH1 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "project": {
+    "noun": {
+      "phonemes": "pɹˈɑdʒɛkt",
+      "arpabet": "P R AA1 JH EH0 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "pɹədʒˈɛkt",
+      "arpabet": "P R AH0 JH EH1 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "live": {
+    "verb": {
+      "phonemes": "lˈɪv",
+      "arpabet": "L IH1 V",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "close": {
+    "verb": {
+      "phonemes": "klˈoʊz",
+      "arpabet": "K L OW1 Z",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "permit": {
+    "verb": {
+      "phonemes": "pəɹmˈɪt",
+      "arpabet": "P ER0 M IH1 T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "attribute": {
+    "verb": {
+      "phonemes": "ətɹˈɪbjˌut",
+      "arpabet": "AH0 T R IH1 B Y UW2 T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "console": {
+    "verb": {
+      "phonemes": "kənsˈoʊl",
+      "arpabet": "K AH0 N S OW1 L",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "convict": {
+    "verb": {
+      "phonemes": "kənvˈɪkt",
+      "arpabet": "K AH0 N V IH1 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "coordinate": {
+    "verb": {
+      "phonemes": "koʊˈɔɹdənˌeɪt",
+      "arpabet": "K OW0 AO1 R D AH0 N EY2 T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "digest": {
+    "noun": {
+      "phonemes": "dˈaɪdʒɛst",
+      "arpabet": "D AY1 JH EH0 S T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "excuse": {
+    "verb": {
+      "phonemes": "ɪkskjˈuz",
+      "arpabet": "IH0 K S K Y UW1 Z",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "rebel": {
+    "verb": {
+      "phonemes": "ɹɪbˈɛl",
+      "arpabet": "R IH0 B EH1 L",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "suspect": {
+    "verb": {
+      "phonemes": "səspˈɛkt",
+      "arpabet": "S AH0 S P EH1 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "alternate": {
+    "adjective": {
+      "phonemes": "ˈɔltəɹnət",
+      "arpabet": "AO1 L T ER0 N AH0 T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  }
+}

@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { deleteUnknownWord, listUnknownWords, updateUnknownWordMeaning } from "./storage";
+import { unknownWordSourceType } from "./clozeUnknownWords";
+
+const SOURCE_FILTERS = [
+  { id: "all", label: "全部" },
+  { id: "reading", label: "精读" },
+  { id: "cloze", label: "完形" },
+];
 
 export default function UnknownWordLibrary({ onBack }) {
   const [words, setWords] = useState([]);
   const [notice, setNotice] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const refresh = () => listUnknownWords().then(setWords);
 
@@ -13,14 +21,20 @@ export default function UnknownWordLibrary({ onBack }) {
     return () => window.removeEventListener("wuliao:unknown-words-updated", refresh);
   }, []);
 
-  const groups = useMemo(() => words.reduce((result, word) => {
+  const filteredWords = useMemo(() => (
+    sourceFilter === "all"
+      ? words
+      : words.filter((word) => unknownWordSourceType(word) === sourceFilter)
+  ), [words, sourceFilter]);
+
+  const groups = useMemo(() => filteredWords.reduce((result, word) => {
     const year = word.year || "自定义资料";
     const chapter = word.chapter || word.passageLabel || "未命名章节";
     result[year] ||= {};
     result[year][chapter] ||= [];
     result[year][chapter].push(word);
     return result;
-  }, {}), [words]);
+  }, {}), [filteredWords]);
 
   async function editMeaning(word) {
     const meaning = window.prompt(`修改 ${word.word} 的中文释义`, word.meaning || "");
@@ -40,16 +54,30 @@ export default function UnknownWordLibrary({ onBack }) {
   return (
     <div className="unknown-library-page">
       <header className="library-header unknown-library-header">
-        <button className="back-button" onClick={onBack}>← 精读资料库</button>
+        <button className="back-button" onClick={onBack}>← 返回</button>
         <div className="unknown-library-title"><small>UNKNOWN WORDS</small><strong>陌生词库</strong></div>
-        <span className="unknown-library-count">{words.length} 词</span>
+        <span className="unknown-library-count">{filteredWords.length} 词</span>
       </header>
       <main className="unknown-library-main">
         <section className="library-intro unknown-library-intro">
-          <div><p className="eyebrow">READ · MARK · REVIEW</p><h1>陌生词库</h1><p>按 PDF 年份和文章章节归类，所有记录只属于当前账号。</p></div>
+          <div><p className="eyebrow">READ · MARK · REVIEW</p><h1>陌生词库</h1></div>
         </section>
-        {!words.length && (
-          <div className="empty-library"><span>词</span><h3>还没有圈选陌生词</h3><p>进入精读，选择“陌生词”工具，用笔点按或划过英文单词。</p></div>
+        <div className="unknown-source-filter" role="tablist" aria-label="按来源筛选">
+          {SOURCE_FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={sourceFilter === item.id}
+              className={sourceFilter === item.id ? "is-active" : ""}
+              onClick={() => setSourceFilter(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        {!filteredWords.length && (
+          <div className="empty-library"><span>词</span><h3>这里还没有陌生词</h3><p>进入精读或完形的可标记阶段，将不熟悉的英文词加入陌生词库。</p></div>
         )}
         {Object.entries(groups)
           .sort(([left], [right]) => String(right).localeCompare(String(left), "zh-CN", { numeric: true }))
@@ -80,4 +108,3 @@ export default function UnknownWordLibrary({ onBack }) {
     </div>
   );
 }
-

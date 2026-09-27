@@ -1,4 +1,5 @@
 import { getStroke } from "perfect-freehand";
+import { traceInkPath } from "./inkEngine";
 
 const naturalInkOptions = {
   thinning: 0.62,
@@ -13,7 +14,7 @@ export const PEN_MODE_STORAGE_KEY = "wuliao:pref:pen-mode";
 export const PEN_SIZE_STORAGE_KEY = "wuliao:pref:pen-size";
 
 export function normalizePenMode(value) {
-  return value === "fountain" ? "fountain" : "ballpoint";
+  return "ballpoint";
 }
 
 export function normalizePenSize(value) {
@@ -30,7 +31,7 @@ export function inkPixelRatio() {
 }
 
 export function resizeInkCanvas(canvas, width, height, ratio = inkPixelRatio()) {
-  const context = canvas.getContext("2d", { alpha: true, desynchronized: true });
+  const context = canvas.getContext("2d", { alpha: true });
   canvas.width = Math.max(1, Math.floor(width * ratio));
   canvas.height = Math.max(1, Math.floor(height * ratio));
   canvas.style.width = `${width}px`;
@@ -52,6 +53,7 @@ export function pointerPointFromSample(sample, rect, isPen) {
   }
   return {
     normalized,
+    timeStamp: Number.isFinite(sample.timeStamp) ? sample.timeStamp : null,
     pixel: { x: sample.clientX - rect.left, y: sample.clientY - rect.top },
     viewport: {
       x: sample.clientX,
@@ -65,8 +67,11 @@ export function pointerPointFromSample(sample, rect, isPen) {
 }
 
 export function coalescedPointerPoints(event, rect) {
-  const coalesced = event.nativeEvent?.getCoalescedEvents?.();
-  const samples = coalesced?.length ? coalesced : [event.nativeEvent || event];
+  const native = event.nativeEvent || event;
+  const coalesced = native.getCoalescedEvents?.();
+  // 父事件可能经过浏览器刷新率对齐；有真实合并采样时只使用采样列表，
+  // 不再把汇总坐标附加为一个额外点（Pointer Events 3 §10.1）。
+  const samples = coalesced?.length ? coalesced : [native];
   return samples.map((sample) => pointerPointFromSample(sample, rect, event.pointerType === "pen"));
 }
 
@@ -143,21 +148,20 @@ export function drawInkStroke(context, stroke, width, height) {
     const pointWidth = stroke.engine === "direct-ink" && stroke.penMode === "ballpoint"
       ? stroke.width
       : strokeWidthAtPoint(stroke, point);
-    const radius = Math.max(1.3, pointWidth / 2);
+    // 半径与当前笔宽完全一致；canvas 已按 inkRatio/DPR 缩放，不需要 1.3px 下限。
+    const radius = pointWidth / 2;
     context.beginPath();
     context.arc(point.x * width, point.y * height, radius, 0, Math.PI * 2);
     context.fill();
   } else if (tool === "pen" && stroke.engine === "perfect-freehand") {
     fillInkOutline(context, naturalInkOutline(stroke, { width, height }));
   } else if (tool === "pen" && stroke.engine === "direct-ink" && stroke.penMode === "ballpoint") {
-    context.beginPath();
-    stroke.points.forEach((point, index) => {
-      const x = point.x * width;
-      const y = point.y * height;
-      if (index === 0) context.moveTo(x, y);
-      else context.lineTo(x, y);
-    });
-    context.stroke();
+    traceInkPath(
+      context,
+      stroke.points,
+      (point) => [point.x * width, point.y * height],
+      { lineWidth: stroke.width, strokeStyle: stroke.color },
+    );
   } else if (tool === "pen" && stroke.engine === "direct-ink") {
     stroke.points.slice(1).forEach((point, index) => {
       const previous = stroke.points[index];
@@ -176,6 +180,17 @@ export function drawInkStroke(context, stroke, width, height) {
       context.lineTo(point.x * width, point.y * height);
       context.stroke();
     });
+  } else if (tool === "lasso") {
+    // 自由套索：橙红色细虚线，绘制后由 save/restore 恢复 canvas state，不影响后续 pen。
+    context.setLineDash([7, 5]);
+    context.beginPath();
+    stroke.points.forEach((point, index) => {
+      const x = point.x * width;
+      const y = point.y * height;
+      if (index === 0) context.moveTo(x, y);
+      else context.lineTo(x, y);
+    });
+    context.stroke();
   } else {
     context.beginPath();
     stroke.points.forEach((point, index) => {
@@ -184,20 +199,21 @@ export function drawInkStroke(context, stroke, width, height) {
       if (index === 0) context.moveTo(x, y);
       else context.lineTo(x, y);
     });
-    if (tool === "lasso") context.setLineDash([7, 5]);
     context.stroke();
   }
   context.restore();
 }
 
 export function renderInkLayer(canvas, strokes, width, height, ratio = Number(canvas?.dataset.ratio) || 1) {
-  if (!canvas) return;
-  const context = canvas.getContext("2d", { alpha: true, desynchronized: true });
+  if (!canvas || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return false;
+  const context = canvas.getContext("2d", { alpha: true });
+  if (!context) return false;
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.save();
   context.scale(ratio, ratio);
   for (const stroke of strokes) drawInkStroke(context, stroke, width, height);
   context.restore();
+  return true;
 }
 
 export function pointInPolygon(point, polygon) {
@@ -263,11 +279,33 @@ export function eraseAnnotationsAlongPath(annotations, path, eraserSize, surface
   return next;
 }
 
+// Committed strokes are immutable; a replacement points array invalidates bounds.
+const lassoBounds = new WeakMap();
+function pointBounds(points) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const { x, y } of points) {
+    minX = Math.min(minX, x); minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+  }
+  return { minX, minY, maxX, maxY };
+}
+
 export function eraseAnnotationsInPolygon(annotations, polygon) {
+  if (polygon.length < 3) return annotations.slice();
+  const area = pointBounds(polygon);
   return annotations.filter((annotation) => {
     if (annotation.type === "text") {
       return !pointInPolygon({ x: annotation.x, y: annotation.y }, polygon);
     }
-    return !(annotation.points || []).some((point) => pointInPolygon(point, polygon));
+    const points = annotation.points || [];
+    let cached = lassoBounds.get(annotation);
+    if (!cached || cached.points !== points || cached.length !== points.length) {
+      cached = { points, length: points.length, bounds: pointBounds(points) };
+      lassoBounds.set(annotation, cached);
+    }
+    const bounds = cached.bounds;
+    if (bounds.maxX < area.minX || bounds.minX > area.maxX
+      || bounds.maxY < area.minY || bounds.minY > area.maxY) return true;
+    return !points.some((point) => pointInPolygon(point, polygon));
   });
 }

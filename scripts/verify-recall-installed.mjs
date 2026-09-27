@@ -1,0 +1,36 @@
+import { chromium, expect } from '@playwright/test';
+import { CRBrowserContext } from '../node_modules/.pnpm/playwright-core@1.57.0/node_modules/playwright-core/lib/server/chromium/crBrowser.js';
+import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+const initialize = CRBrowserContext.prototype._initialize;
+CRBrowserContext.prototype._initialize = function () { this._options.acceptDownloads = 'internal-browser-default'; return initialize.call(this); };
+const browser = await chromium.connectOverCDP('http://127.0.0.1:9223');
+const page = browser.contexts()[0].pages().find(p => p.url().startsWith('https://localhost'));
+const report = { errors: [] }; page.on('pageerror', e => report.errors.push(e.message));
+try {
+  await page.locator('.ds-rail').waitFor();
+  await page.getByRole('button', { name: /AI API/ }).click();
+  const modal = page.locator('.ai-api-modal'), model = modal.getByLabel('Model ID（可手动输入）');
+  await expect(model).toHaveValue('deepseek-flash');
+  await modal.getByRole('tab', { name: '视觉 AI' }).click(); await expect(model).toHaveValue('deepseek-v4-flash-vision-exp');
+  await expect(modal).toContainText('已绑定当前端点');
+  await page.getByRole('button', { name: '关闭 AI API 设置', exact: true }).click();
+  await page.locator('.ds-rail .ds-nav button', { hasText: '筛查' }).click();
+  await expect(page.locator('.vocabulary-frame.loaded')).toBeVisible();
+  await page.getByRole('button', { name: '手写模式', exact: true }).click();
+  await expect(page.locator('.vocab-ink-paper').first()).toBeVisible(); await page.waitForTimeout(800);
+  await expect(page.locator('.vocab-handwriting-message')).not.toContainText('disposed');
+  await page.getByRole('button', { name: '对照', exact: true }).click();
+  await expect(page.locator('.vocab-handwriting-message')).toContainText('3 个已手写');
+  await expect(page.getByLabel('applause 标准汉语')).toContainText('鼓掌');
+  await expect(page.getByLabel('dilemma 标准汉语')).toContainText('窘境');
+  await expect(page.getByLabel('courtesy 标准汉语')).toContainText('礼貌');
+  await expect(page.getByLabel('bound 标准汉语')).toHaveCount(0);
+  await expect(page.locator('.vocab-handwriting footer')).toHaveCount(0);
+  report.renderedRows = await page.locator('.vocab-ink-row').count(); expect(report.renderedRows).toBeLessThan(30);
+  report.manualReferences = 3; report.aiSettingsIndependent = true;
+  report.inkRowsWithPixels = await page.locator('.vocab-ink-row .writing-ink-canvas').evaluateAll(canvases => canvases.filter(c => c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0)).length);
+  expect(report.inkRowsWithPixels).toBe(3); expect(report.errors).toEqual([]);
+  writeFileSync('output/recall-handwriting-20260920/production-final.png', execFileSync('.android-sdk/platform-tools/adb.exe', ['exec-out','screencap','-p'], { maxBuffer:20000000,windowsHide:true }));
+  report.passed = true; writeFileSync('output/recall-handwriting-20260920/installed-result.json',JSON.stringify(report,null,2)); console.log(JSON.stringify(report,null,2));
+} finally { await browser.close(); }

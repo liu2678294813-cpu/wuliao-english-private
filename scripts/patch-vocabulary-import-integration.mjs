@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 
-const bundlePath = new URL("../public/vocabulary/assets/index-DSvnOTE0.js", import.meta.url);
+const bundlePath = process.argv[2] ? pathToFileURL(process.argv[2]) : new URL("../public/vocabulary/assets/index-DSvnOTE0.js", import.meta.url);
 const bridgeImport = 'import{deleteImportedListForMainRecord as __iwDelete,getAllImportedWords as __iwAll,getImportedWord as __iwOne,getImportedWords as __iwMany,renameImportedListForMainRecord as __iwRename,syncImportedLists as __iwSync}from"../imported-word-bridge.js";';
 
 const replacements = [
@@ -32,9 +33,13 @@ const replacements = [
 
 let source = await readFile(bundlePath, "utf8");
 
-if (!source.startsWith(bridgeImport)) {
+if (!source.includes(bridgeImport)) {
   source = bridgeImport + source;
 }
+// Other build patches may prepend their own imports. Keep exactly one binding.
+const firstBridgeImport = source.indexOf(bridgeImport);
+source = source.slice(0, firstBridgeImport + bridgeImport.length)
+  + source.slice(firstBridgeImport + bridgeImport.length).split(bridgeImport).join("");
 
 for (const [before, after] of replacements) {
   if (source.includes(after)) continue;
