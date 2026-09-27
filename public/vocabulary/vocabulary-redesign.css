@@ -1,0 +1,819 @@
+:root {
+  --vocab-ink: #0b2635;
+  --vocab-navy: #0b3042;
+  --vocab-teal: #167a78;
+  --vocab-teal-deep: #0d6465;
+  --vocab-teal-soft: #e6f2ef;
+  --vocab-gold: #c79a45;
+  --vocab-paper: #fffdf8;
+  --vocab-canvas: #f7f3ea;
+  --vocab-line: #ddd4c5;
+  --vocab-muted: #66757d;
+  --vocab-danger: #bf4b3d;
+  --vocab-success: #16805e;
+  --vocab-shadow: 0 16px 38px rgba(11, 38, 53, 0.08);
+  --vocab-radius: 14px;
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  min-width: 0;
+  max-width: 100%;
+  background: var(--vocab-canvas);
+}
+
+body,
+#root {
+  color: var(--vocab-ink);
+  background-image:
+    radial-gradient(circle at 90% 0%, rgba(22, 122, 120, 0.08), transparent 29rem),
+    linear-gradient(155deg, var(--vocab-paper), var(--vocab-canvas) 72%);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  outline-offset: 3px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--vocab-navy);
+  box-shadow: 0 0 0 5px rgba(22, 122, 120, 0.16) !important;
+}
+
+#root header.h-14,
+.topbar {
+  border-color: rgba(199, 154, 69, 0.42);
+  background: linear-gradient(105deg, #071d2a 0%, #0b3445 100%);
+  color: #fffdf8;
+  box-shadow: 0 8px 28px rgba(7, 29, 42, 0.16);
+}
+
+#root header.h-14 h1,
+.topbar h1,
+.brand-lockup h1 {
+  color: #fffdf8;
+  font-family: Georgia, "Songti SC", "Noto Serif SC", serif;
+  letter-spacing: 0.045em;
+}
+
+#root header.h-14 h1::before,
+body[data-app-route="login"] #root h1::before,
+.brand-mark {
+  border: 1px solid rgba(226, 188, 107, 0.7);
+  background-color: #092738;
+  background-image: url("/vocabulary/favicon.svg");
+  background-position: center;
+  background-size: cover;
+  color: transparent;
+  box-shadow: 0 8px 22px rgba(2, 15, 23, 0.3);
+}
+
+.topbar .back-link,
+.topbar .brand-lockup p,
+.topbar .account {
+  color: rgba(255, 253, 248, 0.72);
+}
+
+.topbar .back-link:hover,
+.topbar .back-link:focus-visible {
+  color: #f2ca75;
+}
+
+#root main.flex-1 {
+  min-width: 0;
+  padding: clamp(18px, 3vw, 34px);
+  padding-bottom: clamp(28px, 5vw, 64px);
+  overflow-x: hidden;
+}
+
+#root main > div,
+#root main .max-w-2xl,
+#root main .max-w-3xl,
+#root main .max-w-4xl {
+  width: min(100%, 1180px);
+  max-width: 1180px;
+  margin-inline: auto;
+}
+
+#root main h2,
+#root main h3,
+.import-card h2,
+.review-state strong {
+  color: var(--vocab-ink);
+  font-family: Georgia, "Songti SC", "Noto Serif SC", serif;
+}
+
+#root main h2 {
+  margin-bottom: clamp(20px, 3vw, 30px);
+  font-size: clamp(27px, 3vw, 39px);
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+}
+
+body:not([data-app-route="screening"]) #root main h2::before {
+  width: 4px;
+  height: 0.76em;
+  margin-right: 12px;
+  border-radius: 1px;
+  background: var(--vocab-gold);
+  vertical-align: -0.02em;
+}
+
+#root main .bg-white,
+.controls,
+.word-viewport,
+.review-toolbar,
+.review-quiz,
+.review-state,
+.import-card {
+  border-color: var(--vocab-line);
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: var(--vocab-shadow);
+}
+
+#root main .rounded-lg,
+#root main .rounded-xl,
+#root main .rounded-2xl,
+.controls,
+.word-viewport,
+.review-toolbar,
+.review-quiz,
+.review-state,
+.import-card {
+  border-radius: var(--vocab-radius);
+}
+
+#root .bg-blue-600,
+#root .bg-red-600,
+.mark-button,
+.primary-action,
+.primary-link {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--vocab-teal), var(--vocab-teal-deep));
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(13, 100, 101, 0.2);
+}
+
+#root .text-blue-600,
+#root .text-blue-700,
+#root .text-indigo-600,
+.secondary-link {
+  color: var(--vocab-teal-deep);
+}
+
+/* Dashboard: one strong information hierarchy without adding or moving React nodes. */
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--vocab-line);
+  border-radius: var(--vocab-radius);
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: var(--vocab-shadow);
+}
+
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white {
+  position: relative;
+  min-height: 124px;
+  padding: 26px 18px;
+  border: 0;
+  border-right: 1px solid var(--vocab-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white:last-child {
+  border-right: 0;
+}
+
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white::after {
+  display: none;
+}
+
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white > :first-child {
+  color: var(--vocab-teal-deep);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(27px, 3vw, 39px);
+  font-weight: 600;
+  line-height: 1;
+}
+
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white > :last-child {
+  margin-top: 11px;
+  color: var(--vocab-muted);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+body[data-app-route="dashboard"] #root main .space-y-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 0;
+}
+
+body[data-app-route="dashboard"] #root main .space-y-3 > button {
+  min-height: 58px;
+  margin: 0;
+  border: 1px solid var(--vocab-teal);
+  border-radius: 9px;
+  background: rgba(255, 253, 248, 0.82);
+  color: var(--vocab-navy);
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+body[data-app-route="dashboard"] #root main .space-y-3 > button:first-child {
+  background: linear-gradient(135deg, var(--vocab-teal), var(--vocab-teal-deep));
+  color: #fff;
+}
+
+/* Lists retain their existing actions and React state; only density and surfaces change. */
+body[data-app-route="lists"] #root main .space-y-2 {
+  display: grid;
+  gap: 12px;
+}
+
+body[data-app-route="lists"] #root main .space-y-2 > .bg-white {
+  min-width: 0;
+  padding: 20px 22px;
+  border: 1px solid var(--vocab-line);
+  border-left: 4px solid var(--vocab-gold);
+  border-radius: 10px;
+}
+
+body[data-app-route="lists"] #root main .space-y-2 > .bg-white > .flex,
+body[data-app-route="lists"] #root main .has-imported-list-actions > .flex.items-center.gap-2.ml-4 {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.imported-list-remove-familiar,
+.imported-list-classify {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+/* Screening: exact 3 / 2 / 1 option grid. JS retains answer behavior and status icons. */
+body[data-app-route="screening"] #root main > div {
+  width: min(100%, 1220px);
+  max-width: 1220px;
+}
+
+body[data-app-route="screening"] #root main h2 {
+  min-height: 100px;
+  margin: clamp(20px, 4vh, 48px) auto clamp(24px, 4vh, 42px);
+  padding: 4px 20px;
+  border: 0;
+  background: transparent;
+  color: #082b3e;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(54px, 8vw, 86px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.015em;
+  box-shadow: none;
+}
+
+body[data-app-route="screening"] #root main h2::after {
+  color: var(--vocab-navy);
+  font-size: 0.3em;
+  opacity: 0.8;
+}
+
+body[data-app-route="screening"] #root main .grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+body[data-app-route="screening"] #root main .grid button {
+  position: relative;
+  min-width: 0;
+  min-height: 74px;
+  padding: 13px 44px 13px 18px;
+  border: 1px solid #cfc7ba;
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.9);
+  color: #17384a;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: 0 5px 14px rgba(11, 38, 53, 0.035);
+}
+
+body[data-app-route="screening"] #root main .grid button:not(:disabled):hover {
+  border-color: var(--vocab-teal);
+  background: var(--vocab-teal-soft);
+  box-shadow: 0 7px 18px rgba(13, 100, 101, 0.09);
+}
+
+body[data-app-route="screening"] #root main .grid button.bg-green-50 {
+  border-width: 2px;
+  border-color: var(--vocab-success);
+  background: #edf8f3;
+  color: #0c684a;
+  box-shadow: inset 4px 0 0 var(--vocab-success);
+}
+
+body[data-app-route="screening"] #root main .grid button.bg-red-50 {
+  border-width: 2px;
+  border-color: var(--vocab-danger);
+  background: #fff2ef;
+  color: #9d352b;
+  box-shadow: inset 4px 0 0 var(--vocab-danger);
+}
+
+body[data-app-route="screening"] #root main .border-dashed {
+  min-height: 54px;
+  border: 1px solid var(--vocab-navy);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--vocab-navy);
+  font-weight: 700;
+}
+
+body[data-app-route="screening"] #root main .border-dashed:hover {
+  border-color: var(--vocab-teal);
+  background: rgba(230, 242, 239, 0.6);
+}
+
+.shuffle-toggle-bar {
+  border-color: rgba(199, 154, 69, 0.48);
+  background: rgba(255, 253, 248, 0.96);
+  color: var(--vocab-navy);
+}
+
+/* Learning: preserve the list and controls, clarify reading focus. */
+body[data-app-route="learning"] #root main > .flex.h-full {
+  min-width: 0;
+  min-height: min(720px, calc(100vh - 132px));
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--vocab-line);
+  border-radius: var(--vocab-radius);
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: var(--vocab-shadow);
+}
+
+body[data-app-route="learning"] #root main > .flex.h-full > * {
+  min-width: 0;
+}
+
+body[data-app-route="learning"] #root main .flex-1.flex.items-center.justify-center {
+  margin: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(22, 122, 120, 0.1), transparent 44%),
+    var(--vocab-paper);
+}
+
+body[data-app-route="learning"] #root main button.text-4xl {
+  color: var(--vocab-navy);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(48px, 7vw, 82px);
+  font-weight: 500;
+  text-shadow: none;
+}
+
+body[data-app-route="learning"] #root main .overflow-y-auto {
+  scrollbar-color: rgba(22, 122, 120, 0.45) transparent;
+  scrollbar-width: thin;
+}
+
+/* Export and confusion keep their live controls and empty states. */
+body[data-app-route="export"] #root main .max-w-2xl > .bg-white,
+body[data-app-route="confusion"] #root main .bg-white {
+  border: 1px solid var(--vocab-line);
+  background: rgba(255, 253, 248, 0.96);
+}
+
+body[data-app-route="export"] #root main label {
+  border-color: var(--vocab-line);
+  background: rgba(255, 253, 248, 0.9);
+}
+
+body[data-app-route="confusion"] #root main .p-12.text-center {
+  min-height: 190px;
+  color: var(--vocab-muted);
+}
+
+body[data-app-route="confusion"] #root main .p-12.text-center::before {
+  color: var(--vocab-gold);
+}
+
+/* Standalone memorize, review, and import pages share the same vocabulary system. */
+.page,
+.review-page,
+.import-page {
+  width: min(100%, 1180px);
+  max-width: 1180px;
+}
+
+.controls,
+.review-toolbar,
+.review-quiz,
+.review-state,
+.import-card,
+.word-viewport {
+  border: 1px solid var(--vocab-line);
+  background: var(--vocab-paper);
+}
+
+.spacer,
+.rows-layer { background: var(--vocab-paper); }
+
+.word-row {
+  border-color: #e7dfd2;
+  background: var(--vocab-paper);
+}
+
+.word-row.is-alternate {
+  background: #f8f4ec;
+}
+
+.english,
+.review-word {
+  color: var(--vocab-navy);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.chinese,
+.status-row,
+.review-state p,
+.answer-hint {
+  color: var(--vocab-muted);
+}
+
+.review-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.review-option {
+  min-width: 0;
+  min-height: 66px;
+  border: 1px solid #cfc7ba;
+  border-radius: 8px;
+  background: var(--vocab-paper);
+  color: #17384a;
+}
+
+.review-option:not(:disabled):hover {
+  border-color: var(--vocab-teal);
+  background: var(--vocab-teal-soft);
+}
+
+.review-option.correct {
+  border-width: 2px;
+  border-color: var(--vocab-success);
+  background: #edf8f3;
+  color: #0c684a;
+}
+
+.review-option.wrong {
+  border-width: 2px;
+  border-color: var(--vocab-danger);
+  background: #fff2ef;
+  color: #9d352b;
+}
+
+.date-badge,
+#reviewRule,
+#todaySummary,
+.resume-note {
+  border-radius: 7px;
+  background: var(--vocab-teal-soft);
+  color: var(--vocab-teal-deep);
+}
+
+.progress-track span {
+  background: linear-gradient(90deg, var(--vocab-teal), var(--vocab-teal-deep));
+}
+
+.import-page {
+  gap: 16px;
+}
+
+.import-card {
+  border-radius: var(--vocab-radius);
+  box-shadow: var(--vocab-shadow);
+}
+
+.eyebrow {
+  color: var(--vocab-gold);
+}
+
+.format-example,
+.preview-table {
+  border-color: var(--vocab-line);
+  background: #faf7f0;
+}
+
+.format-example span,
+.preview-row span {
+  border-color: #e7dfd2;
+}
+
+.format-example span:nth-child(odd),
+.preview-row span:first-child {
+  color: var(--vocab-teal-deep);
+}
+
+.file-drop {
+  border-color: #c9bda9;
+  background: #fbf8f1;
+}
+
+.file-drop:hover,
+.file-drop:focus-within {
+  border-color: var(--vocab-teal);
+  background: var(--vocab-teal-soft);
+}
+
+.name-field input:focus {
+  border-color: var(--vocab-teal);
+  box-shadow: 0 0 0 3px rgba(22, 122, 120, 0.14);
+}
+
+.secondary-action,
+.secondary {
+  background: #eee8dc;
+  color: var(--vocab-navy);
+}
+
+@media (max-width: 900px) {
+  body[data-app-route="dashboard"] #root main .grid.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white:nth-child(2) {
+    border-right: 0;
+  }
+
+  body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--vocab-line);
+  }
+
+  body[data-app-route="dashboard"] #root main .space-y-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .intro-card,
+  .form-card {
+    grid-template-columns: 1fr;
+  }
+
+  .file-drop {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  #root main.flex-1 {
+    padding: 16px 14px 28px;
+  }
+
+  #root main h2 {
+    margin-bottom: 20px;
+    font-size: 29px;
+  }
+
+  body[data-app-route="screening"] #root main h2 {
+    min-height: 78px;
+    margin: 14px auto 22px;
+    font-size: clamp(45px, 15vw, 64px);
+  }
+
+  body[data-app-route="screening"] #root main .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  body[data-app-route="screening"] #root main .grid button {
+    min-height: 64px;
+    padding: 11px 36px 11px 12px;
+    font-size: 14px;
+  }
+
+  body[data-app-route="learning"] #root main > .flex.h-full {
+    min-height: calc(100vh - 104px);
+    border-radius: 10px;
+  }
+
+  .review-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .import-page {
+    width: min(100% - 20px, 1180px);
+    margin-top: 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white {
+    min-height: 104px;
+    padding: 20px 10px;
+  }
+
+  body[data-app-route="screening"] #root main .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body[data-app-route="screening"] #root main .grid button {
+    min-height: 56px;
+  }
+
+  .review-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .review-quiz,
+  .review-state,
+  .import-card {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Embedded mode: AppShell owns global navigation, so the vocabulary React
+ * chrome and standalone top bars are hidden. Local business actions remain. */
+html.vocab-embedded #root aside,
+html.vocab-embedded #root header.h-14 {
+  display: none !important;
+}
+
+html.vocab-embedded #root main.flex-1 {
+  padding: 16px 18px 30px;
+}
+
+.embedded-vocab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.embedded-vocab-action {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid rgba(13, 100, 101, 0.45);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.9);
+  color: var(--vocab-teal-deep);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.embedded-vocab-action:hover,
+.embedded-vocab-action:focus-visible {
+  border-color: var(--vocab-teal);
+  background: var(--vocab-teal-soft);
+}
+
+.embedded-dashboard-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.embedded-dashboard-heading > h1,
+.embedded-dashboard-heading > h2 {
+  min-width: 0;
+  margin-bottom: 24px !important;
+}
+
+.embedded-dashboard-heading > #embeddedDashboardLibrary {
+  margin-bottom: 24px;
+  white-space: nowrap;
+}
+
+.embedded-dashboard-heading > :not(h1):not(h2):not(#embeddedDashboardLibrary) {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 420px) {
+  .embedded-dashboard-heading { column-gap: 8px; }
+  .embedded-dashboard-heading > #embeddedDashboardLibrary { padding: 0 10px; }
+}
+
+html.vocab-embedded .topbar {
+  display: none;
+}
+
+html.vocab-embedded .page,
+html.vocab-embedded .review-page,
+html.vocab-embedded .import-page {
+  width: min(100% - 24px, 1180px);
+  margin-top: 18px;
+  margin-bottom: 24px;
+}
+
+/* ============ 2026-08-13 平板单屏适配 ============ */
+
+/* 词库主页：紧凑统计块与动作，配合 iframe 100dvh 做到单屏。 */
+body[data-app-route="dashboard"] #root main {
+  padding: 8px 12px 10px;
+}
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white {
+  min-height: 72px;
+  padding: 10px 12px;
+}
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white strong {
+  font-size: 24px;
+}
+body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white span {
+  font-size: 10px;
+}
+body[data-app-route="dashboard"] #root main .space-y-3 > button {
+  min-height: 44px;
+  padding-inline: 12px;
+}
+body[data-app-route="dashboard"] #root main .space-y-2 > .flex.items-center.justify-between {
+  min-height: 42px;
+}
+
+/* 筛查：横屏 3 列×4 行，竖屏 2 列×6 行，均保持 44px+ 触控目标。 */
+body[data-app-route="screening"] #root main {
+  padding: 8px 12px 10px;
+}
+body[data-app-route="screening"] #root main h2 {
+  min-height: 58px;
+  margin: 4px auto 8px;
+  font-size: clamp(46px, 6vw, 58px);
+}
+body[data-app-route="screening"] #root main .grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 8px;
+  row-gap: 6px;
+}
+body[data-app-route="screening"] #root main .grid button {
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+body[data-app-route="screening"] #root main .skip-button,
+body[data-app-route="screening"] #root main #skipButton {
+  min-height: 44px;
+  margin-top: 6px;
+}
+@media (orientation: portrait) {
+  body[data-app-route="screening"] #root main .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 8px;
+  }
+  body[data-app-route="screening"] #root main .grid button {
+    min-height: 50px;
+  }
+  body[data-app-route="screening"] #root main h2 {
+    min-height: 56px;
+    font-size: clamp(46px, 10vw, 58px);
+  }
+}
+@media (max-width: 479px) {
+  body[data-app-route="screening"] #root main .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body[data-app-route="screening"] #root main .grid button {
+    min-height: 44px;
+  }
+}
+/* A question is one visual update; feedback must not fade across frames. */
+body[data-app-route="screening"] main .animate-fade-in { animation: none !important; }
+body[data-app-route="screening"] main .grid button { transition: none !important; }

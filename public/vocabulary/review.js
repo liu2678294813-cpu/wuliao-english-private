@@ -7,6 +7,10 @@ const MEMORY_DB_VERSION = 2;
 const SESSION_KEY_PREFIX = "kaoyan_vocab_daily_review:";
 const AUTO_SPEAK_KEY = "wuliao:vocabulary:auto-pronounce";
 const OPTION_COUNT = 12;
+const DISTRACTOR_COUNT = OPTION_COUNT - 1;
+const DISTRACTOR_POOL_LIMIT = 96;
+const CONFUSING_DISTRACTOR_COUNT = Math.round(DISTRACTOR_COUNT * 0.64);
+const CONFUSING_SCORE_THRESHOLD = 0.28;
 
 const accountLabel = document.getElementById("accountLabel");
 const dateSelect = document.getElementById("dateSelect");
@@ -97,6 +101,7 @@ function showMessage(text) {
 }
 
 function speakWord(word) {
+  if (window.WuliaoPronunciation) { window.WuliaoPronunciation.speak(word).catch(() => showMessage("发音暂不可用，请重试")); return; }
   if (window.AndroidSpeech?.speak) {
     window.AndroidSpeech.speak(word);
     return;
@@ -150,11 +155,15 @@ function openMemoryDatabase() {
   });
 }
 
-async function readImportedWords(wordIds = null) {
+async function readImportedWords(wordIds = null, listKey = null) {
   const db = await openMemoryDatabase();
   try {
     const transaction = db.transaction(IMPORT_WORD_STORE, "readonly");
-    const words = await requestToPromise(transaction.objectStore(IMPORT_WORD_STORE).getAll());
+    const store = transaction.objectStore(IMPORT_WORD_STORE);
+    const request = listKey && store.indexNames.contains("usernameList")
+      ? store.index("usernameList").getAll(IDBKeyRange.only([state.username, listKey]))
+      : store.getAll();
+    const words = await requestToPromise(request);
     const wanted = wordIds ? new Set(wordIds) : null;
     return words.filter((word) => word.username === state.username && (!wanted || wanted.has(word.wordId)));
   } finally {
@@ -183,7 +192,8 @@ async function downgradeWrongWord(item) {
       const dates = recordDates(record);
       store.put({
         ...record,
-        clickCount: Math.min(2, record.clickCount || 0),
+        clickCount: 0,
+        modeProgress: { default: 0, cycle: 0 },
         maskedAt: record.maskedAt || (record.clickCount >= 3 ? record.updatedAt : undefined),
         maskedDates: dates,
         lastReviewDate: state.selectedDate,
@@ -224,6 +234,198 @@ function chunkIndexForWordId(wordId) {
   return Math.floor(numericWordId(wordId) / 500);
 }
 
+function normalizedMeaning(value) {
+  return String(value ?? "")
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[\s、，,；;：:。.!！?？/\\|()[\]{}<>《》“”‘’]/g, "");
+}
+
+function meaningTokens(value) {
+  return String(value ?? "")
+    .toLocaleLowerCase()
+    .split(/[\s、，,；;：:。.!！?？/\\|()[\]{}<>《》“”‘’]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+function chineseCharacters(value) {
+  return new Set([...String(value ?? "")].filter((character) => /[\u3400-\u9fff]/u.test(character)));
+}
+
+function overlapRatio(left, right) {
+  if (!left.size || !right.size) return 0;
+  let overlap = 0;
+  left.forEach((value) => {
+    if (right.has(value)) overlap += 1;
+  });
+  return overlap / Math.min(left.size, right.size);
+}
+
+function chineseMeaningOverlap(target, candidate) {
+  const targetMeaning = String(target?.chinese ?? "");
+  const candidateMeaning = String(candidate?.chinese ?? "");
+  if (!targetMeaning || !candidateMeaning) return 0;
+  const tokenOverlap = overlapRatio(
+    new Set(meaningTokens(targetMeaning)),
+    new Set(meaningTokens(candidateMeaning)),
+  );
+  const characterOverlap = overlapRatio(
+    chineseCharacters(targetMeaning),
+    chineseCharacters(candidateMeaning),
+  );
+  return Math.min(1, Math.max(tokenOverlap, characterOverlap * 0.65));
+}
+
+function normalizedEnglish(value) {
+  return String(value ?? "").toLocaleLowerCase().replace(/[^a-z]/g, "");
+}
+
+function commonPrefixLength(left, right) {
+  const limit = Math.min(left.length, right.length);
+  let index = 0;
+  while (index < limit && left[index] === right[index]) index += 1;
+  return index;
+}
+
+function commonSuffixLength(left, right) {
+  const limit = Math.min(left.length, right.length);
+  let index = 0;
+  while (index < limit && left[left.length - index - 1] === right[right.length - index - 1]) index += 1;
+  return index;
+}
+
+function englishFormSimilarity(target, candidate) {
+  const left = normalizedEnglish(target?.english);
+  const right = normalizedEnglish(candidate?.english);
+  if (!left || !right) return 0;
+  const minimumLength = Math.min(left.length, right.length);
+  if (minimumLength < 3) return 0;
+  const prefixScore = commonPrefixLength(left, right) / minimumLength;
+  const suffixScore = commonSuffixLength(left, right) / minimumLength;
+  const lengthScore = 1 - Math.abs(left.length - right.length) / Math.max(left.length, right.length);
+  return Math.min(1, Math.max(prefixScore, suffixScore * 0.9) * 0.8 + lengthScore * 0.2);
+}
+
+function sourceKeys(value) {
+  if (!value || typeof value !== "object") return [];
+  return ["listKey", "chunkKey", "chunk", "chunkIndex"]
+    .filter((key) => Object.prototype.hasOwnProperty.call(value, key))
+    .map((key) => ({ key, value: value[key] }))
+    .filter(({ value }) => value !== undefined && value !== null && String(value) !== "")
+    .map(({ key, value: source }) => {
+      return `${key === "listKey" ? "list" : "chunk"}:${String(source)}`;
+    });
+}
+
+function sourceKeysForWord(word, context = {}) {
+  const directKeys = [...sourceKeys(word), ...sourceKeys(context)];
+  const recordKeys = Array.isArray(context.records)
+    ? context.records.flatMap((record) => sourceKeys(record))
+    : [];
+  const keys = [...directKeys, ...recordKeys];
+  if (!keys.length && word?.wordId && !String(word.wordId).startsWith("import:")) {
+    keys.push(`chunk:${chunkIndexForWordId(word.wordId)}`);
+  }
+  return [...new Set(keys)];
+}
+
+function singleImportedListKey(word, context = {}) {
+  const keys = [
+    word?.listKey,
+    context?.listKey,
+    ...(Array.isArray(context.records) ? context.records.map((record) => record?.listKey) : []),
+  ]
+    .filter((value) => value !== undefined && value !== null && String(value) !== "")
+    .map((value) => String(value));
+  const unique = [...new Set(keys)];
+  return unique.length === 1 ? unique[0] : null;
+}
+
+function sharesSource(target, candidate, context = {}) {
+  const targetKeys = sourceKeysForWord(target, context);
+  const candidateKeys = sourceKeysForWord(candidate);
+  return targetKeys.some((key) => candidateKeys.includes(key));
+}
+
+function distractorScore(target, candidate, context = {}) {
+  const meaningScore = chineseMeaningOverlap(target, candidate);
+  const formScore = englishFormSimilarity(target, candidate);
+  const sourceScore = sharesSource(target, candidate, context) ? 0.12 : 0;
+  return Math.min(1, meaningScore * 0.62 + formScore * 0.38 + sourceScore);
+}
+
+function randomUnit(rng) {
+  const value = Number(rng?.());
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(0.999999999, Math.max(0, value));
+}
+
+function sampleWithoutReplacement(items, count, rng) {
+  const pool = [...items];
+  const selected = [];
+  const targetCount = Math.min(Math.max(0, count), pool.length);
+  for (let index = 0; index < targetCount; index += 1) {
+    const offset = index + Math.floor(randomUnit(rng) * (pool.length - index));
+    [pool[index], pool[offset]] = [pool[offset], pool[index]];
+    selected.push(pool[index]);
+  }
+  return selected;
+}
+
+function candidatePool(target, candidates, rng) {
+  const usedMeanings = new Set([normalizedMeaning(target?.chinese)]);
+  const eligible = [];
+  for (const candidate of candidates || []) {
+    const meaning = normalizedMeaning(candidate?.chinese);
+    if (!candidate?.wordId || candidate.wordId === target?.wordId || !meaning || usedMeanings.has(meaning)) {
+      continue;
+    }
+    usedMeanings.add(meaning);
+    eligible.push(candidate);
+  }
+  return sampleWithoutReplacement(eligible, DISTRACTOR_POOL_LIMIT, rng);
+}
+
+function selectDistractors(target, candidates, { rng = Math.random, context = {} } = {}) {
+  const scored = candidatePool(target, candidates, rng)
+    .map((candidate) => ({ candidate, score: distractorScore(target, candidate, context) }));
+  const confusing = scored
+    .filter((entry) => entry.score >= CONFUSING_SCORE_THRESHOLD)
+    .sort((left, right) => right.score - left.score);
+  const random = scored.filter((entry) => entry.score < CONFUSING_SCORE_THRESHOLD);
+  const selected = [];
+  const selectedIds = new Set();
+  const add = (entries) => {
+    entries.forEach((entry) => {
+      if (selected.length >= DISTRACTOR_COUNT || selectedIds.has(entry.candidate.wordId)) return;
+      selected.push(entry.candidate);
+      selectedIds.add(entry.candidate.wordId);
+    });
+  };
+
+  const confusingCount = Math.min(CONFUSING_DISTRACTOR_COUNT, confusing.length);
+  add(sampleWithoutReplacement(confusing.slice(0, Math.max(confusingCount * 2, confusingCount)), confusingCount, rng));
+  add(sampleWithoutReplacement(random, DISTRACTOR_COUNT - selected.length, rng));
+  if (selected.length < DISTRACTOR_COUNT) {
+    add(sampleWithoutReplacement(
+      scored.filter((entry) => !selectedIds.has(entry.candidate.wordId)),
+      DISTRACTOR_COUNT - selected.length,
+      rng,
+    ));
+  }
+  return selected;
+}
+
+function shuffle(items, rng) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const offset = Math.floor(randomUnit(rng) * (index + 1));
+    [shuffled[index], shuffled[offset]] = [shuffled[offset], shuffled[index]];
+  }
+  return shuffled;
+}
+
 async function loadWords(items) {
   const builtInItems = items.filter((item) => !String(item.wordId).startsWith("import:"));
   const importedItems = items.filter((item) => String(item.wordId).startsWith("import:"));
@@ -237,11 +439,12 @@ async function loadWords(items) {
     .filter((item) => item.word);
 }
 
-async function choicesForWord(word) {
+async function choicesForWord(word, context = {}) {
   let candidates;
   if (String(word.wordId).startsWith("import:")) {
-    candidates = (await readImportedWords()).filter((entry) => entry.wordId !== word.wordId && entry.chinese !== word.chinese);
-    if (candidates.length < OPTION_COUNT - 1) {
+    candidates = (await readImportedWords(null, singleImportedListKey(word, context)))
+      .filter((entry) => entry.wordId !== word.wordId && entry.chinese !== word.chinese);
+    if (candidates.length < DISTRACTOR_COUNT) {
       const fallback = await loadChunk(0);
       candidates.push(...fallback.entries.filter((entry) => entry.chinese !== word.chinese));
     }
@@ -249,21 +452,11 @@ async function choicesForWord(word) {
     const chunk = await loadChunk(chunkIndexForWordId(word.wordId));
     candidates = chunk.entries.filter((entry) => entry.wordId !== word.wordId && entry.chinese !== word.chinese);
   }
-  const choices = [];
-  const usedMeanings = new Set([word.chinese]);
-  const seed = numericWordId(word.wordId);
-  let cursor = candidates.length ? (seed * 17 + 7) % candidates.length : 0;
-  while (choices.length < OPTION_COUNT - 1 && choices.length < candidates.length) {
-    const candidate = candidates[cursor];
-    if (!usedMeanings.has(candidate.chinese)) {
-      usedMeanings.add(candidate.chinese);
-      choices.push({ chinese: candidate.chinese, correct: false });
-    }
-    cursor = (cursor + 37) % candidates.length;
-  }
-  const correctIndex = seed % (choices.length + 1);
-  choices.splice(correctIndex, 0, { chinese: word.chinese, correct: true });
-  return choices;
+  const rng = Math.random;
+  const choices = selectDistractors(word, candidates, { rng, context })
+    .map((candidate) => ({ chinese: candidate.chinese, correct: false }));
+  choices.push({ chinese: word.chinese, correct: true });
+  return shuffle(choices, rng);
 }
 
 function buildDateGroups(records) {
@@ -306,8 +499,9 @@ function updateCounters() {
 function finishReview() {
   saveSession();
   completeTitle.textContent = `${formatDateName(state.selectedDate)}筛查完成`;
-  completeSummary.textContent = `共 ${state.words.length} 词，正确 ${state.correct}，错误 ${state.wrong}。错误词已取消黑线并恢复为 2/3。`;
+  completeSummary.textContent = `共 ${state.words.length} 词，正确 ${state.correct}，错误 ${state.wrong}。错误词已取消黑线并恢复为 0/3。`;
   setVisible(completeState);
+  window.VocabularyBridge?.reportSessionUpdated?.();
 }
 
 async function renderQuestion() {
@@ -325,7 +519,7 @@ async function renderQuestion() {
 
   const item = state.words[state.currentIndex];
   wordButton.textContent = item.word.english;
-  const choices = await choicesForWord(item.word);
+  const choices = await choicesForWord(item.word, item);
   optionGrid.replaceChildren(...choices.map((choice, index) => {
     const button = document.createElement("button");
     button.type = "button";

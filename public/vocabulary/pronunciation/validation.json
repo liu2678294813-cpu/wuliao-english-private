@@ -1,0 +1,80 @@
+{
+  "createdAt": "2026-09-19T11:41:10.385395+00:00",
+  "manifestSha256": "eef1a8c3ad51e222fb375592243c2d7afd79d4df6303ac89dc20b80fe93cc6ee",
+  "variantsSha256": "435a301f7c7d5e82a1e56d8d7268be941caf00a2f8568ecb5fcdc5f5cccd5958",
+  "uniqueWords": 6515,
+  "coveredWords": 6515,
+  "coverageComplete": true,
+  "variants": 32,
+  "retainedBasePronunciations": 20,
+  "recordCount": 6567,
+  "uniqueAudioFiles": 6547,
+  "verifiedFiles": 6547,
+  "totalBytes": 66116653,
+  "generatedWords": 6515,
+  "commonsWords": 0,
+  "minDuration": 0.87,
+  "maxDuration": 2.12,
+  "medianDuration": 1.62,
+  "maxPeak": 0.9899520874023438,
+  "repairs": [],
+  "issues": [],
+  "humanListeningReview": false,
+  "privateImportedWordBanksIncluded": false,
+  "fullWaveformSampleCountsVerified": 6547,
+  "rawCheckpointsVerified": 6547,
+  "minimumRawToDecodedCorrelation": 0.9832454458618111,
+  "lowestRawToDecodedCorrelations": [
+    {
+      "word": "slap",
+      "pos": null,
+      "correlation": 0.9832454458618111
+    },
+    {
+      "word": "slack",
+      "pos": null,
+      "correlation": 0.9839117404794667
+    },
+    {
+      "word": "slum",
+      "pos": null,
+      "correlation": 0.9840001075520427
+    },
+    {
+      "word": "slide",
+      "pos": null,
+      "correlation": 0.9845023706074224
+    },
+    {
+      "word": "slip",
+      "pos": null,
+      "correlation": 0.9845298052176139
+    },
+    {
+      "word": "sling",
+      "pos": null,
+      "correlation": 0.9848255567141725
+    },
+    {
+      "word": "slot",
+      "pos": null,
+      "correlation": 0.9850128729072738
+    },
+    {
+      "word": "snap",
+      "pos": null,
+      "correlation": 0.9850546362721803
+    },
+    {
+      "word": "disparity",
+      "pos": null,
+      "correlation": 0.985279270236604
+    },
+    {
+      "word": "scrub",
+      "pos": null,
+      "correlation": 0.9854114309734237
+    }
+  ],
+  "signalCheckLimit": "Sample-count and waveform correlation checks establish preservation of inference audio; they do not prove the model pronounced every phoneme correctly."
+}

@@ -196,7 +196,7 @@ body[data-app-route="learning"] #root main .flex-1.flex.items-center.justify-cen
   background: rgba(255, 254, 250, 0.9);
 }
 
-.word-row:nth-child(even) {
+.word-row.is-alternate {
   background: #f7f5ef;
 }
 
