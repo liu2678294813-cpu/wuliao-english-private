@@ -339,8 +339,7 @@
 .ds-shell .library-action-strip { position: sticky; z-index: 30; top: 0; width: min(var(--ds-content-max), calc(100% - 64px)); margin-inline: auto; padding: 12px 0; border-bottom: 1px solid var(--ds-line); background: var(--ds-canvas); backdrop-filter: none; }
 .ds-shell .library-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .ds-shell .library-header-actions button { display: inline-flex; min-height: 40px; padding: 0 15px; align-items: center; justify-content: center; gap: 8px; border-radius: 7px; font: 600 12px/1 var(--ds-sans); }
-.ds-shell .library-header-actions .unknown-library-button,
-.ds-shell .library-header-actions .exam-library-button { border: 1px solid rgba(189, 150, 80, .72); background: transparent; color: var(--ds-ink); }
+.ds-shell .library-header-actions .unknown-library-button { border: 1px solid rgba(189, 150, 80, .72); background: transparent; color: var(--ds-ink); }
 .ds-shell .library-header-actions .upload-button { border: 1px solid var(--ds-teal); background: var(--ds-teal); color: white; }
 
 .ds-shell .library-main {
@@ -438,6 +437,8 @@
 
 /* Vocabulary host page presentation belongs to this page layer, not AppShell. */
 .ds-shell .vocabulary-page { display: grid; width: 100%; min-width: 0; grid-template-rows: auto 1fr; }
+.ds-shell .vocabulary-page-memorize { grid-template-rows: minmax(0, 1fr); }
+.ds-shell .vocabulary-page-memorize .vocabulary-frame-wrap { height: 100%; min-height: 0; margin-bottom: 0; }
 .ds-shell .vocabulary-shell-header {
   position: static;
   width: calc(100% - 42px);

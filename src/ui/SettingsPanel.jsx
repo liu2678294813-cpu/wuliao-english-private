@@ -25,6 +25,8 @@ export default function SettingsPanel({
   onClose,
   onSwitchAccount,
   onOpenDeveloperLab,
+  longSentenceTrainingEnabled = true,
+  onLongSentenceTrainingEnabledChange,
 }) {
   const devMode = getDeveloperMode();
   const info = getAppInfo();
@@ -218,6 +220,16 @@ export default function SettingsPanel({
               <strong>{username || "未登录"}</strong>
             </div>
             <button className="settings-action" type="button" onClick={onSwitchAccount}>切换账号</button>
+          </section>
+
+          <section className="settings-section">
+            <h3>学习功能</h3>
+            <label className="settings-row">
+              <span>长难句训练</span>
+              <input type="checkbox" checked={longSentenceTrainingEnabled}
+                onChange={(event) => onLongSentenceTrainingEnabledChange?.(event.target.checked)} />
+            </label>
+            <p className="settings-note">关闭后隐藏入口，已有训练记录仍保留。</p>
           </section>
 
           <section className="settings-section">

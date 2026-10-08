@@ -22,7 +22,7 @@ test("Writing 是独立顶级入口且不属于 Reading", () => {
   assert.ok(!isNavGroup(writing));
   assert.ok(isNavGroup(reading));
   assert.ok(!reading.children.some((item) => item.id === "writing" || item.label === "写作"));
-  assert.deepEqual(READING_NAV.map((item) => item.label), ["精读", "完形", "模拟"]);
+  assert.deepEqual(READING_NAV.map((item) => item.label), ["精读", "完形"]);
 });
 
 test("Writing Library 与 Session route 保留 session identity 且不编码 Stage", () => {

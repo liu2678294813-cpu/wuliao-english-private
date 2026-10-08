@@ -83,8 +83,6 @@ async function waitForView(page, label) {
     await page.locator(".home-page").waitFor({ timeout: 30000 });
   } else if (label === "精读" || label === "完形") {
     await page.locator(".library-page").waitFor({ timeout: 30000 });
-  } else if (label === "模拟") {
-    await page.locator(".exam-library-page").waitFor({ timeout: 30000 });
   } else if (label === "写作") {
     await page.locator(".writing-library").waitFor({ timeout: 30000 });
   } else if (label === "词库") {
@@ -162,7 +160,7 @@ test("Flow A：所有左栏页面均可折叠为图标 rail，当前 view/iframe
   await page.setViewportSize({ width: 1280, height: 800 });
   await createAccount(page);
 
-  for (const label of ["首页", "精读", "完形", "模拟", "写作", "词库", "背诵", "复习"]) {
+  for (const label of ["首页", "精读", "完形", "写作", "词库", "背诵", "复习"]) {
     if (label !== "首页") await navTo(page, label);
     await waitForView(page, label);
     await page.waitForTimeout(500);
@@ -185,7 +183,7 @@ test("Flow A2：折叠 rail 的每个图标沿用真实导航并保持 active �
   await createAccount(page);
   await page.locator(".ds-brand").click();
   await expect(page.locator(".ds-shell")).toHaveClass(/ds-shell-collapsed/);
-  for (const label of ["精读", "完形", "模拟", "写作", "词库", "背诵", "复习", "首页"]) {
+  for (const label of ["精读", "完形", "写作", "词库", "背诵", "复习", "首页"]) {
     const button = page.locator(`.ds-nav > button[aria-label="${label}"]`);
     await button.click();
     await waitForView(page, label);
@@ -204,7 +202,7 @@ test("Flow B：背诵页无导入词库入口；/lists 的导入 PDF / Excel 与
   await memorizeFrame.locator("body").waitFor({ timeout: 15000 });
   await expect(memorizeFrame.locator('a[href="/vocabulary/import.html"]')).toHaveCount(0);
   await expect(memorizeFrame.locator("body")).not.toContainText("导入词库");
-  await expect(memorizeFrame.locator("#learnLink")).toBeVisible();
+  await expect(memorizeFrame.locator("#learnLink")).toHaveCount(0);
   await expect(memorizeFrame.locator("#listSelect")).toBeVisible();
 
   await navTo(page, "词库");

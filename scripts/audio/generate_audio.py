@@ -100,12 +100,13 @@ def write_audio(word, audio, sr, pos=None):
             'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
-def base_metadata():
+def base_metadata(voice=None):
+    voice = voice or VOICE
     return {'source': 'https://huggingface.co/hexgrad/Kokoro-82M',
             'license': 'Apache-2.0 (model)',
             'licenseUrl': 'https://www.apache.org/licenses/LICENSE-2.0',
-            'attribution': 'Synthesized locally with hexgrad/Kokoro-82M v1.0, voice ' + VOICE + '; kokoro-onnx (MIT)',
-            'generated': True, 'voice': VOICE, 'accent': 'en-US',
+            'attribution': 'Synthesized locally with hexgrad/Kokoro-82M v1.0, voice ' + voice + '; kokoro-onnx (MIT)',
+            'generated': True, 'voice': voice, 'accent': 'en-US',
             'modifications': 'Preserved full inference waveform; normalized level; added 40ms/80ms silence; encoded Ogg Vorbis' if TRIM_POLICY == 'preserve' else 'Legacy threshold trimming; normalized level; encoded Ogg Vorbis',
             'qualityReview': 'automated-signal-check-only'}
 
@@ -246,8 +247,9 @@ def main():
             for word, choices in config.items():
                 variants[word] = {}
                 for pos, choice in choices.items():
-                    audio, sr = MODEL.create(choice['phonemes'], voice=VOICE, speed=.95, is_phonemes=True, trim=TRIM_POLICY != 'preserve')
-                    variants[word][pos] = {**write_audio(word, audio, sr, pos), **base_metadata(),
+                    voice = choice.get('voice', VOICE)
+                    audio, sr = MODEL.create(choice['phonemes'], voice=voice, speed=.95, is_phonemes=True, trim=TRIM_POLICY != 'preserve')
+                    variants[word][pos] = {**write_audio(word, audio, sr, pos), **base_metadata(voice),
                                            **choice, 'qualityReview': 'dictionary-phoneme-and-automated-signal-check; not human-listened'}
             save_json(output / 'variants.json', variants)
     MODEL = None

@@ -31,6 +31,7 @@ const {
   normalizeProviderProfile,
   rebindCredential,
   resolveModelTransport,
+  textAiCacheIdentity,
 } = await import("../src/aiProvider.js");
 
 function reset() { localStorage.clear(); setCurrentUsername("provider-v2-user"); delete window.AndroidSecureStore; }
@@ -119,6 +120,49 @@ test("Android native Vision credential migrates only to its existing endpoint an
   assert.equal((await getCredential(profile, { secureStore })).status, "missing");
 });
 
+test("Android native Text credential migrates with verified scope and keeps its rollback copy", async () => {
+  reset();
+  const profile = getProviderProfile("text");
+  const oldKey = "ai:apikey:provider-v2-user", rows = new Map([[oldKey, "legacy-native-text"]]);
+  const reads = [], secureStore = { get: async key => { reads.push(key); return rows.get(key) || ""; }, set: async (key, value) => rows.set(key, value), remove: async key => rows.delete(key) };
+  const other = custom("text", "https://other.example/v1");
+  assert.equal((await getCredential(other, { secureStore })).status, "missing");
+  assert.equal(reads.includes(oldKey), false);
+  assert.equal((await getCredential(profile, { secureStore, migrateLegacy: false })).status, "missing");
+  assert.equal(reads.includes(oldKey), false);
+  await bindCredential(other, "", { secureStore });
+  assert.equal(rows.get(oldKey), "legacy-native-text");
+  assert.equal((await getCredential(profile, { secureStore, username: "another-user" })).status, "missing");
+  assert.equal(reads.includes(oldKey), false);
+  assert.equal((await getCredential(profile, { secureStore })).value, "legacy-native-text");
+  const newKey = `ai:credential:v2:provider-v2-user:${profile.credentialScopeId}`;
+  assert.equal(rows.get(newKey), "legacy-native-text");
+  assert.equal(rows.get(oldKey), "legacy-native-text");
+  rows.set(newKey, "newer-text-key");
+  assert.equal((await getCredential(profile, { secureStore })).value, "newer-text-key");
+  rows.delete(newKey);
+  await assert.rejects(() => getCredential(profile, { secureStore: { get: secureStore.get, set: async () => {} } }), error => error.code === "secure_storage_error");
+  assert.equal(rows.get(oldKey), "legacy-native-text");
+  await bindCredential(profile, "", { secureStore });
+  assert.equal(rows.has(oldKey), false);
+  assert.equal((await getCredential(profile, { secureStore })).status, "missing");
+});
+
+test("legacy native migration checks the requested account configuration and URL-encodes its key", async () => {
+  reset();
+  const username = "另一账号: /";
+  setUserItem("wuliao:ai:api-config", JSON.stringify({ baseUrl: "https://account-b.example/v1" }), username);
+  const oldKey = `ai:apikey:${encodeURIComponent(username)}`, rows = new Map([[oldKey, "account-b-text-key"]]);
+  const reads = [], secureStore = { get: async key => { reads.push(key); return rows.get(key) || ""; }, set: async (key, value) => rows.set(key, value), remove: async key => rows.delete(key) };
+  assert.equal((await getCredential(getProviderProfile("text"), { secureStore, username })).status, "missing");
+  assert.equal(reads.includes(oldKey), false);
+  const profile = normalizeProviderProfile({ modality: "text", providerId: "deepseek", endpointKind: "custom", baseUrl: "https://account-b.example/v1", modelId: "deepseek-chat" });
+  assert.equal((await getCredential(profile, { secureStore, username })).value, "account-b-text-key");
+  assert.equal(rows.get(oldKey), "account-b-text-key");
+  await bindCredential(profile, "", { secureStore, username });
+  assert.equal(rows.has(oldKey), false);
+});
+
 test("legacy plaintext is never migrated to a different provider endpoint", async () => {
   reset();
   setUserItem("wuliao:ai:api-config", JSON.stringify({ version: 1, baseUrl: "https://api.deepseek.com" }));
@@ -178,5 +222,24 @@ test("fetch TypeError is runtime compatibility, never auth or model unsupported"
   try {
     const profile = custom("text", "https://cors-blocked.example/v1");
     await assert.rejects(() => callAi({ profile, apiKey: "fixture", messages: [{ role: "user", content: "x" }] }), (error) => error.code === "runtime_network_compatibility");
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("explicit null omits temperature for both transports and keeps its cache identity separate", async () => {
+  reset();
+  const originalFetch = globalThis.fetch, bodies = [];
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return { ok: true, json: async () => ({ choices: [{ message: { content: "OK" } }], output_text: "OK" }) };
+  };
+  try {
+    for (const transportOverride of [TRANSPORT_KINDS.CHAT, TRANSPORT_KINDS.RESPONSES]) {
+      const profile = { ...custom("text", "https://temperature.example/v1"), transportOverride };
+      const options = { profile, apiKey: "fixture", messages: [{ role: "user", content: "x" }] };
+      await callAi({ ...options, temperature: null }); assert.equal("temperature" in bodies.at(-1), false);
+      await callAi(options); assert.equal(bodies.at(-1).temperature, 0.6);
+      await callAi({ ...options, temperature: 0 }); assert.equal(bodies.at(-1).temperature, 0);
+      assert.notEqual(textAiCacheIdentity({ ...options, temperature: null }).fingerprint, textAiCacheIdentity(options).fingerprint);
+    }
   } finally { globalThis.fetch = originalFetch; }
 });

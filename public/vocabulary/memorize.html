@@ -27,21 +27,31 @@
 
     <main class="page">
       <section class="controls">
-        <label>
-          <span>选择词库</span>
-          <select id="listSelect"></select>
-        </label>
+        <div class="memory-list-controls">
+          <h2>背诵</h2>
+          <label>
+            <span>选择词库</span>
+            <select id="listSelect"></select>
+          </label>
+        </div>
         <div class="memory-controls-right">
           <div class="memory-mode-switches" aria-label="背词模式">
             <div role="group" aria-label="遮挡规则"><button data-memory-rule="default" type="button">默认</button><button data-memory-rule="cycle" type="button">循环</button></div>
             <div role="group" aria-label="操作方式"><button data-memory-input="click" type="button">点击</button><button data-memory-input="swipe" type="button">滑动</button></div>
           </div>
         <div class="actions">
-          <a class="primary-link" id="learnLink" href="/vocabulary/index.html#/learning?from=memorize">学习单词</a>
-          <a class="primary-link" href="/vocabulary/review.html">今日复习</a>
+          <button id="rangeButton" class="secondary" type="button" aria-pressed="false">区间全黑</button>
           <button id="undoButton" class="secondary" type="button" disabled>撤销上一步</button>
           <button id="clearButton" class="secondary" type="button">一键清除黑线</button>
         </div>
+        </div>
+      </section>
+
+      <section id="rangePanel" class="range-panel hidden" aria-live="polite">
+        <span id="rangeDescription">请选择起点</span>
+        <div class="range-actions">
+          <button id="rangeConfirm" type="button" disabled>确认全黑</button>
+          <button id="rangeCancel" type="button">取消</button>
         </div>
       </section>
 
@@ -49,8 +59,6 @@
         <span id="listSummary">正在读取词库…</span>
         <span id="todaySummary">今日背词 0 个</span>
         <span id="maskSummary"></span>
-        <span class="resume-note">当前位置自动保存</span>
-        <a href="/vocabulary/pronunciation-credits.html" target="_blank" rel="noreferrer">发音来源</a>
       </section>
 
       <section id="viewport" class="word-viewport" aria-live="polite">

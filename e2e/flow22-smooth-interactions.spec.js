@@ -7,7 +7,7 @@ function percentile(values, fraction) {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))];
 }
 
-test("指定入口删除且整卷模拟只从左侧栏进入", async ({ page }) => {
+test("资料库入口与导航均无整卷模拟", async ({ page }) => {
   await page.setViewportSize({ width: 1104, height: 720 });
   await createAccount(page, uniqueUsername("smooth-entry"));
 
@@ -19,10 +19,7 @@ test("指定入口删除且整卷模拟只从左侧栏进入", async ({ page }) 
   await expect(page.getByRole("heading", { name: "完形资料库" })).toBeVisible();
   await expect(page.locator(".exam-library-button")).toHaveCount(0);
 
-  await navTo(page, "模拟");
-  await expect(page.getByRole("heading", { name: "整卷模拟" })).toBeVisible();
-  await expect(page.locator(".exam-library-page > .back-button")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "历史成绩" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "模拟", exact: true })).toHaveCount(0);
 
   await navTo(page, "写作");
   await expect(page.locator(".writing-library")).toBeVisible();

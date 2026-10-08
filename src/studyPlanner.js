@@ -21,7 +21,6 @@ export const TASK_TYPE_VOCABULARY_REVIEW = "vocabulary-review";
 export const TASK_TYPE_NEW_READING = "new-reading";
 export const TASK_TYPE_BLOCKED_READING = "blocked-reading";
 export const TASK_TYPE_CLOZE_REVIEW = "cloze-review";
-export const TASK_TYPE_EXAM_FOLLOWUP = "exam-followup";
 export const TASK_TYPE_CONTINUE_WRITING = "continue-writing";
 export const TASK_TYPE_WRITING_REVIEW = "writing-review";
 
@@ -65,7 +64,6 @@ export const PLANNER_DURATION_DEFAULTS = {
   clozeReviewBase: 2,
   clozeReviewPerBlank: 1,
   clozeReviewMax: 15,
-  examFollowup: 10,
   continueWriting: 20,
   writingReview: 15,
 };
@@ -111,7 +109,6 @@ export function estimateTaskDuration(candidate, defaults = PLANNER_DURATION_DEFA
     return defaults.newReading;
   }
   if (type === TASK_TYPE_LEARNING_REVIEW) return defaults.learningReview;
-  if (type === TASK_TYPE_EXAM_FOLLOWUP) return defaults.examFollowup;
   if (type === TASK_TYPE_VOCABULARY_REVIEW) {
     const dueCount = Math.max(0, Number(meta.dueCount) || 0);
     return clampMinutes(

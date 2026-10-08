@@ -210,7 +210,7 @@ test("pending page serialization yields a frame and can be cancelled for a bound
 test("intentional stationary long press survives but a slow real stroke never becomes a lasso", () => {
   const tap = session([[10, 10], [10.2, 10]]);
   assert.equal(shouldActivateTemporaryEraser(tap.longPress, tap.longPress.startTime + 621), true);
-  const written = session([[10, 10], [11.2, 10], [10, 10]]);
+  const written = session([[10, 10], [13.2, 10], [10, 10]]);
   assert.equal(written.longPress.active, false);
   assert.equal(shouldActivateTemporaryEraser(written.longPress, Date.now() + 5000), false);
 });

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { deleteUnknownWord, listUnknownWords, updateUnknownWordMeaning } from "./storage";
+import { deleteUnknownWord, listUnknownWords, updateUnknownWordMeaning, updateUnknownWordContextMeaning } from "./storage";
 import { unknownWordSourceType } from "./clozeUnknownWords";
+import { getUserItem, setUserItem } from "./userData";
+
+const DISPLAY_KEY = "wuliao:unknown-library-display";
 
 const SOURCE_FILTERS = [
   { id: "all", label: "全部" },
@@ -12,6 +15,12 @@ export default function UnknownWordLibrary({ onBack }) {
   const [words, setWords] = useState([]);
   const [notice, setNotice] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [displayMode, setDisplayMode] = useState(() => getUserItem(DISPLAY_KEY) === "context" ? "context" : "meaning");
+
+  function changeDisplayMode(mode) {
+    setUserItem(DISPLAY_KEY, mode);
+    setDisplayMode(mode);
+  }
 
   const refresh = () => listUnknownWords().then(setWords);
 
@@ -36,10 +45,11 @@ export default function UnknownWordLibrary({ onBack }) {
     return result;
   }, {}), [filteredWords]);
 
-  async function editMeaning(word) {
-    const meaning = window.prompt(`修改 ${word.word} 的中文释义`, word.meaning || "");
+  async function editMeaning(word, sense) {
+    const meaning = window.prompt(`修改 ${word.word} 的${sense ? "本句" : "中文"}释义`, (sense || word).meaning || "");
     if (meaning === null) return;
-    await updateUnknownWordMeaning(word.id, meaning);
+    if (sense) await updateUnknownWordContextMeaning(word.id, sense.contextKey, meaning);
+    else await updateUnknownWordMeaning(word.id, meaning);
     setNotice("释义已更新");
     window.setTimeout(() => setNotice(""), 1500);
   }
@@ -52,7 +62,7 @@ export default function UnknownWordLibrary({ onBack }) {
   }
 
   return (
-    <div className="unknown-library-page">
+    <div className={`unknown-library-page unknown-display-${displayMode}`}>
       <header className="library-header unknown-library-header">
         <button className="back-button" onClick={onBack}>← 返回</button>
         <div className="unknown-library-title"><small>UNKNOWN WORDS</small><strong>陌生词库</strong></div>
@@ -76,6 +86,10 @@ export default function UnknownWordLibrary({ onBack }) {
             </button>
           ))}
         </div>
+        <div className="unknown-display-switch" role="group" aria-label="词库显示方式">
+          <button type="button" aria-pressed={displayMode === "meaning"} onClick={() => changeDisplayMode("meaning")}>只看释义</button>
+          <button type="button" aria-pressed={displayMode === "context"} onClick={() => changeDisplayMode("context")}>显示语境</button>
+        </div>
         {!filteredWords.length && (
           <div className="empty-library"><span>词</span><h3>这里还没有陌生词</h3><p>进入精读或完形的可标记阶段，将不熟悉的英文词加入陌生词库。</p></div>
         )}
@@ -92,9 +106,18 @@ export default function UnknownWordLibrary({ onBack }) {
                       .sort((a, b) => a.word.localeCompare(b.word, "en"))
                       .map((word) => (
                         <div className="unknown-word-card" key={word.id}>
-                          <button className="unknown-word-copy" onClick={() => editMeaning(word)}>
+                          {word.senses?.length ? <div className="unknown-word-copy">
+                            <strong>{word.word}</strong>
+                            <div className="unknown-senses">
+                            {word.senses.map((sense) => <button className="unknown-context-sense" key={sense.contextKey} onClick={() => editMeaning(word, sense)}>
+                              <span>{sense.meaning || "本句释义待补充 · 点此编辑"}</span>
+                              {sense.meaningSource === "dictionary-fallback" && <small>通用释义 · 待按本句确认</small>}
+                              {displayMode === "context" && <small className="unknown-context-sentence">{sense.sentence}</small>}
+                            </button>)}
+                            </div>
+                          </div> : <button className="unknown-word-copy" onClick={() => editMeaning(word)}>
                             <strong>{word.word}</strong><span>{word.meaning || "释义未收录 · 点此补充"}</span>
-                          </button>
+                          </button>}
                           <button className="unknown-word-delete" onClick={() => removeWord(word)} aria-label={`删除 ${word.word}`}>×</button>
                         </div>
                       ))}

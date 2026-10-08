@@ -70,8 +70,6 @@ export default function TodayTasks({
   onStateChange,
   onBrowseLibrary,
   onOpenVocabularyReview,
-  onOpenExamFollowup,
-  onUpdateExamFollowup,
 }) {
   const [today, setToday] = useState(() => localDateKey());
   const [plan, setPlan] = useState(null);
@@ -254,18 +252,6 @@ export default function TodayTasks({
   }
 
   function handleSkip(candidate) {
-    if (candidate.type === "exam-followup") {
-      const started = candidate.metadata?.status === "started";
-      const status = started ? "completed" : "dismissed";
-      const message = started
-        ? "确认已完成这项考试后续学习？这只结束 Planner 提醒，不会改写普通学习记录。"
-        : "确认忽略这项考试后续学习？考试原始结果会继续保留。";
-      if (!window.confirm(message)) return;
-      Promise.resolve(onUpdateExamFollowup?.(candidate.metadata, status))
-        .then(() => refreshPlan(scanLearningState({ force: true })))
-        .catch((error) => console.error("考试后续学习状态更新失败", error));
-      return;
-    }
     const taskKey = candidate.metadata?.taskKey || candidate.metadata?.task?.taskKey;
     if (!taskKey) return;
     const message = candidate.type === "cloze-review"
@@ -303,10 +289,6 @@ export default function TodayTasks({
     }
     if (action.type === "vocabulary-review") {
       onOpenVocabularyReview?.();
-      return;
-    }
-    if (action.type === "exam-followup") {
-      onOpenExamFollowup?.(candidate.metadata);
       return;
     }
     if (action.type === "new-reading") {

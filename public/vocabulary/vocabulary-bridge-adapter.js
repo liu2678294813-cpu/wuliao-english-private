@@ -140,6 +140,12 @@
     const data = event.data || {};
     if (data.namespace !== NAMESPACE || data.version !== VERSION) return;
     switch (data.type) {
+      case "UNKNOWN_WORDS_CHANGED":
+        if (typeof data.payload?.username === "string"
+          && data.payload.username === localStorage.getItem("kaoyan_vocab_current_user")) {
+          dispatchLegacy("wuliao:unknown-words-refresh", { username: data.payload.username });
+        }
+        return;
       case "FLUSH_PENDING": {
         const requestId = data.payload?.requestId;
         if (typeof requestId !== "string") return;

@@ -5,7 +5,7 @@ test("approved home keeps budget, archive, rank and all navigation actions", asy
   await createAccount(page);
   await expect(page.getByRole("heading", { name: "今日学习", exact: true })).toBeVisible();
   await expect(page.locator(".overview-metrics article")).toHaveCount(6);
-  await expect(page.locator(".ds-nav > button")).toHaveCount(9);
+  await expect(page.locator(".ds-nav > button")).toHaveCount(10);
   const archiveBox = await page.getByRole("button", { name: "学习档案", exact: true }).boundingBox();
   const homeBox = await page.locator(".home-main").boundingBox();
   const greetingBox = await page.locator(".home-greeting").boundingBox();

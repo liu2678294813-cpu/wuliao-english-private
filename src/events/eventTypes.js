@@ -26,9 +26,6 @@ export const AppEvent = Object.freeze({
   DEEP_TRANSLATION_UPDATED: "wuliao:deep-translation:updated",
   LEARNING_STATE_INVALIDATED: "wuliao:learning-state-invalidated",
   VOCABULARY_SESSION_UPDATED: "wuliao:vocabulary-session-updated",
-  EXAM_SESSIONS_UPDATED: "wuliao:exam-sessions-updated",
-  EXAM_RESULTS_UPDATED: "wuliao:exam-results-updated",
-  EXAM_HANDOFF_UPDATED: "wuliao:exam-handoff-updated",
 
   AI_REQUEST: "wuliao:ai-request",
   AI_HINT_NEXT: "wuliao:ai-hint-next",

@@ -5,6 +5,8 @@ import { VocabMessageType } from "../vocabulary/vocabularyBridge";
 import { vocabularyMessageTargetOrigin } from "../vocabulary/vocabularyProtocol";
 import { useSaveBoundary } from "../useSaveBoundary.js";
 import { flushPendingSaves, reportSaveFailure } from "../saveCoordinator.js";
+import { onAppEvent } from "../events/appEvents.js";
+import { AppEvent } from "../events/eventTypes.js";
 
 const HandwritingScreening = lazy(() => import("../vocabulary/HandwritingScreening.jsx"));
 
@@ -17,7 +19,7 @@ function isTrustedFrameMessage(event, frameWindow) {
   return false;
 }
 
-export default function VocabularyWorkspace({ onBack, workspace, route, onRouteChange, bridge }) {
+export default function VocabularyWorkspace({ username, onBack, workspace, route, onRouteChange, bridge }) {
   const [screeningMode, setScreeningMode] = useState("choice");
   const [modeSaving, setModeSaving] = useState(false);
   const changeScreeningMode = async (next) => {
@@ -46,6 +48,15 @@ export default function VocabularyWorkspace({ onBack, workspace, route, onRouteC
       : `/vocabulary/index.html#${route}`
   ));
   const workspaceKeyRef = useRef(workspaceKey);
+  useEffect(() => {
+    const refresh = () => bridge?.send(VocabMessageType.UNKNOWN_WORDS_CHANGED, { username });
+    const off = onAppEvent(AppEvent.UNKNOWN_WORDS_UPDATED, refresh);
+    const offBridge = bridge?.on(({ type }) => {
+      if (type === VocabMessageType.READY) refresh();
+    });
+    if (loaded) refresh();
+    return () => { off(); offBridge?.(); };
+  }, [username, bridge, loaded]);
 
   const handleShuffleChange = (event) => {
     const next = event.target.checked;
@@ -163,8 +174,8 @@ export default function VocabularyWorkspace({ onBack, workspace, route, onRouteC
   };
 
   return (
-    <div className="vocabulary-page">
-      <header className="vocabulary-shell-header">
+    <div className={`vocabulary-page${workspace.kind === "static" && workspace.page === "memorize" ? " vocabulary-page-memorize" : ""}`}>
+      {!(workspace.kind === "static" && workspace.page === "memorize") && <header className="vocabulary-shell-header">
         <button className="back-button light" onClick={onBack}>← 返回</button>
         <div className="vocabulary-shell-title">
           <small>VOCABULARY WORKSPACE</small>
@@ -186,7 +197,7 @@ export default function VocabularyWorkspace({ onBack, workspace, route, onRouteC
             </label>
           </div>
         )}
-      </header>
+      </header>}
       <div className="vocabulary-frame-wrap">
         {!loaded && !loadFailed && <div className="vocabulary-frame-loading"><span>词</span><strong>正在载入单词软件…</strong></div>}
         {!loaded && loadFailed && (

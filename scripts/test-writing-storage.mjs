@@ -5,6 +5,7 @@ await import("./test-hooks.mjs");
 
 const {
   DEVICE_PRIVATE_WRITING_SAMPLE_STORE,
+  LONG_SENTENCE_STORES,
   WRITING_INK_STORE,
   WULIAO_ENGLISH_DB_VERSION,
   openWuliaoEnglishDatabase,
@@ -975,11 +976,11 @@ function createV4Database() {
   return indexedDb;
 }
 
-test("L IndexedDB v4→v7 is additive; old data survives and ink/private indexes are exact", async () => {
+test("L IndexedDB v4→v8 is additive; old data survives and new training indexes are exact", async () => {
   const indexedDb = createV4Database();
   const database = await openWuliaoEnglishDatabase(indexedDb);
   assert.equal(database.version, WULIAO_ENGLISH_DB_VERSION);
-  assert.equal(WULIAO_ENGLISH_DB_VERSION, 7);
+  assert.equal(WULIAO_ENGLISH_DB_VERSION, 8);
   for (const name of ["custom-pdfs", "unknown-words", "pdf-parse-cache", "exam-ink"]) {
     assert.equal(database.objectStoreNames.contains(name), true);
     assert.equal(database.stores.get(name).records.values().next().value.value, `keep-${name}`);
@@ -992,6 +993,15 @@ test("L IndexedDB v4→v7 is additive; old data survives and ink/private indexes
   const privateStore = database.stores.get(DEVICE_PRIVATE_WRITING_SAMPLE_STORE);
   assert.equal(privateStore.keyPath, "id");
   assert.deepEqual([...privateStore.indexes].sort(), ["username", "usernameQuestion"]);
+  for (const name of LONG_SENTENCE_STORES) {
+    const store = database.stores.get(name);
+    assert.equal(store.keyPath, "id");
+    const indexes = name === "long-sentence-skills" ? ["username", "usernameDue"]
+      : name === "long-sentence-sessions" ? ["username", "usernameCreated", "usernameSession"]
+      : name === "long-sentence-ink" ? ["ownerRecordId", "username", "usernameSession"]
+        : ["username", "usernameSession"];
+    assert.deepEqual([...store.indexes].sort(), indexes);
+  }
   database.close();
 });
 

@@ -8,14 +8,12 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 
 // ---------------- 导航 / AppShell / 设置 ----------------
 
-test("阅读组包含精读/完形/模拟，模拟指向现有 Exam Library，加入写作后叶子共 9 项", () => {
-  assert.deepEqual(READING_NAV.map((item) => item.label), ["精读", "完形", "模拟"]);
-  assert.equal(READING_NAV[2].view, "exam-library");
-  assert.equal(READING_NAV[2].icon, "exam");
+test("阅读组只包含精读/完形，全部导航叶子共 9 项", () => {
+  assert.deepEqual(READING_NAV.map((item) => item.label), ["精读", "完形"]);
   const leaves = navLeaves();
   assert.equal(leaves.length, 9);
   assert.ok(leaves.some((item) => item.id === "writing" && item.view === "writing-library"));
-  assert.ok(leaves.some((item) => item.id === "exam" && item.view === "exam-library"));
+  assert.ok(!leaves.some((item) => item.id === "exam"));
 });
 
 test("rail 不再存在独立账号卡片，设置内保留账号与切换账号", () => {
@@ -117,10 +115,10 @@ test("PdfReader 与 CustomDeepReader 均消费共享 AnnotationToolbar（PdfRead
   assert.ok(custom.includes("AnnotationToolbar"));
 });
 
-test("三宿主 Toolbar 行高统一 42px reserved row，44px 伪元素命中区共享", () => {
+test("精读和完形 Toolbar 行高统一 42px reserved row，44px 伪元素命中区共享", () => {
   const reader = read("src/redesign/reader.css");
   assert.ok(reader.includes(".custom-workbook-page,"));
-  assert.ok(reader.includes(".exam-session"));
+  assert.ok(!reader.includes(".exam-session"));
   assert.ok(reader.includes("--reader-toolbar-height: 42px"));
   assert.ok(!reader.includes("--reader-toolbar-height: 44px"));
   assert.ok(!reader.includes("--reader-toolbar-height: 51px"), "删除 51px 旧行高");
@@ -130,8 +128,6 @@ test("三宿主 Toolbar 行高统一 42px reserved row，44px 伪元素命中区
   assert.ok(reader.includes("tablet-ink-toolbar::-webkit-scrollbar"));
   const pages = read("src/redesign/pages.css");
   assert.ok(!pages.includes("--reader-toolbar-height: 42px"), "完形宿主不再重复声明行高");
-  const examCss = read("src/exam/exam.css");
-  assert.ok(!examCss.includes("--reader-toolbar-height:"), "考试宿主不得重复声明 Toolbar 行高");
 });
 
 test("品牌折叠属于 AppShell 状态：任意 workspace 页面切换为共享导航图标 rail，无 home 特判", () => {
@@ -192,38 +188,15 @@ test("完形冻结提示按官方答案区分文案", () => {
 
 // ---------------- Exam UI ----------------
 
-test("Exam Library 按钮统一与作答页 Chrome 结构", () => {
-  const screens = read("src/exam/ExamScreens.jsx");
-  assert.ok(screens.includes("exam-danger-button"));
-  assert.ok(screens.includes("exam-session-title"));
-  assert.ok(screens.includes("exam-status-bar"));
-  assert.ok(screens.includes("exam-session-actions"));
-  assert.ok(screens.includes("exam-library-heading-row"));
-  assert.ok(screens.includes("exam-secondary-action"));
-  assert.ok(!screens.includes('className="secondary-button"'), "Exam 不得消费泛 .secondary-button");
-  const css = read("src/exam/exam.css");
-  assert.ok(css.includes(".exam-ink-content"));
-  assert.ok(css.includes(".exam-navigator button::after"));
-  assert.ok(css.includes("--exam-status-height: 36px"));
-});
 
-test("资料库入口清理只删除指定按钮，整卷模拟仅保留共享侧栏入口", () => {
+test("资料库与导航没有整卷模拟入口，写作保留原入口", () => {
   const app = read("src/App.jsx");
-  const screens = read("src/exam/ExamScreens.jsx");
   const writing = read("src/writing/ui/WritingLibrary.jsx");
   const navigation = read("src/navigation.js");
-  const examLibrary = screens.slice(
-    screens.indexOf("export function ExamLibrary"),
-    screens.indexOf("export function ExamCover"),
-  );
-
-  assert.doesNotMatch(app, /exam-library-button|function Library\([^)]*onOpenExam/);
-  assert.doesNotMatch(examLibrary, /back-button|onBack/);
+  assert.doesNotMatch(app, /ExamLibrary|onOpenExam|\.\/exam\//);
+  assert.doesNotMatch(navigation, /label:\s*"模拟"/);
   assert.doesNotMatch(writing, /writing-library-hero[\s\S]*?<button[^>]+back-button/);
   assert.match(writing, /浏览历年真题/);
-  assert.match(screens, /返回考试资料库/);
-  assert.match(screens, /返回资料库/);
-  assert.match(navigation, /label:\s*"模拟"[\s\S]*?view:\s*"exam-library"/);
 });
 
 test("交互动效使用统一 presence 状态与合成层属性", () => {
@@ -245,23 +218,6 @@ test("交互动效使用统一 presence 状态与合成层属性", () => {
   assert.doesNotMatch(android, /enableSlowWholeDocumentDraw/);
 });
 
-test("Exam 次级按钮 / 题号 / 冷色收口与 CSS ownership", () => {
-  const css = read("src/exam/exam.css");
-  assert.ok(css.includes(".exam-secondary-action"));
-  assert.ok(css.includes("appearance: none"));
-  assert.ok(css.includes("-webkit-appearance: none"));
-  assert.ok(css.includes("border-radius: var(--ds-radius-md)"));
-  assert.ok(css.includes("width: 40px"));
-  for (const cold of ["#cbd5e1", "#64748b", "#d7e1e5", "#f8fafc"]) {
-    assert.ok(!css.includes(cold), `exam.css 不得保留冷色 ${cold}`);
-  }
-  // CSS ownership：exam.css 不得重新定义共享 Toolbar 内部控件几何
-  assert.ok(!/\.exam-toolbar|\.exam-pen|\.exam-eraser|\.exam-size-slider|\.exam-colors/.test(css));
-  // 只允许几何变量，禁止第二套视觉色 token
-  assert.ok(css.includes("--exam-header-height"));
-  assert.ok(css.includes("--exam-status-height"));
-  assert.ok(!/--exam-blue|--exam-card-bg|--exam-border/.test(css));
-});
 
 // ---------------- 词库 / 筛查 ----------------
 

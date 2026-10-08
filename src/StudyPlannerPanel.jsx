@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TASK_TYPE_CLOZE_REVIEW, TASK_TYPE_EXAM_FOLLOWUP, TASK_TYPE_REVIEW } from "./studyPlanner";
+import { TASK_TYPE_CLOZE_REVIEW, TASK_TYPE_REVIEW } from "./studyPlanner";
 
 const BUDGET_PRESETS = [30, 60, 90, 120];
 
@@ -9,7 +9,7 @@ function actionLabel(candidate) {
 }
 
 function PlannerTaskRow({ candidate, onStart, onDefer, onSkip }) {
-  const canSkip = candidate.type === TASK_TYPE_REVIEW || candidate.type === TASK_TYPE_CLOZE_REVIEW || candidate.type === TASK_TYPE_EXAM_FOLLOWUP;
+  const canSkip = candidate.type === TASK_TYPE_REVIEW || candidate.type === TASK_TYPE_CLOZE_REVIEW;
   return (
     <article className="planner-task-row">
       <div className="planner-task-main">
@@ -36,7 +36,7 @@ function PlannerTaskRow({ candidate, onStart, onDefer, onSkip }) {
           </button>
           {canSkip && (
             <button type="button" className="planner-skip-button" onClick={() => onSkip(candidate)}>
-              {candidate.type === TASK_TYPE_EXAM_FOLLOWUP ? (candidate.metadata?.status === "started" ? "标记完成" : "忽略") : "跳过本次"}
+              跳过本次
             </button>
           )}
         </div>
@@ -46,7 +46,7 @@ function PlannerTaskRow({ candidate, onStart, onDefer, onSkip }) {
 }
 
 function PlannerOverflowRow({ candidate, onDefer, onSkip }) {
-  const canSkip = candidate.type === TASK_TYPE_REVIEW || candidate.type === TASK_TYPE_CLOZE_REVIEW || candidate.type === TASK_TYPE_EXAM_FOLLOWUP;
+  const canSkip = candidate.type === TASK_TYPE_REVIEW || candidate.type === TASK_TYPE_CLOZE_REVIEW;
   return (
     <article className="planner-task-row is-overflow">
       <div className="planner-task-main">
@@ -69,7 +69,7 @@ function PlannerOverflowRow({ candidate, onDefer, onSkip }) {
         </button>
         {canSkip && (
           <button type="button" className="planner-skip-button" onClick={() => onSkip(candidate)}>
-            {candidate.type === TASK_TYPE_EXAM_FOLLOWUP ? (candidate.metadata?.status === "started" ? "标记完成" : "忽略") : "跳过本次"}
+            跳过本次
           </button>
         )}
       </div>

@@ -16,6 +16,7 @@ import SettingsPanel from "./ui/SettingsPanel";
 import VocabularyWorkspace from "./ui/VocabularyWorkspace";
 import AiProviderSettings from "./ui/AiProviderSettings.jsx";
 import { getWritingVisionApiKey } from "./writing/writingVisionConfig.js";
+import { getLongSentenceTrainingEnabled, setLongSentenceTrainingEnabled } from "./longSentence/flag.js";
 import { createWritingInkFlushBridge } from "./writing/ui/WritingInkComposer.jsx";
 import { createWritingAppServices } from "./writing/writingAppServices.js";
 import Icon from "./ui/Icon";
@@ -25,16 +26,18 @@ import {
   PRIMARY_NAV,
   readingHostHash,
   readingRouteFromHost,
-  examHostHash,
-  examRouteFromHost,
+  isLegacyExamHash,
   VOCABULARY_STATIC_PAGES,
   isVocabularySpaRoute,
   vocabularyWorkspaceFor,
   writingHostHash,
   writingRouteFromHost,
+  longSentenceRouteFromHost,
+  longSentenceHostHash,
 } from "./navigation";
 import { getAiApiKey } from "./ai";
 import { PDF_PARSER_VERSION } from "./pdfParserVersion.js";
+import { getCachedOfficialAnalysis, loadOfficialAnalysis } from "./officialAnalysis.js";
 import { computeFileFingerprint } from "./fingerprint";
 import { importFailureMessage } from "./examImport";
 import {
@@ -53,6 +56,7 @@ const ClozeReviewSession = lazy(loadClozeReviewSession);
 const DeveloperLab = lazy(() => import("./ui/DeveloperLab"));
 const WritingLibrary = lazy(() => import("./writing/ui/WritingLibrary.jsx"));
 const WritingWorkspace = lazy(() => import("./writing/ui/WritingWorkspace.jsx"));
+const LongSentencePage = lazy(() => import("./longSentence/LongSentencePage.jsx"));
 const ExamImportEditor = lazy(() => import("./ExamImportEditor"));
 
 function RouteLoading({ label = "正在打开…" }) {
@@ -81,6 +85,7 @@ import {
 } from "./userData";
 import {
   REVIEW_TASKS_UPDATED,
+  ensureSentenceRecheckTask,
   localDateKey,
 } from "./readingReview";
 import {
@@ -93,37 +98,7 @@ import { buildRecentLearning, completedClozeCount } from "./recentLearning";
 import { AppEvent } from "./events/eventTypes";
 import { emitAppEvent } from "./events/appEvents";
 import { createVocabularyBridge, VocabMessageType } from "./vocabulary/vocabularyBridge";
-import { ExamCover, ExamHistory, ExamLibrary, ExamResult, ExamSession } from "./exam/ExamScreens";
-import {
-  ExamResultRepository,
-  ExamHandoffRepository,
-  ExamSessionRepository,
-  ExamStatus,
-  ExamTimeoutError,
-  answerExamItem,
-  abandonExamSession,
-  createExamSession,
-  createOrUpdateHandoff,
-  createSessionController,
-  deriveHandoffTargets,
-  reconcileSessionOnLoad,
-  rebuildTerminalResult,
-  submitExam,
-  updateSession,
-} from "./exam/examCore";
-import { preflightX1Paper } from "./exam/examSources";
-import {
-  examInkRegistryUpsert,
-  examSurfaceFlushDecision,
-  examSurfaceIdForItem,
-  mergeExamInkRegistryWithFlush,
-} from "./exam/examInkStorage";
-import "./exam/exam.css";
-import "./exam/examInk.css";
-import ExamInkSurface from "./exam/ExamInkSurface";
-import ExamQuestionDrawer from "./exam/ExamQuestionDrawer";
 
-const officialAnalysisCache = new Map();
 configureDurableInkStorage(openWuliaoEnglishDatabase);
 
 const vocabularyRouteFromHost = () => {
@@ -453,7 +428,7 @@ function HomeOverview({ summary, todayState, onShowRanks, completedCloze = null 
   );
 }
 
-function Home({ onRead, onOpenClozeLibrary, onOpenExam, onOpenExamFollowup, onUpdateExamFollowup, onOpenResource, onOpenCloze, username, onStartReview, onStartClozeReview, onOpenVocabularyReview, onReady }) {
+function Home({ onRead, onOpenClozeLibrary, onOpenResource, onOpenCloze, username, onStartReview, onStartClozeReview, onOpenVocabularyReview, onReady }) {
   const [customPdfs, setCustomPdfs] = useState([]);
   const [todayState, setTodayState] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -516,8 +491,6 @@ function Home({ onRead, onOpenClozeLibrary, onOpenExam, onOpenExamFollowup, onUp
           onStateChange={setTodayState}
           onBrowseLibrary={onRead}
           onOpenVocabularyReview={onOpenVocabularyReview}
-          onOpenExamFollowup={onOpenExamFollowup}
-          onUpdateExamFollowup={onUpdateExamFollowup}
         />
 
         <HomeOverview summary={summary} todayState={todayState} onShowRanks={() => setRankModalOpen(true)} completedCloze={completedCloze} />
@@ -1174,8 +1147,10 @@ function OfficialDeepReader({
   summaryInitially = false,
   summaryTabInitially = "summary",
   onRequestReview = null,
+  onOpenLongSentence = null,
+  restoreContext = null,
 }) {
-  const [analysis, setAnalysis] = useState(() => officialAnalysisCache.get(resource.id) || null);
+  const [analysis, setAnalysis] = useState(() => getCachedOfficialAnalysis(resource.id));
   const [status, setStatus] = useState("正在读取考研真题 PDF");
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -1187,30 +1162,19 @@ function OfficialDeepReader({
     setError("");
 
     (async () => {
-      const workbookSource = resource.workbookSource || resource.source;
-      const response = await fetch(workbookSource, { cache: "no-store", signal: controller.signal });
-      if (!response.ok) throw new Error(`PDF 文件读取失败（${response.status}）`);
-      const file = new File(
-        [await response.blob()],
-        `${resource.year}-text-${resource.text}.pdf`,
-        { type: "application/pdf" },
-      );
-      const { parsePdfFile } = await import("./pdfParser");
-      const nextAnalysis = await parsePdfFile(file, (progress) => {
+      const nextAnalysis = await loadOfficialAnalysis(resource, {
+        signal: controller.signal,
+        onProgress: (progress) => {
         if (cancelled) return;
         if (progress.phase === "reading") setStatus("正在读取考研真题 PDF");
         if (progress.phase === "text") setStatus(`正在读取文字层（第 ${progress.page}/${progress.total} 页）`);
         if (progress.phase === "quality") setStatus("正在检查文字层");
         if (progress.phase === "structure") setStatus("正在结构化文章");
         if (progress.phase === "done") setStatus("解析完成");
-      }, {
-        signal: controller.signal,
-        parserVersion: PDF_PARSER_VERSION,
-        ocrPolicy: "disabled",
+        },
       });
       if (cancelled) return;
-      officialAnalysisCache.set(resource.id, nextAnalysis.analysis);
-      setAnalysis(nextAnalysis.analysis);
+      setAnalysis(nextAnalysis);
     })().catch((reason) => {
       if (!cancelled && reason?.name !== "AbortError" && reason?.code !== "cancelled") {
         console.error("[OfficialDeepReader] workbook parse failed", {
@@ -1241,6 +1205,8 @@ function OfficialDeepReader({
         summaryInitially={summaryInitially}
         summaryTabInitially={summaryTabInitially}
         onRequestReview={onRequestReview}
+        onOpenLongSentence={onOpenLongSentence}
+        restoreContext={restoreContext}
       />
     );
   }
@@ -1268,8 +1234,9 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         await flushPendingSaves();
         await flushDurableInk(username);
         window.dispatchEvent(new Event("wuliao:save-succeeded"));
-        action();
-      } catch { reportSaveFailure(); }
+        await action();
+        return true;
+      } catch { reportSaveFailure(); return false; }
       finally { leaveTaskRef.current = null; }
     })();
     return leaveTaskRef.current;
@@ -1286,12 +1253,21 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
     ? "/screening/1"
     : initialHostVocabularyRoute;
   const initialReadingRoute = readingRouteFromHost();
-  const initialExamRoute = examRouteFromHost();
   const initialWritingRoute = writingRouteFromHost();
-  const [nav, setNav] = useState(() => ({
-    view: initialWritingRoute?.view || initialExamRoute?.view || initialReadingRoute?.view || (initialVocabularyRoute ? "vocabulary" : "home"),
-    stack: [],
-  }));
+  const initialLongSentenceRoute = longSentenceRouteFromHost();
+  const [longSentenceTrainingEnabled, setLongSentenceEnabled] = useState(getLongSentenceTrainingEnabled);
+  const [nav, setNav] = useState(() => {
+    if (isLegacyExamHash()) {
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+      return { view: "home", stack: [] };
+    }
+    return {
+      view: initialWritingRoute?.view || initialReadingRoute?.view
+        || (getLongSentenceTrainingEnabled() ? initialLongSentenceRoute?.view : "")
+        || (initialVocabularyRoute ? "vocabulary" : "home"),
+      stack: [],
+    };
+  });
   const [vocabularyRoute, setVocabularyRoute] = useState(initialVocabularyRoute || "/lists");
   const [vocabularyMode, setVocabularyMode] = useState("spa");
   const [vocabularyStaticPage, setVocabularyStaticPage] = useState("");
@@ -1301,6 +1277,13 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
   const [activeClozeId, setActiveClozeId] = useState(initialReadingRoute?.view === "cloze" ? initialReadingRoute.resourceId : "");
   const [activeClozeReviewTaskKey, setActiveClozeReviewTaskKey] = useState("");
   const [writingSessionId, setWritingSessionId] = useState(initialWritingRoute?.sessionId || "");
+  const [longSentenceSessionId, setLongSentenceSessionId] = useState(initialLongSentenceRoute?.sessionId || "");
+  const [longSentenceOrigin, setLongSentenceOrigin] = useState(null);
+  const longSentenceReaderOriginRef = useRef(null);
+  const longSentenceOriginRef = useRef(longSentenceOrigin);
+  longSentenceOriginRef.current = longSentenceOrigin;
+  const longSentenceSessionIdRef = useRef(longSentenceSessionId);
+  longSentenceSessionIdRef.current = longSentenceSessionId;
   const [writingImmersive, setWritingImmersive] = useState(false);
   const [clozeSummaryTarget, setClozeSummaryTarget] = useState(null);
   const [restoreChecked, setRestoreChecked] = useState(false);
@@ -1310,14 +1293,6 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [labOpen, setLabOpen] = useState(false);
   const [aiConfigured, setAiConfigured] = useState(false);
-  const [examYear, setExamYear] = useState(initialExamRoute?.year || null);
-  const [examPaper, setExamPaper] = useState(null);
-  const [examSession, setExamSession] = useState(null);
-  const [examResult, setExamResult] = useState(null);
-  const [examHistory, setExamHistory] = useState([]);
-  const [examAbandonedHistory, setExamAbandonedHistory] = useState([]);
-  const [examLoading, setExamLoading] = useState(false);
-  const [examError, setExamError] = useState("");
   const [homeReady, setHomeReady] = useState(false);
   const markHomeReady = useCallback(() => setHomeReady(true), []);
   const objectUrlRef = useRef(null);
@@ -1366,382 +1341,6 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
     [username, writingInkFlushBridge],
   );
 
-  const examSessionRepository = useMemo(() => new ExamSessionRepository({ username }), [username]);
-  const examResultRepository = useMemo(() => new ExamResultRepository({ username }), [username]);
-  const examHandoffRepository = useMemo(() => new ExamHandoffRepository({ username }), [username]);
-  const examControllerRef = useRef(null);
-  const examSubmittingRef = useRef(false);
-  const examSessionRef = useRef(examSession);
-  const examMutationQueueRef = useRef(Promise.resolve());
-  const examInkFlushesRef = useRef(new Map());
-  const examInkRefsRef = useRef({});
-  const examInkStatusRef = useRef("complete");
-  examSessionRef.current = examSession;
-
-  function resetExamInkRuntime(inkRefs = {}) {
-    examInkFlushesRef.current.clear();
-    examInkRefsRef.current = { ...(inkRefs || {}) };
-    examInkStatusRef.current = "complete";
-  }
-
-  // Ink Registry（修改 7）：valid ref → add/update；null → 删除该 surface 的旧 entry。
-  // 防止 source-mismatch / damaged / clear / invalid snapshot 后交卷仍引用失效历史 ref。
-  function updateExamInkRegistry(surfaceId, ref) {
-    examInkRefsRef.current = examInkRegistryUpsert(examInkRefsRef.current, surfaceId, ref);
-  }
-
-  function mergeExamInkFlushOutcome(outcome) {
-    const merged = mergeExamInkRegistryWithFlush(examInkRefsRef.current, outcome);
-    examInkRefsRef.current = merged.registry;
-    if (merged.partial) examInkStatusRef.current = "partial";
-  }
-
-  useEffect(() => {
-    let active = true;
-    const auditTerminalResults = async () => {
-      const sessions = await examSessionRepository.listAll();
-      for (const session of sessions) {
-        if (!active || session?.damaged || (session?.status !== ExamStatus.SUBMITTED && session?.status !== ExamStatus.TIMED_OUT)) continue;
-        let result = null;
-        try {
-          result = await examResultRepository.read(session.sessionId);
-        } catch {
-          if (active) setExamError("检测到损坏的考试 Result，已保持只读且未恢复答题。");
-          continue;
-        }
-        if (result) continue;
-        const rebuilt = await rebuildTerminalResult(session);
-        if (!rebuilt) {
-          if (active) setExamError("终态考试缺少且无法验证 Result，已保持只读 damaged 状态。");
-          continue;
-        }
-        try {
-          await examResultRepository.createOnce(rebuilt);
-        } catch {
-          if (active) setExamError("终态 Result 重建发生指纹冲突，已保持只读 damaged 状态。");
-        }
-      }
-      if (!active) return;
-      const records = await examResultRepository.list();
-      if (active) setExamHistory(records.map((record) => ({ ...record, handoffTargets: deriveHandoffTargets(record) })));
-    };
-    auditTerminalResults().catch((error) => console.warn("[X1] terminal result audit failed", error));
-    return () => { active = false; };
-  }, [examResultRepository, examSessionRepository]);
-
-  async function openExamCover(year) {
-    setExamYear(year);
-    setExamPaper(null);
-    setExamError("");
-    setExamLoading(true);
-    navigateTo("exam-cover");
-    window.history.pushState(window.history.state, "", examHostHash({ view: "exam-cover", year }));
-    try {
-      const paper = await preflightX1Paper(year, { onProgress: () => {} });
-      setExamPaper(paper);
-    } catch (error) {
-      setExamError(error instanceof Error ? error.message : String(error));
-    } finally { setExamLoading(false); }
-  }
-
-  async function beginExam() {
-    if (!examPaper) return;
-    const activeSessions = await examSessionRepository.listActive();
-    if (activeSessions.length) {
-      setExamError(activeSessions.length > 1 ? "检测到多个未完成考试，需先处理数据冲突。" : "当前账号已有未完成考试，请先继续或放弃。");
-      return;
-    }
-    const session = await createExamSession({ username, year: examPaper.year, items: examPaper.items, sourceFingerprint: examPaper.sourceFingerprint });
-    await examSessionRepository.write(session, {});
-    resetExamInkRuntime();
-    examControllerRef.current = createSessionController(session.sessionId);
-    examMutationQueueRef.current = Promise.resolve();
-    examSessionRef.current = session;
-    setExamSession(session);
-    emitAppEvent(AppEvent.EXAM_SESSIONS_UPDATED, { username, sessionId: session.sessionId, reason: "created" });
-    navigateTo("exam-session");
-    window.history.pushState(window.history.state, "", examHostHash({ view: "exam-session", sessionId: session.sessionId }));
-  }
-
-  function enqueueExamMutation(createNext) {
-    const operation = examMutationQueueRef.current.catch(() => {}).then(async () => {
-      const current = examSessionRef.current;
-      if (!current || current.status !== ExamStatus.IN_PROGRESS || !examControllerRef.current?.active) return current;
-      const next = await createNext(current);
-      const saved = await examSessionRepository.write(next, { expectedRevision: current.revision, controller: examControllerRef.current });
-      examSessionRef.current = saved;
-      setExamSession(saved);
-      emitAppEvent(AppEvent.EXAM_SESSIONS_UPDATED, { username, sessionId: saved.sessionId, reason: "updated" });
-      return saved;
-    });
-    examMutationQueueRef.current = operation.catch(() => {});
-    return operation;
-  }
-
-  async function handleExamMutationFailure(error) {
-    if (error instanceof ExamTimeoutError) {
-      await submitCurrentExam(ExamStatus.TIMED_OUT);
-      return;
-    }
-    if (!examControllerRef.current?.active) {
-      setExamError("考试数据已发生冲突，当前页面已锁定，请重新加载最新进度。");
-      return;
-    }
-    console.warn("[X1] exam mutation failed", error);
-    setExamError(error instanceof Error ? error.message : String(error));
-  }
-
-  async function answerExam(itemId, answer) {
-    try {
-      await enqueueExamMutation((current) => answerExamItem(current, itemId, answer));
-    } catch (error) {
-      await handleExamMutationFailure(error);
-    }
-  }
-
-  // Surface Transaction（修改 4/5）：真正的 Surface 切换（cloze ↔ reading / text ↔ text）
-  // 必须显式 flush previous Surface 并 merge verified inkRef；同 Surface 内切题（如 Q21 → Q22）
-  // 不做额外 flush，避免每答一题都引入 IndexedDB write barrier。
-  // 统一通过 examSurfaceIdForItem 判断，杜绝多套 Surface 判断实现。
-  async function navigateExam(itemId) {
-    try {
-      await enqueueExamMutation(async (current) => {
-        const previous = current.items.find((entry) => entry.id === current.currentItemId);
-        const target = current.items.find((entry) => entry.id === itemId);
-        const decision = examSurfaceFlushDecision(previous, target);
-        if (decision.shouldFlush) {
-          try {
-            const outcome = await examInkFlushesRef.current.get(decision.previousSurface)?.();
-            if (outcome) mergeExamInkFlushOutcome(outcome);
-          } catch {
-            // Flush 失败不能阻塞考试导航：标记 partial，保留 last verified inkRef。
-            examInkStatusRef.current = "partial";
-          }
-        }
-        return updateSession(current, { currentItemId: itemId, inkRefs: examInkRefsRef.current });
-      });
-    } catch (error) {
-      await handleExamMutationFailure(error);
-    }
-  }
-
-  async function finishExamSession(session, reason = ExamStatus.SUBMITTED) {
-    if (!session || session.status !== ExamStatus.IN_PROGRESS) return;
-    if (!examControllerRef.current?.active) return;
-    if (examSubmittingRef.current) return;
-    examSubmittingRef.current = true;
-    let submitted;
-    try {
-      submitted = await submitExam({ session, sessionRepository: examSessionRepository, resultRepository: examResultRepository, expectedRevision: session.revision, reason, controller: examControllerRef.current, flushInk: async () => {
-        const settled = await Promise.allSettled([...examInkFlushesRef.current.values()].map((flush) => flush?.()));
-        const inkRefs = { ...examInkRefsRef.current };
-        settled.forEach((entry) => {
-          if (entry.status === "fulfilled") {
-            mergeExamInkFlushOutcome(entry.value);
-            Object.assign(inkRefs, entry.value?.inkRefs || {});
-          } else examInkStatusRef.current = "partial";
-        });
-        return { inkRefs: { ...inkRefs, ...examInkRefsRef.current }, inkStatus: examInkStatusRef.current };
-      } });
-    } finally { examSubmittingRef.current = false; }
-    const result = { ...submitted.result, handoffTargets: deriveHandoffTargets(submitted.result) };
-    examSessionRef.current = submitted.session;
-    setExamSession(submitted.session);
-    setExamResult(result);
-    setExamHistory((current) => [result, ...current.filter((entry) => entry.id !== result.id)]);
-    emitAppEvent(AppEvent.EXAM_SESSIONS_UPDATED, { username, sessionId: submitted.session.sessionId, reason });
-    emitAppEvent(AppEvent.EXAM_RESULTS_UPDATED, { username, resultId: result.id, reason });
-    navigateTo("exam-result");
-    window.history.pushState(window.history.state, "", examHostHash({ view: "exam-result", resultId: result.id }));
-  }
-
-  async function submitCurrentExam(reason = ExamStatus.SUBMITTED) {
-    await examMutationQueueRef.current;
-    if (!examControllerRef.current?.active) return;
-    return finishExamSession(examSessionRef.current, reason);
-  }
-
-  async function saveExamHandoff(targetIds) {
-    if (!examResult) return;
-    for (const targetId of targetIds.slice(0, 5)) {
-      const current = await examHandoffRepository.read(examResult.id, targetId);
-      const next = await createOrUpdateHandoff({ username, examResultId: examResult.id, targetId, current });
-      await examHandoffRepository.save(next, { expectedRevision: current?.revision });
-    }
-    emitAppEvent(AppEvent.EXAM_HANDOFF_UPDATED, { username, resultId: examResult.id, reason: "selected" });
-  }
-
-  async function abandonCurrentExam() {
-    if (!examSession || examSession.status !== ExamStatus.IN_PROGRESS || !window.confirm("放弃后不能继续答题，确认放弃？")) return;
-    let inkStatus = examInkStatusRef.current;
-    try {
-      await Promise.race([
-        Promise.allSettled([...examInkFlushesRef.current.values()].map((flush) => flush?.())).then((entries) => {
-          entries.forEach((entry) => {
-            if (entry.status === "fulfilled") {
-              mergeExamInkFlushOutcome(entry.value);
-              if (entry.value?.inkStatus === "partial") inkStatus = "partial";
-            } else inkStatus = "partial";
-          });
-        }),
-        new Promise((resolve) => window.setTimeout(() => { inkStatus = "partial"; resolve(); }, 1500)),
-      ]);
-    } catch { inkStatus = "partial"; }
-    const abandoned = await abandonExamSession(examSession, { inkRefs: examInkRefsRef.current, inkStatus });
-    await examSessionRepository.write(abandoned, { expectedRevision: examSession.revision, controller: examControllerRef.current });
-    setExamSession(abandoned);
-    emitAppEvent(AppEvent.EXAM_SESSIONS_UPDATED, { username, sessionId: abandoned.sessionId, reason: "abandoned" });
-    navigateTo("exam-library");
-  }
-
-  async function loadExamSessionSafely(sessionId, { openView = true } = {}) {
-    const activeSessions = await examSessionRepository.listActive();
-    if (activeSessions.length > 1) { setExamError("检测到多个未完成考试，已进入冲突保护，不能继续作答。"); return null; }
-    const saved = await examSessionRepository.read(sessionId);
-    if (!saved) return null;
-    if (saved.status !== ExamStatus.IN_PROGRESS) {
-      setExamSession(saved);
-      const existingResult = await examResultRepository.read(saved.sessionId);
-      if (existingResult) {
-        const result = { ...existingResult, handoffTargets: deriveHandoffTargets(existingResult) };
-        setExamResult(result);
-        if (openView) {
-          navigateTo("exam-result");
-          window.history.replaceState(window.history.state, "", examHostHash({ view: "exam-result", resultId: result.id }));
-        }
-      }
-      return saved;
-    }
-    resetExamInkRuntime(saved.inkRefs);
-    examControllerRef.current = createSessionController(saved.sessionId);
-    const fencedResult = await examResultRepository.read(saved.sessionId);
-    if (fencedResult) { await finishExamSession(saved, fencedResult.reason); return null; }
-    const restored = reconcileSessionOnLoad(saved);
-    if (restored.action === "timed_out") { await finishExamSession(restored.session, ExamStatus.TIMED_OUT); return null; }
-    setExamSession(restored.session);
-    if (openView) navigateTo("exam-session");
-    return restored.session;
-  }
-
-  async function reloadCurrentExam() {
-    if (!examSession?.sessionId) return;
-    setExamError("");
-    try {
-      await loadExamSessionSafely(examSession.sessionId, { openView: true });
-    } catch (error) {
-      setExamError(error instanceof Error ? error.message : String(error));
-    }
-  }
-
-  useEffect(() => {
-    let active = true;
-    const hydrateExamRoute = async () => {
-      const route = examRouteFromHost();
-      if (!route) return;
-      if (route.view === "exam-cover" && route.year) {
-        setExamYear(route.year);
-        setExamPaper(null);
-        setExamError("");
-        setExamLoading(true);
-        try {
-          const paper = await preflightX1Paper(route.year, { onProgress: () => {} });
-          if (active) setExamPaper(paper);
-        } catch (error) {
-          if (active) setExamError(error instanceof Error ? error.message : String(error));
-        } finally {
-          if (active) setExamLoading(false);
-        }
-        return;
-      }
-      if (route.view === "exam-session" && route.sessionId) {
-        await loadExamSessionSafely(route.sessionId, { openView: false });
-        return;
-      }
-      if (route.view === "exam-result" && route.resultId) {
-        const records = await examResultRepository.list();
-        const result = records.find((entry) => entry.id === route.resultId);
-        if (active && result) setExamResult({ ...result, handoffTargets: deriveHandoffTargets(result) });
-      }
-    };
-    hydrateExamRoute().catch((error) => {
-      if (active) setExamError(error instanceof Error ? error.message : String(error));
-    });
-    return () => { active = false; };
-  }, [username]);
-
-  async function openExamFollowup(record) {
-    if (!record?.examResultId || !record?.targetId) return;
-    const current = await examHandoffRepository.read(record.examResultId, record.targetId);
-    if (current?.status === "selected") {
-      const next = await createOrUpdateHandoff({ username, examResultId: current.examResultId, targetId: current.targetId, status: "started", current });
-      await examHandoffRepository.save(next, { expectedRevision: current.revision });
-      emitAppEvent(AppEvent.EXAM_HANDOFF_UPDATED, { username, resultId: current.examResultId, reason: "started" });
-    }
-    const resourceId = String(record.targetId).replace(/^(?:cloze|reading):/, "");
-    const cloze = postgraduateClozeResources.find((resource) => resource.id === resourceId);
-    if (cloze) { openCloze(cloze); return; }
-    const reading = postgraduateResources.find((resource) => resource.id === resourceId);
-    if (reading) openResource(reading);
-  }
-
-  async function updateExamFollowup(record, status) {
-    if (!record?.examResultId || !record?.targetId) return;
-    const current = await examHandoffRepository.read(record.examResultId, record.targetId);
-    if (!current || current.status === status) return;
-    const next = await createOrUpdateHandoff({
-      username,
-      examResultId: current.examResultId,
-      targetId: current.targetId,
-      status,
-      current,
-    });
-    await examHandoffRepository.save(next, { expectedRevision: current.revision });
-    emitAppEvent(AppEvent.EXAM_HANDOFF_UPDATED, { username, resultId: current.examResultId, reason: status });
-  }
-
-  useEffect(() => {
-    let active = true;
-    const restore = async () => {
-      if (examRouteFromHost()?.view === "exam-session") return;
-      const activeSessions = await examSessionRepository.listActive();
-      if (activeSessions.length > 1) { if (active) setExamError("检测到多个未完成考试，已停止考试入口；请在数据恢复页处理冲突。"); return; }
-      const candidate = activeSessions[0]?.sessionId;
-      if (!candidate) return;
-      try {
-        await loadExamSessionSafely(candidate, { openView: false });
-      } catch (error) { console.warn("[X1] session restore failed", error); }
-    };
-    restore();
-    return () => { active = false; };
-  }, [username]);
-
-  useEffect(() => {
-    let active = true;
-    examSessionRepository.listAll().then((sessions) => {
-      if (active) setExamAbandonedHistory(sessions.filter((session) => session?.status === ExamStatus.ABANDONED || session?.damaged));
-    }).catch(() => {});
-    return () => { active = false; };
-  }, [examSessionRepository, examSession]);
-
-  useEffect(() => {
-    const onStorage = (event) => {
-      const controller = examControllerRef.current;
-      if (controller?.observeStorageEvent(event, username)) {
-        setExamError("考试数据已在另一运行环境变更，请重新加载最新进度。");
-        return;
-      }
-      if (controller?.observeResultStorageEvent(event, username)) {
-        setExamError("另一运行环境已生成本次考试结果，正在锁定并恢复终态。");
-        loadExamSessionSafely(controller.sessionId, { openView: true }).catch((error) => {
-          setExamError(error instanceof Error ? error.message : String(error));
-        });
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [username]);
-
-
   function refreshAiConfiguration() {
     getAiApiKey().then((value) => setAiConfigured(Boolean(value)));
   }
@@ -1781,6 +1380,103 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
     setNav({ view: "writing-library", stack: [] });
   }
 
+  function openLongSentenceFromReader(context) {
+    if (!getLongSentenceTrainingEnabled()) return;
+    return leaveAfterSave(() => {
+      longSentenceReaderOriginRef.current = {
+        resource: activeResource,
+        readerOptions,
+        nav: navRef.current,
+        hash: window.location.hash,
+        reviewTaskKey,
+      };
+      setLongSentenceOrigin(context);
+      setLongSentenceSessionId("");
+      setNav({ view: "long-sentence", stack: [...navRef.current.stack, "reader"] });
+      window.history.pushState(window.history.state, "", longSentenceHostHash());
+    });
+  }
+
+  function openLongSentenceSession(sessionId) {
+    const id = String(sessionId || "").trim();
+    if (!id || !getLongSentenceTrainingEnabled()) return;
+    return leaveAfterSave(() => {
+      setLongSentenceSessionId(id);
+      window.history.pushState(window.history.state, "", longSentenceHostHash(id));
+    });
+  }
+
+  function returnToLongSentenceReader(saved = false) {
+    if (saved !== true) return leaveAfterSave(async () => {
+      const context = saved?.resourceId ? saved : longSentenceOriginRef.current;
+      if (context && longSentenceReaderOriginRef.current?.resource?.id !== context.resourceId) {
+        const official = postgraduateResources.find((resource) => resource.id === context.resourceId);
+        const resource = official || (await listCustomPdfs()).find((entry) => entry.id === context.resourceId);
+        if (!resource) throw new Error("原精读资料暂不可用");
+        longSentenceReaderOriginRef.current = {
+          resource, readerOptions: {}, nav: { view: "reader", stack: ["library"] },
+          hash: readingHostHash({ view: "library" }), reviewTaskKey: context.reviewTaskKey || "",
+        };
+      }
+      if (context) {
+        longSentenceOriginRef.current = context;
+        setLongSentenceOrigin(context);
+      }
+      return returnToLongSentenceReader(true);
+    });
+    const origin = longSentenceReaderOriginRef.current;
+    const context = longSentenceOriginRef.current;
+    if (!origin?.resource || !context) return goBack(true);
+    let resource = origin.resource;
+    if (resource.kind === "custom" && resource.file) {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = URL.createObjectURL(resource.file);
+      resource = { ...resource, source: objectUrlRef.current };
+    }
+    setActiveResource(resource);
+    setReviewTaskKey(origin.reviewTaskKey || "");
+    setReaderOptions({ ...origin.readerOptions, restoreContext: context });
+    setNav(origin.nav);
+    window.history.replaceState(window.history.state, "", origin.hash || window.location.pathname + window.location.search);
+  }
+
+  function closeLongSentenceSession(saved = false) {
+    if (saved !== true) return leaveAfterSave(() => closeLongSentenceSession(true));
+    if (longSentenceSessionIdRef.current) {
+      setLongSentenceSessionId("");
+      window.history.replaceState(window.history.state, "", longSentenceHostHash());
+      return;
+    }
+    if (longSentenceReaderOriginRef.current) return returnToLongSentenceReader(true);
+    return goBack(true);
+  }
+
+  async function startLongSentenceOriginalReview(source) {
+    return leaveAfterSave(async () => {
+      const result = ensureSentenceRecheckTask({
+        resourceId: source?.resourceId,
+        passageId: source?.passageId,
+        sentenceKeys: source?.sentenceKey ? [source.sentenceKey] : [],
+      });
+      if (!result.ok || !result.task) throw new Error(result.error || "原句复习任务无法保存");
+      if (!await startReview(result.task)) throw new Error("原句所在资料暂不可用");
+    });
+  }
+
+  function changeLongSentenceEnabled(enabled) {
+    return leaveAfterSave(() => {
+      setLongSentenceEnabled(setLongSentenceTrainingEnabled(enabled));
+      if (!enabled && navRef.current.view === "long-sentence") {
+        setSettingsOpen(false);
+        if (longSentenceReaderOriginRef.current) returnToLongSentenceReader(true);
+        else {
+          setNav({ view: "home", stack: [] });
+          window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+        }
+      }
+    });
+  }
+
   function goBack(saved = false) {
     if (saved !== true) return leaveAfterSave(() => goBack(true));
     const current = navRef.current;
@@ -1788,15 +1484,15 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
     if (destination === "writing-library") {
       window.history.replaceState(window.history.state, "", writingHostHash({ view: "writing-library" }));
       setWritingSessionId("");
+    } else if (destination === "long-sentence") {
+      window.history.replaceState(window.history.state, "", longSentenceHostHash(longSentenceSessionIdRef.current));
     } else if (destination === "library" || destination === "cloze-library") {
       window.history.replaceState(window.history.state, "", readingHostHash({ view: destination }));
     } else if (readingRouteFromHost()) {
       window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
-    } else if (destination === "exam-library" || destination === "exam-history") {
-      window.history.replaceState(window.history.state, "", examHostHash({ view: destination }));
-    } else if (examRouteFromHost() && !String(destination).startsWith("exam-")) {
-      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
     } else if (writingRouteFromHost() && !String(destination).startsWith("writing-")) {
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+    } else if (longSentenceRouteFromHost()) {
       window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
     }
     setNav(current.stack.length
@@ -1991,6 +1687,15 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         .catch(() => {});
       return;
     }
+    if (view === "long-sentence") {
+      if (!longSentenceTrainingEnabled) return;
+      setLongSentenceSessionId("");
+      setLongSentenceOrigin(null);
+      longSentenceReaderOriginRef.current = null;
+      window.history.replaceState(window.history.state, "", longSentenceHostHash());
+      setNav({ view: "long-sentence", stack: [] });
+      return;
+    }
     if (view === "vocabulary") {
       const currentFrame = document.querySelector(".vocabulary-frame");
       const currentFramePath = currentFrame?.contentWindow?.location?.pathname || "";
@@ -2047,19 +1752,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       startTransition(() => setNav({ view, stack: [] }));
       return;
     }
-    if (view === "exam-library") {
-      if (vocabularyRouteFromHost() || readingRouteFromHost()) {
-        window.history.replaceState(
-          window.history.state,
-          "",
-          window.location.pathname + window.location.search,
-        );
-      }
-      navigateTo("exam-library");
-      window.history.replaceState(window.history.state, "", examHostHash({ view: "exam-library" }));
-      return;
-    }
-    if (vocabularyRouteFromHost()) {
+    if (vocabularyRouteFromHost() || longSentenceRouteFromHost()) {
       window.history.replaceState(
         window.history.state,
         "",
@@ -2115,6 +1808,10 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
     if (backControllerRef.current.handle()) return true;
     const currentView = navRef.current.view;
     if (currentView === "home") return false;
+    if (currentView === "long-sentence") {
+      closeLongSentenceSession();
+      return true;
+    }
     if (currentView === "vocabulary") {
         const frameWindow = document.querySelector(".vocabulary-frame")?.contentWindow;
         const framePath = frameWindow?.location?.pathname || "";
@@ -2157,12 +1854,6 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
     }
     if (currentView === "cloze-review") {
       closeClozeReview();
-      return true;
-    }
-    if (currentView === "exam-session") {
-      if (!window.confirm("退出考试并保留进度？计时不会暂停。")) return true;
-      navigateTo("exam-library");
-      window.history.replaceState(window.history.state, "", examHostHash({ view: "exam-library" }));
       return true;
     }
     if (currentView === "writing-session") {
@@ -2233,39 +1924,59 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         window.history.replaceState(window.history.state, "", writingHostHash({ view: currentView, sessionId: writingSessionIdRef.current }));
         return;
       }
-      if (readingRouteFromHost() || writingRouteFromHost() || vocabularyRouteFromHost()) {
+      if (currentView === "long-sentence") {
+        window.history.replaceState(window.history.state, "", longSentenceHostHash(longSentenceSessionIdRef.current));
+        return;
+      }
+      if (readingRouteFromHost() || writingRouteFromHost() || vocabularyRouteFromHost() || longSentenceRouteFromHost()) {
         window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
       }
     }
 
-    const restoreHostNavigation = () => {
+    const restoreHostNavigation = (saved = false) => {
+      if (isLegacyExamHash()) {
+        restoreCurrentHostLocation();
+        leaveAfterSave(() => {
+          window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+          setNav({ view: "home", stack: [] });
+        });
+        return;
+      }
       if (backControllerRef.current.handle()) {
         restoreCurrentHostLocation();
         return;
       }
       const currentView = navRef.current.view;
+      if (currentView === "long-sentence" && saved !== true) {
+        const requestedHash = window.location.hash;
+        const requestedLongSentence = longSentenceRouteFromHost();
+        restoreCurrentHostLocation();
+        leaveAfterSave(() => {
+          if (!requestedLongSentence && longSentenceReaderOriginRef.current) {
+            returnToLongSentenceReader(true);
+            return;
+          }
+          window.history.replaceState(window.history.state, "", requestedHash || window.location.pathname + window.location.search);
+          restoreHostNavigation(true);
+        });
+        return;
+      }
       if (currentView === "reader" || currentView === "cloze" || currentView === "cloze-review" || currentView === "writing-session") {
         if (appBackRef.current?.()) {
           return;
         }
       }
       const reading = readingRouteFromHost();
-      const exam = examRouteFromHost();
       const writing = writingRouteFromHost();
+      const longSentence = longSentenceRouteFromHost();
+      if (longSentence && getLongSentenceTrainingEnabled()) {
+        setLongSentenceSessionId(longSentence.sessionId || "");
+        setNav((current) => ({ view: "long-sentence", stack: current.view === "long-sentence" ? current.stack : ["home"] }));
+        return;
+      }
       if (writing) {
         setWritingSessionId(writing.sessionId || "");
         setNav({ view: writing.view, stack: writing.view === "writing-session" ? ["writing-library"] : [] });
-        return;
-      }
-      if (exam) {
-        if (exam.view === "exam-cover") setExamYear(exam.year);
-        if (exam.view === "exam-session" && exam.sessionId) {
-          loadExamSessionSafely(exam.sessionId, { openView: false }).catch(() => {});
-        }
-        if (exam.view === "exam-result" && exam.resultId) {
-          examResultRepository.list().then((records) => { const result = records.find((entry) => entry.id === exam.resultId); if (result) setExamResult({ ...result, handoffTargets: deriveHandoffTargets(result) }); }).catch(() => {});
-        }
-        setNav({ view: exam.view, stack: ["home"] });
         return;
       }
       if (reading) {
@@ -2287,8 +1998,15 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       }
       setNav({ view: "home", stack: [] });
     };
+    const onHashChange = () => {
+      if (isLegacyExamHash() || navRef.current.view === "long-sentence" || longSentenceRouteFromHost()) restoreHostNavigation();
+    };
     window.addEventListener("popstate", restoreHostNavigation);
-    return () => window.removeEventListener("popstate", restoreHostNavigation);
+    window.addEventListener("hashchange", onHashChange);
+    return () => {
+      window.removeEventListener("popstate", restoreHostNavigation);
+      window.removeEventListener("hashchange", onHashChange);
+    };
   }, []);
 
   useEffect(() => () => {
@@ -2296,31 +2014,21 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
   }, []);
 
   let content = null;
-  if (nav.view === "writing-library") {
+  if (nav.view === "long-sentence" && longSentenceTrainingEnabled) {
+    content = <LongSentencePage
+      username={username}
+      sessionId={longSentenceSessionId}
+      onOpenSession={openLongSentenceSession}
+      onCloseSession={closeLongSentenceSession}
+      originContext={longSentenceOrigin}
+      onReturnToReader={returnToLongSentenceReader}
+      onStartOriginalReview={startLongSentenceOriginalReview}
+      onOpenAiSettings={() => setAiApiOpen(true)}
+    />;
+  } else if (nav.view === "writing-library") {
     content = <WritingLibrary services={writingServices} username={username} onOpenSession={openWritingSession} onConfigureTextAi={() => setAiApiOpen(true)} />;
   } else if (nav.view === "writing-session") {
     content = <WritingWorkspace sessionId={writingSessionId} username={username} services={writingServices} inkFlushBridge={writingInkFlushBridge} onBack={closeWritingWorkspace} onImmersiveChange={setWritingImmersive} hostLeaveBarrierRef={writingLeaveBarrierRef} />;
-  } else if (nav.view === "exam-library") {
-    content = <ExamLibrary years={Array.from({ length: 17 }, (_, index) => 2007 + index)} activeSession={examSession?.status === ExamStatus.IN_PROGRESS ? examSession : null} onStart={openExamCover} onContinue={() => { navigateTo("exam-session"); window.history.replaceState(window.history.state, "", examHostHash({ view: "exam-session", sessionId: examSession?.sessionId })); }} onAbandon={abandonCurrentExam} completedCount={examHistory.filter((entry) => !entry.damaged).length} latestResult={examHistory.find((entry) => !entry.damaged) || null} onHistory={() => { navigateTo("exam-history"); window.history.replaceState(window.history.state, "", examHostHash({ view: "exam-history" })); }} />;
-  } else if (nav.view === "exam-cover") {
-    content = <ExamCover year={examYear} loading={examLoading} error={examError} onBegin={beginExam} onBack={goBack} />;
-  } else if (nav.view === "exam-session" && examSession) {
-    content = <ExamSession session={examSession} disabled={!examControllerRef.current?.active} conflictMessage={examError} onReload={reloadCurrentExam} onAnswer={answerExam} onNavigate={navigateExam} onSubmit={() => submitCurrentExam(ExamStatus.SUBMITTED)} onTimeout={() => submitCurrentExam(ExamStatus.TIMED_OUT)} onBack={goBack} ExamInkSurface={ExamInkSurface} examInkProps={(item) => {
-      const surfaceId = examSurfaceIdForItem(item);
-      return {
-        username,
-        sessionId: examSession.sessionId,
-        surfaceId,
-        sourceFingerprint: item.passageFingerprint || examSession.sourceFingerprint,
-        disabled: examControllerRef.current && !examControllerRef.current.active,
-        onFlushHandleChange: (flush) => { if (flush) examInkFlushesRef.current.set(surfaceId, flush); else examInkFlushesRef.current.delete(surfaceId); },
-        onInkRefChange: (ref) => updateExamInkRegistry(surfaceId, ref),
-      };
-    }} ExamQuestionDrawer={ExamQuestionDrawer} />;
-  } else if (nav.view === "exam-result" && examResult) {
-    content = <ExamResult result={examResult} onHandoff={saveExamHandoff} onStartHandoff={(target) => openExamFollowup({ examResultId: examResult.id, targetId: target.targetId })} onHistory={() => { navigateTo("exam-history"); window.history.pushState(window.history.state, "", examHostHash({ view: "exam-history" })); }} onBack={() => navigateFromShell("library")} />;
-  } else if (nav.view === "exam-history") {
-    content = <ExamHistory results={[...examHistory, ...examAbandonedHistory]} onOpen={(result) => { setExamResult(result); navigateTo("exam-result"); window.history.pushState(window.history.state, "", examHostHash({ view: "exam-result", resultId: result.id })); }} onBack={goBack} />;
   } else if (nav.view === "reader" && activeResource) {
     const readerProps = {
       onClose: closeReader,
@@ -2328,6 +2036,8 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       summaryInitially: Boolean(readerOptions.summaryInitially),
       summaryTabInitially: readerOptions.reviewTab ? "review" : "summary",
       onRequestReview: startReview,
+      onOpenLongSentence: longSentenceTrainingEnabled ? openLongSentenceFromReader : null,
+      restoreContext: readerOptions.restoreContext || null,
     };
     content = activeResource.kind === "custom" && activeResource.analysis?.passages?.length
       ? <CustomDeepReader resource={activeResource} {...readerProps} />
@@ -2379,6 +2089,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       : { kind: "spa", route: vocabularyRoute, src: `/vocabulary/index.html#${vocabularyRoute}`, label: "单词训练", nonce: vocabularyReloadNonce };
     content = (
       <VocabularyWorkspace
+        username={username}
         onBack={closeVocabulary}
         workspace={vocabularyWorkspace}
         route={vocabularyRoute}
@@ -2392,9 +2103,6 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         onReady={markHomeReady}
         onRead={() => navigateFromShell("library")}
         onOpenClozeLibrary={() => navigateFromShell("cloze-library")}
-        onOpenExam={() => { navigateTo("exam-library"); window.history.pushState(window.history.state, "", examHostHash({ view: "exam-library" })); }}
-        onOpenExamFollowup={openExamFollowup}
-        onUpdateExamFollowup={updateExamFollowup}
         onOpenResource={openResource}
         onOpenCloze={openCloze}
         username={username}
@@ -2404,7 +2112,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       />
     );
   }
-  const immersive = nav.view === "reader" || nav.view === "cloze" || nav.view === "cloze-review" || nav.view === "exam-session" || (nav.view === "writing-session" && writingImmersive);
+  const immersive = nav.view === "reader" || nav.view === "cloze" || nav.view === "cloze-review" || (nav.view === "writing-session" && writingImmersive);
   return (
     <ErrorBoundary>
       <BackControllerProvider controller={backControllerRef.current}>
@@ -2416,6 +2124,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
           vocabularyStaticPage={vocabularyStaticPage}
           username={username}
           aiConfigured={aiConfigured}
+          longSentenceTrainingEnabled={longSentenceTrainingEnabled}
           onNavigate={navigateFromShell}
           onOpenAiApi={() => setAiApiOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
@@ -2429,7 +2138,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
             }}
           >
             <Suspense fallback={<RouteLoading />}>{content}</Suspense>
-            <SaveStatus username={username} showSaved={nav.view === "reader" || nav.view === "cloze"} />
+            <SaveStatus username={username} />
           </ErrorBoundary>
         </AppShell>
         {aiApiOpen && (
@@ -2443,6 +2152,8 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         {settingsOpen && (
           <SettingsPanel
             username={username}
+            longSentenceTrainingEnabled={longSentenceTrainingEnabled}
+            onLongSentenceTrainingEnabledChange={changeLongSentenceEnabled}
             onClose={() => setSettingsOpen(false)}
             onSwitchAccount={() => leaveAfterSave(onSwitchAccount)}
             onOpenDeveloperLab={() => {

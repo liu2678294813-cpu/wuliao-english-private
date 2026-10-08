@@ -20,12 +20,14 @@ export default function AppShell({
   vocabularyStaticPage = "",
   username,
   aiConfigured,
+  longSentenceTrainingEnabled = true,
   onNavigate,
   onOpenAiApi,
   onOpenSettings,
   children,
 }) {
   const immersive = mode === "immersive";
+  const visibleNav = longSentenceTrainingEnabled ? PRIMARY_NAV : PRIMARY_NAV.filter((item) => item.id !== "long-sentence");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const contentRef = useRef(null);
   const shellMotionRef = useRef(null);
@@ -72,7 +74,7 @@ export default function AppShell({
           <span><strong>无聊英语</strong><small>DEEP SEA STUDY</small></span>
         </button>
         <nav className="ds-nav" aria-label="主导航">
-          {PRIMARY_NAV.map((item) => (
+          {visibleNav.map((item) => (
             <Fragment key={item.id}>
               {isNavGroup(item) ? (
                 <>
@@ -141,7 +143,7 @@ export default function AppShell({
       <div ref={contentRef} className={`ds-shell-content ds-shell-view-${activeView}`}>{children}</div>
 
       {!immersive && <nav className="ds-bottom-nav" aria-label="移动端主导航">
-        {navLeaves(PRIMARY_NAV).map((item) => (
+        {navLeaves(visibleNav).map((item) => (
           <button
             key={item.id}
             type="button"

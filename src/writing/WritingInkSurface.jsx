@@ -28,6 +28,19 @@ const CANVAS_STYLE = Object.freeze({
   pointerEvents: "none",
 });
 
+function validLogicalSize(size) {
+  return Number.isFinite(size?.width) && size.width > 0
+    && Number.isFinite(size?.height) && size.height > 0;
+}
+
+// CSS scaling changes the viewport rect, but the canvas must retain paper pixels.
+export function measureWritingInkSurface(container, ratio, logicalSize) {
+  const measured = measureWritingInkContainer(container, ratio);
+  return validLogicalSize(logicalSize)
+    ? { ...measured, width: logicalSize.width, height: logicalSize.height }
+    : measured;
+}
+
 function warningForStatus(status) {
   if (status === "damaged") return "手写笔迹记录已损坏；为避免误显示，当前笔迹不会挂载。";
   if (status === "source-mismatch") return "内容来源已经变化；为避免错位，旧笔迹不会挂载。";
@@ -55,6 +68,10 @@ export default function WritingInkSurface({
   eraserMode = "normal",
   eraserSize = 24,
   pageRegions = EMPTY_PAGE_REGIONS,
+  persistence,
+  logicalSize = null,
+  ariaLabel = "Writing 手写输入",
+  clearConfirmation = "清空当前 Writing 输入区的全部手写笔迹？此操作不会删除 Session、Attempt 或 Revision。",
   onInkRefChange,
   onFlushHandleChange,
   onToolbarApiChange,
@@ -94,11 +111,15 @@ export default function WritingInkSurface({
   const onStatusChangeRef = useRef(onStatusChange);
   const onInkMutationRef = useRef(onInkMutation);
   const onHintRef = useRef(onHint);
+  const logicalSizeRef = useRef(logicalSize);
+  const clearConfirmationRef = useRef(clearConfirmation);
   const requestedIdentityKeyRef = useRef("");
   const [strokes, setStrokes] = useState([]);
   const [storageStatus, setStorageStatus] = useState("idle");
 
   pageRegionsRef.current = pageRegions;
+  logicalSizeRef.current = logicalSize;
+  clearConfirmationRef.current = clearConfirmation;
 
   requestedIdentityKeyRef.current = writingInkIdentityKey({
     username,
@@ -175,6 +196,8 @@ export default function WritingInkSurface({
   const adapterRef = useRef(null);
   if (!adapterRef.current) {
     adapterRef.current = createWritingInkAdapter({
+      getSnapshot: persistence?.getSnapshot,
+      saveSnapshot: persistence?.saveSnapshot,
       onStrokesChange: (next, meta) => {
         strokesRef.current = next;
         if (!mountedRef.current) return;
@@ -220,6 +243,9 @@ export default function WritingInkSurface({
         && writingInkIdentityKey(mountedIdentity) === requestedIdentityKeyRef.current;
     },
     surfaceRef: contentRef,
+    surfaceSize: validLogicalSize(logicalSize)
+      ? () => ({ width: logicalSizeRef.current.width, height: logicalSizeRef.current.height })
+      : null,
     previewCanvasRef,
     tailCanvasRef,
     strokesRef,
@@ -278,7 +304,7 @@ export default function WritingInkSurface({
   const clear = useCallback(() => {
     finalizeActive();
     if (disabledRef.current || readOnlyRef.current || !adapter.getState().canClear) return false;
-    if (!window.confirm("清空当前 Writing 输入区的全部手写笔迹？此操作不会删除 Session、Attempt 或 Revision。")) return false;
+    if (!window.confirm(clearConfirmationRef.current)) return false;
     inkController.clearPreview();
     const changed = adapter.clear();
     if (changed) onInkMutationRef.current?.(strokesRef.current.length, dimensionsRef.current);
@@ -330,7 +356,7 @@ export default function WritingInkSurface({
     const resize = () => {
       const content = contentRef.current;
       if (!content) return;
-      const next = measureWritingInkContainer(content, inkPixelRatio());
+      const next = measureWritingInkSurface(content, inkPixelRatio(), logicalSizeRef.current);
       const current = dimensionsRef.current;
       let nextPageGeometry = null;
       try {
@@ -365,7 +391,7 @@ export default function WritingInkSurface({
       observer?.disconnect();
       window.removeEventListener("resize", resize);
     };
-  }, [finalizeActive, pageRegions, readPageGeometry, renderCommitted, reportGeometryError]);
+  }, [finalizeActive, logicalSize?.width, logicalSize?.height, pageRegions, readPageGeometry, renderCommitted, reportGeometryError]);
 
   useEffect(() => installPenScrollGuard({
     root: rootRef,
@@ -399,14 +425,14 @@ export default function WritingInkSurface({
     <section
       ref={rootRef}
       className={`writing-ink-surface ${disabled || readOnly ? "is-disabled" : ""}`}
-      aria-label="Writing 手写输入"
+      aria-label={ariaLabel}
       aria-readonly={readOnly || undefined}
     >
       {warning ? <p className="writing-ink-warning" role="alert">{warning}</p> : null}
       <div
         ref={contentRef}
         className="writing-ink-content"
-        style={CONTENT_STYLE}
+        style={validLogicalSize(logicalSize) ? { ...CONTENT_STYLE, width: logicalSize.width, height: logicalSize.height } : CONTENT_STYLE}
         onPointerDownCapture={inkController.handlePointerDown}
         onPointerMoveCapture={inkController.handlePointerMove}
         onPointerUpCapture={inkController.handlePointerUp}

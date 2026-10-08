@@ -1,16 +1,16 @@
 {
-  "createdAt": "2026-09-19T11:41:10.385395+00:00",
-  "manifestSha256": "eef1a8c3ad51e222fb375592243c2d7afd79d4df6303ac89dc20b80fe93cc6ee",
-  "variantsSha256": "435a301f7c7d5e82a1e56d8d7268be941caf00a2f8568ecb5fcdc5f5cccd5958",
+  "createdAt": "2026-10-05T03:06:23.182444+00:00",
+  "manifestSha256": "bc9ae841ebb45d2bc38eaa2ea9268f58d9d7a1b4acc72b279f50055cdc976fdd",
+  "variantsSha256": "51c4d9d9611bc5868133740d85a4101d4c54ff198214a583e807717cbc0498a8",
   "uniqueWords": 6515,
   "coveredWords": 6515,
   "coverageComplete": true,
-  "variants": 32,
-  "retainedBasePronunciations": 20,
-  "recordCount": 6567,
-  "uniqueAudioFiles": 6547,
-  "verifiedFiles": 6547,
-  "totalBytes": 66116653,
+  "variants": 47,
+  "retainedBasePronunciations": 33,
+  "recordCount": 6595,
+  "uniqueAudioFiles": 6562,
+  "verifiedFiles": 6562,
+  "totalBytes": 66264752,
   "generatedWords": 6515,
   "commonsWords": 0,
   "minDuration": 0.87,
@@ -21,8 +21,8 @@
   "issues": [],
   "humanListeningReview": false,
   "privateImportedWordBanksIncluded": false,
-  "fullWaveformSampleCountsVerified": 6547,
-  "rawCheckpointsVerified": 6547,
+  "fullWaveformSampleCountsVerified": 6562,
+  "rawCheckpointsVerified": 6562,
   "minimumRawToDecodedCorrelation": 0.9832454458618111,
   "lowestRawToDecodedCorrelations": [
     {
@@ -76,5 +76,30 @@
       "correlation": 0.9854114309734237
     }
   ],
-  "signalCheckLimit": "Sample-count and waveform correlation checks establish preservation of inference audio; they do not prove the model pronounced every phoneme correctly."
+  "signalCheckLimit": "Sample-count and waveform correlation checks establish preservation of inference audio; they do not prove the model pronounced every phoneme correctly.",
+  "revalidationEvidence": {
+    "method": "The prior full raw-checkpoint audit is bound to the saved previous manifest; the current complete pass rechecked all release hashes and decodes. Exactly two audio hashes changed. Their replacement Ogg and WAV hashes, sample counts, rates, and correlations were freshly checked; the other 6,560 path/hash records are unchanged.",
+    "priorManifestSha256": "5b25d52137d08dd0d5917ff1704841c50a0d8d641ec0172b3f29342d2369369c",
+    "priorVariantsSha256": "c700750936d54379b2095f88ed3ba9bb1d82f8dbe2e6a336494a9cd24f194fc8",
+    "priorRawCheckpointsVerified": 6562,
+    "unchangedAudioPaths": 6560,
+    "freshReplacementWaveforms": [
+      {
+        "word": "appal",
+        "path": "audio/960137a4c13a41faa572.ogg",
+        "oldSha256": "07f508b0b4d2dc3197d2343904c065f7e28798d930f123353d264ab08b38052c",
+        "sha256": "a73f6782da53aeb20cb35bc8b21580344a2174d0c5459c12de8b4454f0ec1805",
+        "rawSha256": "4f189d9d69c07af63ecb78f8d4332042ff7de7eafd87004fcabaf11a058a3dd3",
+        "rawToDecodedCorrelation": 0.995888132183105
+      },
+      {
+        "word": "appall",
+        "path": "audio/5bccf31e466ec769db11.ogg",
+        "oldSha256": "371bb5e1f5f786900d99983f395a219d215830e53b082a97318092a753f32ee8",
+        "sha256": "9fae160990c840384e9cafb1b409296a4211eb0ac697564e299553043f84af54",
+        "rawSha256": "c5e35a3a5375abdffe475c237b554bb366f7aa9af3ab2cfaac895280d14a6c88",
+        "rawToDecodedCorrelation": 0.995888132183105
+      }
+    ]
+  }
 }

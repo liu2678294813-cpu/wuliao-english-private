@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import {
   BACKUP_FORMAT,
@@ -18,6 +19,31 @@ import {
 
 const USER = "alice";
 const PREFIX = `wuliao:user:${encodeURIComponent(USER)}:`;
+
+test("删除产品后 legacy exam 备份空目标恢复完整，恢复不接入 App/Planner runtime", async () => {
+  const keys = ["wuliao:exam-session:v1:legacy", "wuliao:exam-session-recovery:v1:legacy",
+    "wuliao:exam-result:v1:legacy", "wuliao:exam-handoff:v1:legacy:reading"];
+  const entries = keys.map((key, index) => ({ key: PREFIX + key,
+    value: JSON.stringify({ fingerprint: "legacy-" + index, status: "in_progress", revision: 2 }) }));
+  const ink = { id: "alice::legacy::reading", username: USER, fingerprint: "legacy-ink",
+    sessionId: "legacy", strokes: [{ points: [{ x: 1, y: 2 }] }] };
+  const { manifest } = await createBackup({ username: USER, sources: { entries,
+    databases: [{ name: "wuliao-english", stores: [{ name: "exam-ink", records: [{ key: ink.id, value: ink }] }] }] } });
+  const local = new Map(), idb = makeFakeIdb();
+  const restored = await restoreBackup({ manifest, username: USER, existingEntries: [],
+    writeLocal: (row) => local.set(row.key, row.value), idb, createFile: () => ({}) });
+  assert.equal(restored.ok, true);
+  assert.equal(restored.writtenLocal, 4);
+  assert.equal(restored.writtenIdb, 1);
+  assert.deepEqual([...local], entries.map((row) => [row.key, row.value]));
+  assert.deepEqual(idb.store.get(ink.id), ink);
+  for (const path of ["../src/App.jsx", "../src/studyPlannerSources.js", "../src/studyPlanner.js"]) {
+    const source = await readFile(new URL(path, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /from\s+["'][^"']*\/exam\/|createExamRepository|readExamResults|exam-followup|ExamScreens/);
+  }
+  const events = await readFile(new URL("../src/events/eventTypes.js", import.meta.url), "utf8");
+  assert.doesNotMatch(events, /EXAM_(?:SESSION|RESULT|HANDOFF)_UPDATED/);
+});
 
 test("手写筛选答案与会话纳入同账号备份及恢复，不混入其他账号", async () => {
   const value = { id: "answer-a", username: USER, wordId: "word_0001", text: "放弃", revision: 4, verdict: "correct" };

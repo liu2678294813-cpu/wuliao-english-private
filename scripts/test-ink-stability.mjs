@@ -302,7 +302,7 @@ test("引擎: 长按候选在离开轻点范围后永久失效", () => {
   candidate = updateLongPressCandidate(candidate, LONG_PRESS_MAX_DISPLACEMENT_CSS_PX + 1, 0);
   assert.equal(candidate.active, false);
   let circular = createLongPressCandidate(0, 0, 0);
-  for (const [x, y] of [[0.8, 0], [0, 0], [-0.8, 0], [0, 0], [0.8, 0]]) {
+  for (const [x, y] of [[0.8, 0], [0, 0], [-0.8, 0], [0, 0], [0.8, 0], [0, 0], [-0.8, 0], [0, 0], [0.8, 0]]) {
     circular = updateLongPressCandidate(circular, x, y);
   }
   assert.ok(circular.maxDisplacement <= LONG_PRESS_MAX_DISPLACEMENT_CSS_PX);

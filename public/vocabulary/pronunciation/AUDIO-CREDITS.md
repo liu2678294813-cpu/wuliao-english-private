@@ -1,6 +1,6 @@
 # Pronunciation audio credits — pipeline v2
 
-All word audio and the 32 selected part-of-speech variants in this release are synthesized locally using [hexgrad/Kokoro-82M v1.0](https://huggingface.co/hexgrad/Kokoro-82M), fixed American English voice **af_heart**, speed **0.95**.
+All word audio and the 47 selected part-of-speech variants in this release are synthesized locally using [hexgrad/Kokoro-82M v1.0](https://huggingface.co/hexgrad/Kokoro-82M), with American English voice **af_heart** at speed **0.95** as the default. Three clarity-reviewed variants use **af_bella** (`clasp`, `clout`, `laugh`); `mouth` uses **af_sarah**. Those four variants are also the selected default readings for their words.
 
 The model is [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0). Runtime [kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) is MIT. These describe the model/software licenses; the manifest does not invent an independent copyright license for each synthetic utterance. Models and generation runtimes are not distributed with this website.
 
@@ -16,4 +16,4 @@ Full waveform retention prevents this processing pipeline from truncating model 
 
 ## First-sense selection and audit
 
-The 6515 default entries, 32 POS variant records and 20 retained base records reference **6547 unique Ogg files** (6567 records including shared default/variant paths). 20 default readings use verified first Chinese senses; remaining ambiguity is documented in [the 75-word text audit](docs/audit/README.md). Default entries retain the actual selected file provenance; original base provenance remains separately auditable. All 6547 files are synthetic; **Commons recording count is zero**. Local raw evidence: `D:/codex库/无聊英语发音素材/uncut-release/.raw/` (not deployed).
+The 6515 default entries, 47 POS variant records and 33 retained base records reference **6562 unique Ogg files** (6595 records including shared default/variant paths). 33 default readings follow the reviewed Chinese sense or explicit dictionary phonemes; 10 ambiguous defaults remain documented in [the 75-word audit](docs/audit/README.md). Default entries retain the selected file provenance; replaced base provenance remains separately auditable. All 6562 files are synthetic; **Commons recording count is zero**. Local raw evidence: `D:/codex库/01_无聊英语项目/无聊英语发音素材/uncut-release/.raw/` (not deployed).

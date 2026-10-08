@@ -106,24 +106,22 @@ async function record(page, testInfo, label) {
   await page.screenshot({ path: testInfo.outputPath(`${label}.png`) });
 }
 
-test("reader clear: pending cross-stage undo cannot resurrect cleared ink", async ({page}) => {
+test("精读无清空入口，跨阶段笔迹可套索撤销并保存恢复", async ({ page }) => {
   await setup(page);
+  await expect(page.getByRole("button", { name: "清空页面", exact: true })).toHaveCount(0);
   const cover = await pointOn(page, "#deep-cover .deep-cover-subtitle");
-  await drawAt(page,cover);
+  await drawAt(page, cover);
   await expect.poll(async () => (await ink(page))["deep-cover"].length).toBe(1);
-  await page.getByRole("button", {name:"开始精读",exact:true}).click();
-  await drawAt(page,await pointOn(page,"#deep-first-read h2"));
+  await page.getByRole("button", { name: "开始精读", exact: true }).click();
+  await drawAt(page, await pointOn(page, "#deep-first-read h2"));
   await expect.poll(async () => (await ink(page))["deep-first-read"].length).toBe(1);
-  await lasso(page,await pointOn(page,"#deep-cover .deep-cover-subtitle"));
-  page.on("dialog", dialog => dialog.accept());
-  await page.evaluate(() => {
-    const button = name => [...document.querySelectorAll(".annotation-toolbar button")].find(b => b.textContent.trim().endsWith(name));
-    button("撤销").click();
-    button("清空页面").click();
-  });
-  await expect(page.getByRole("button",{name:"撤销",exact:true})).toBeDisabled();
+  const before = await ink(page);
+  await lasso(page, await pointOn(page, "#deep-cover .deep-cover-subtitle"));
+  await expect.poll(async () => (await ink(page))["deep-cover"].length).toBe(0);
+  await page.getByRole("button", { name: "撤销", exact: true }).click();
+  await expect.poll(() => ink(page)).toEqual(before);
   await page.locator(".reader-header .back-button").first().click();
   await expect(page.locator(".library-page")).toBeVisible();
   await page.reload();
-  await expect.poll(async () => Object.values(await ink(page)).reduce((n,strokes)=>n+strokes.length,0)).toBe(0);
+  await expect.poll(() => ink(page)).toEqual(before);
 });

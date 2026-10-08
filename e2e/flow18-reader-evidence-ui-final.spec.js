@@ -158,7 +158,7 @@ async function drawReaderStroke(page, box, yOffset = 0) {
   await page.mouse.up();
 }
 
-test("精读 Ink：撤销和清空只作用当前 Surface，刷新后为空且流程数据不变", async ({ page }) => {
+test("精读 Ink：无清空入口，撤销后当前 Surface 为空且刷新不改变流程", async ({ page }) => {
   const username = await createAccount(page, uniqueUsername("reader-clear"));
   await openOfficialResource(page, RESOURCE_TITLE);
   await page.locator(".annotation-toolbar .input-mode-picker button", { hasText: "手写批注" }).click();
@@ -178,8 +178,10 @@ test("精读 Ink：撤销和清空只作用当前 Surface，刷新后为空且�
   await drawReaderStroke(page, box);
   await drawReaderStroke(page, box, 34);
   await expect.poll(async () => (await readDeepInk(page, username)).length).toBe(2);
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.locator(".reader-page > .annotation-toolbar button", { hasText: "清空页面" }).click();
+  await expect(page.getByRole("button", { name: "清空页面", exact: true })).toHaveCount(0);
+  await page.locator(".reader-page > .annotation-toolbar button", { hasText: "撤销" }).click();
+  await expect.poll(async () => (await readDeepInk(page, username)).length).toBe(1);
+  await page.locator(".reader-page > .annotation-toolbar button", { hasText: "撤销" }).click();
   await expect.poll(async () => (await readDeepInk(page, username)).length).toBe(0);
   const flowAfter = await page.evaluate((user) => {
     const prefix = `wuliao:user:${encodeURIComponent(user)}:wuliao:reading-flow:`;

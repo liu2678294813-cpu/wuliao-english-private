@@ -70,7 +70,6 @@
 /* Unknown-word library */
 .library-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .unknown-library-button,
-.exam-library-button,
 .export-pdf-button { min-height: 36px; padding: 0 12px; border: 1px solid rgba(11, 123, 119, 0.24); border-radius: 9px; background: #edf7f5; color: var(--teal); cursor: pointer; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .export-pdf-button:disabled { cursor: wait; opacity: 0.62; }
 .unknown-library-page { min-height: 100vh; background: var(--ds-canvas, #f4f1e9); }
@@ -91,6 +90,17 @@
 .unknown-word-copy { display: grid; min-width: 0; padding: 9px 11px; grid-template-columns: minmax(80px, 0.75fr) minmax(0, 1.25fr); align-items: center; gap: 10px; border: 0; background: transparent; text-align: left; cursor: pointer; }
 .unknown-word-copy strong { overflow: hidden; color: #111; font-family: Georgia, "Times New Roman", serif; font-size: 15px; text-overflow: ellipsis; }
 .unknown-word-copy span { color: #505f66; font-size: 11px; line-height: 1.45; }
+div.unknown-word-copy { grid-template-columns: 1fr; align-items: start; cursor: default; }
+div.unknown-word-copy strong { overflow-wrap: anywhere; white-space: normal; }
+.unknown-context-sense { display: grid; min-width: 0; gap: 4px; padding: 7px 0; border: 0; border-top: 1px solid #e4e9e8; background: transparent; text-align: left; cursor: pointer; }
+.unknown-context-sense small { color: #7d8d94; font-size: 10px; line-height: 1.5; }
+.unknown-context-sentence { overflow-wrap: anywhere; }
+.unknown-display-switch { display: flex; width: fit-content; max-width: 100%; gap: 4px; margin-top: 14px; padding: 4px; border: 1px solid #cad8d9; border-radius: 10px; background: #fffefa; }
+.unknown-display-switch button { min-height: 36px; padding: 0 14px; border: 0; border-radius: 7px; background: transparent; color: var(--teal); font: inherit; font-size: 12px; cursor: pointer; }
+.unknown-display-switch button[aria-pressed="true"] { background: var(--teal); color: white; }
+.unknown-display-meaning div.unknown-word-copy { grid-template-columns: minmax(80px, 0.75fr) minmax(0, 1.25fr); align-items: center; }
+.unknown-senses { display: grid; min-width: 0; }
+.unknown-display-meaning .unknown-context-sense { padding: 3px 0; border-top: 0; }
 .unknown-word-delete { border: 0; border-left: 1px solid #e4e9e8; background: #fafbfb; color: #a35c50; cursor: pointer; }
 
 /* PDF uses fixed viewport canvases; deep-reading overrides these in its common paper layer below. */
@@ -155,7 +165,6 @@
   .account-pill small { display: none; }
   .library-header-actions { gap: 5px; }
   .unknown-library-button,
-  .exam-library-button,
   .upload-button { padding-inline: 8px; font-size: 9px; }
   .unknown-library-main { width: calc(100% - 20px); padding-top: 26px; }
   .unknown-word-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
@@ -4195,8 +4204,7 @@ a:focus-visible {
   color: rgba(255, 250, 241, 0.48);
 }
 
-.unknown-library-button,
-.exam-library-button {
+.unknown-library-button {
   border-color: rgba(175, 138, 85, 0.62);
   background: rgba(255, 250, 241, 0.06);
   color: #f2d69f;

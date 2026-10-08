@@ -1,3 +1,6 @@
+import { withMemoryProgress } from "./memory-record.js";
+import { isUnknownWordId, readUnknownWordList, filterResolvableUnknownRecords } from "./unknown-word-list.js";
+
 const CURRENT_USER_KEY = "kaoyan_vocab_current_user";
 const MEMORY_DB_NAME = "KaoyanVocabMemorizeDB";
 const MEMORY_STORE = "records";
@@ -44,10 +47,19 @@ const state = {
   answered: false,
   assetMap: {},
   wordChunks: new Map(),
+  unknownWords: [],
+  unknownWordMap: new Map(),
 };
 
 let messageTimer = 0;
 let advanceTimer = 0;
+let reviewVersion = 0;
+let pendingReviewWrite = null;
+let reviewRefreshTask = null;
+let reviewRefreshPending = false;
+let reviewRefreshVersion = 0;
+let initialized = false;
+const isCurrentAccount = () => state.username === (localStorage.getItem(CURRENT_USER_KEY)?.trim() || "");
 
 function localDateKey(timestamp = Date.now()) {
   const date = new Date(timestamp);
@@ -89,6 +101,7 @@ function saveSession() {
     correct: state.correct,
     wrong: state.wrong,
     total: state.words.length,
+    wordIds: state.words.map((item) => item.wordId),
     updatedAt: Date.now(),
   }));
 }
@@ -191,9 +204,7 @@ async function downgradeWrongWord(item) {
     item.records.forEach((record) => {
       const dates = recordDates(record);
       store.put({
-        ...record,
-        clickCount: 0,
-        modeProgress: { default: 0, cycle: 0 },
+        ...withMemoryProgress(record, record.wordId, 0, { username: record.username, listKey: record.listKey, now }),
         maskedAt: record.maskedAt || (record.clickCount >= 3 ? record.updatedAt : undefined),
         maskedDates: dates,
         lastReviewDate: state.selectedDate,
@@ -427,13 +438,17 @@ function shuffle(items, rng) {
 }
 
 async function loadWords(items) {
-  const builtInItems = items.filter((item) => !String(item.wordId).startsWith("import:"));
+  const builtInItems = items.filter((item) => !String(item.wordId).startsWith("import:") && !isUnknownWordId(item.wordId));
   const importedItems = items.filter((item) => String(item.wordId).startsWith("import:"));
   const chunkIndexes = [...new Set(builtInItems.map((item) => chunkIndexForWordId(item.wordId)))];
   const chunks = await Promise.all(chunkIndexes.map(loadChunk));
   const wordMap = new Map();
   chunks.forEach((chunk) => chunk.entries.forEach((entry) => wordMap.set(entry.wordId, entry)));
   (await readImportedWords(importedItems.map((item) => item.wordId))).forEach((entry) => wordMap.set(entry.wordId, entry));
+  for (const item of items.filter((entry) => isUnknownWordId(entry.wordId))) {
+    const word = state.unknownWordMap.get(item.wordId);
+    if (word?.chinese) wordMap.set(item.wordId, word);
+  }
   return items
     .map((item) => ({ ...item, word: wordMap.get(item.wordId) }))
     .filter((item) => item.word);
@@ -441,7 +456,18 @@ async function loadWords(items) {
 
 async function choicesForWord(word, context = {}) {
   let candidates;
-  if (String(word.wordId).startsWith("import:")) {
+  if (isUnknownWordId(word.wordId)) {
+    candidates = state.unknownWords.filter((entry) => entry.chinese && entry.wordId !== word.wordId && entry.chinese !== word.chinese);
+    const primary = selectDistractors(word, candidates, { context });
+    if (primary.length < DISTRACTOR_COUNT) {
+      const fallback = await loadChunk(0);
+      const meanings = new Set([word.chinese, ...primary.map((entry) => entry.chinese)]);
+      primary.push(...selectDistractors(word, fallback.entries.filter((entry) => !meanings.has(entry.chinese)), { context })
+        .slice(0, DISTRACTOR_COUNT - primary.length));
+    }
+    return shuffle([...primary.map((entry) => ({ chinese: entry.chinese, correct: false })),
+      { chinese: word.chinese, correct: true }], Math.random);
+  } else if (String(word.wordId).startsWith("import:")) {
     candidates = (await readImportedWords(null, singleImportedListKey(word, context)))
       .filter((entry) => entry.wordId !== word.wordId && entry.chinese !== word.chinese);
     if (candidates.length < DISTRACTOR_COUNT) {
@@ -505,6 +531,8 @@ function finishReview() {
 }
 
 async function renderQuestion() {
+  if (!isCurrentAccount()) return;
+  const version = reviewVersion;
   window.clearTimeout(advanceTimer);
   if (state.currentIndex >= state.words.length) {
     finishReview();
@@ -513,13 +541,15 @@ async function renderQuestion() {
   setVisible(quiz);
   state.answered = false;
   answerHint.textContent = "";
-  skipButton.disabled = false;
+  skipButton.disabled = true;
+  optionGrid.replaceChildren();
   dateName.textContent = formatDateName(state.selectedDate);
   updateCounters();
 
   const item = state.words[state.currentIndex];
   wordButton.textContent = item.word.english;
   const choices = await choicesForWord(item.word, item);
+  if (!isCurrentAccount() || version !== reviewVersion || state.words[state.currentIndex] !== item) return;
   optionGrid.replaceChildren(...choices.map((choice, index) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -527,14 +557,18 @@ async function renderQuestion() {
     button.textContent = choice.chinese;
     button.dataset.correct = String(choice.correct);
     button.dataset.optionIndex = String(index);
-    button.addEventListener("click", () => answerQuestion(choice, button));
+    button.addEventListener("click", () => {
+      if (version === reviewVersion && state.words[state.currentIndex] === item) answerQuestion(choice, button);
+    });
     return button;
   }));
+  skipButton.disabled = false;
   if (localStorage.getItem(AUTO_SPEAK_KEY) === "true") speakWord(item.word.english);
 }
 
 async function answerQuestion(choice, selectedButton) {
-  if (state.answered) return;
+  if (!isCurrentAccount() || state.answered || pendingReviewWrite) return;
+  const version = reviewVersion;
   state.answered = true;
   skipButton.disabled = true;
   const item = state.words[state.currentIndex];
@@ -550,10 +584,9 @@ async function answerQuestion(choice, selectedButton) {
     state.correct += 1;
     answerHint.textContent = "正确，原黑线保持不变";
   } else {
-    state.wrong += 1;
-    answerHint.textContent = `正确答案：${item.word.chinese}；该词黑线已取消`;
     try {
-      await downgradeWrongWord(item);
+      pendingReviewWrite = downgradeWrongWord(item);
+      await pendingReviewWrite;
     } catch (error) {
       console.error(error);
       showMessage("取消黑线失败，请重试本词");
@@ -561,7 +594,12 @@ async function answerQuestion(choice, selectedButton) {
       skipButton.disabled = false;
       buttons.forEach((button) => { button.disabled = false; });
       return;
+    } finally {
+      pendingReviewWrite = null;
     }
+    if (!isCurrentAccount() || version !== reviewVersion) return;
+    state.wrong += 1;
+    answerHint.textContent = `正确答案：${item.word.chinese}；该词黑线已取消`;
   }
 
   state.currentIndex += 1;
@@ -570,22 +608,72 @@ async function answerQuestion(choice, selectedButton) {
   advanceTimer = window.setTimeout(renderQuestion, isCorrect ? 260 : 1050);
 }
 
-async function selectDate(date) {
+async function selectDate(date, { preserveWordId = "", previousIndex = 0 } = {}) {
+  if (!isCurrentAccount()) return;
+  const version = ++reviewVersion;
   state.selectedDate = date;
   dateSelect.value = date;
   history.replaceState(null, "", `/vocabulary/review.html?date=${encodeURIComponent(date)}`);
   setVisible(loadingState);
   const items = state.groups.get(date) || [];
-  state.words = await loadWords(items);
+  const words = await loadWords(items);
+  if (!isCurrentAccount() || version !== reviewVersion) return;
+  state.words = words;
   const saved = readSession();
-  state.currentIndex = saved?.total === state.words.length ? Math.min(saved.currentIndex || 0, state.words.length) : 0;
-  state.correct = saved?.total === state.words.length ? saved.correct || 0 : 0;
-  state.wrong = saved?.total === state.words.length ? saved.wrong || 0 : 0;
+  const sameWords = saved?.total === state.words.length && (Array.isArray(saved.wordIds)
+    ? saved.wordIds.every((wordId, index) => wordId === state.words[index]?.wordId)
+    : !state.words.some((item) => isUnknownWordId(item.wordId)));
+  state.currentIndex = sameWords ? Math.min(saved.currentIndex || 0, state.words.length) : 0;
+  state.correct = sameWords ? saved.correct || 0 : 0;
+  state.wrong = sameWords ? saved.wrong || 0 : 0;
+  if (preserveWordId) {
+    const index = state.words.findIndex((item) => item.wordId === preserveWordId);
+    state.currentIndex = index >= 0 ? index : Math.min(previousIndex, state.words.length);
+  }
   if (!state.words.length) {
     setVisible(emptyState);
     return;
   }
   await renderQuestion();
+}
+
+async function readCurrentReviewSources() {
+  const [records, snapshot] = await Promise.all([
+    readAllUserRecords(), readUnknownWordList(state.username),
+  ]);
+  return { snapshot, groups: buildDateGroups(filterResolvableUnknownRecords(records, snapshot.words)) };
+}
+
+function requestReviewRefresh() {
+  if (!isCurrentAccount()) return Promise.resolve();
+  reviewRefreshPending = true;
+  ++reviewRefreshVersion;
+  if (!initialized) return Promise.resolve();
+  if (reviewRefreshTask) return reviewRefreshTask;
+  reviewRefreshTask = (async () => {
+    while (reviewRefreshPending && isCurrentAccount()) {
+      reviewRefreshPending = false;
+      const refreshVersion = reviewRefreshVersion;
+      if (pendingReviewWrite) await pendingReviewWrite;
+      const sources = await readCurrentReviewSources();
+      if (!isCurrentAccount()) return;
+      if (refreshVersion !== reviewRefreshVersion) continue;
+      const changed = JSON.stringify([...state.groups]) !== JSON.stringify([...sources.groups])
+        || JSON.stringify(state.unknownWords) !== JSON.stringify(sources.snapshot.words);
+      state.unknownWords = sources.snapshot.words;
+      state.unknownWordMap = sources.snapshot.wordMap;
+      if (sources.snapshot.error) showMessage(sources.snapshot.error);
+      if (!changed) continue;
+      const preserveWordId = state.words[state.currentIndex]?.wordId || "";
+      const previousIndex = state.currentIndex;
+      window.clearTimeout(advanceTimer);
+      state.groups = sources.groups;
+      populateDateSelect();
+      await selectDate(state.selectedDate || localDateKey(), { preserveWordId, previousIndex });
+    }
+  })().catch(() => showMessage("复习词库刷新失败，请重新打开页面"))
+    .finally(() => { reviewRefreshTask = null; });
+  return reviewRefreshTask;
 }
 
 async function initialize() {
@@ -599,12 +687,18 @@ async function initialize() {
   }
   accountLabel.textContent = state.username;
   await loadAssetMap();
-  const records = await readAllUserRecords();
-  state.groups = buildDateGroups(records);
+  const sources = await readCurrentReviewSources();
+  if (!isCurrentAccount()) return;
+  state.unknownWords = sources.snapshot.words;
+  state.unknownWordMap = sources.snapshot.wordMap;
+  state.groups = sources.groups;
+  if (sources.snapshot.error) showMessage(sources.snapshot.error);
   populateDateSelect();
   const requested = new URLSearchParams(location.search).get("date");
   const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(requested || "") ? requested : localDateKey();
   await selectDate(initialDate);
+  initialized = true;
+  if (reviewRefreshPending) requestReviewRefresh();
 }
 
 dateSelect.addEventListener("change", () => selectDate(dateSelect.value));
@@ -623,6 +717,26 @@ restartButton.addEventListener("click", () => {
   renderQuestion();
 });
 window.addEventListener("pagehide", saveSession);
+window.addEventListener("focus", requestReviewRefresh);
+window.addEventListener("pageshow", () => { if (state.selectedDate) requestReviewRefresh(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state.selectedDate) requestReviewRefresh();
+});
+window.addEventListener("wuliao:unknown-words-refresh", (event) => {
+  if (event.detail?.username === state.username && state.selectedDate) requestReviewRefresh();
+});
+window.addEventListener("storage", (event) => {
+  if (event.key !== CURRENT_USER_KEY || isCurrentAccount()) return;
+  ++reviewVersion;
+  ++reviewRefreshVersion;
+  window.clearTimeout(advanceTimer);
+  reviewRefreshPending = false;
+  state.unknownWords = [];
+  state.unknownWordMap.clear();
+  setVisible(loadingState);
+  Promise.resolve(pendingReviewWrite).then(() => location.reload())
+    .catch(() => showMessage("保存失败，请重试后切换账号"));
+});
 
 initialize().catch((error) => {
   console.error(error);

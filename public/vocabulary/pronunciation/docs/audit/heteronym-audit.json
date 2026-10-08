@@ -1,5 +1,5 @@
 {
-  "scope": "75 locally readable heteronym candidates: source Chinese first sense versus phonemizer base and selected CMU variants. No listening review.",
+  "scope": "75 locally readable heteronym candidates: source Chinese first sense, phonemizer base, and dictionary-backed variants. Separate all-asset automated audio scan; no claim of full human listening.",
   "sourceDictionaryHasPOS": false,
   "candidateWordsNotInSource": [
     "converse",
@@ -8,17 +8,22 @@
   ],
   "sources": [
     "https://github.com/cmusphinx/cmudict",
-    "https://dictionary.cambridge.org/us/pronunciation/english/alternate"
+    "https://dictionary.cambridge.org/us/pronunciation/english/alternate",
+    "https://dictionary.cambridge.org/us/dictionary/english/address",
+    "https://dictionary.cambridge.org/us/dictionary/english/decrease",
+    "https://dictionary.cambridge.org/us/dictionary/english/estimate",
+    "https://dictionary.cambridge.org/us/dictionary/english/increase",
+    "https://dictionary.cambridge.org/us/dictionary/english/affect",
+    "https://dictionary.cambridge.org/us/dictionary/english/ashore",
+    "https://dictionary.cambridge.org/us/dictionary/english/appall",
+    "https://www.oxfordlearnersdictionaries.com/us/definition/english/appal"
   ],
-  "selectedDefaults": 20,
+  "selectedDefaults": 25,
   "explicitAmbiguousWords": [
     "conflict",
     "contrast",
-    "decrease",
-    "estimate",
     "export",
     "import",
-    "increase",
     "insult",
     "progress",
     "protest",
@@ -26,7 +31,7 @@
     "transfer",
     "transport"
   ],
-  "remainingRisk": "All synthetic audio remains unreviewed by a human listener; first-sense defaults do not cover every meaning/tense. read past tense, lead metal, wind verb, tear verb and resume noun require other readings not supplied here.",
+  "remainingRisk": "No complete human listening review has been performed. ASR identifies review candidates but cannot prove every phoneme or stress. Default readings follow the selected app gloss; alternate meanings/tense require the noun/verb variants or sentence context.",
   "rows": [
     {
       "word": "absent",
@@ -60,9 +65,16 @@
       "wordId": "word_1087",
       "chinese": "地址；网址；演说",
       "basePhonemes": "ɐdɹˈɛs",
-      "status": "first-sense-g2p-retained",
-      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
-      "humanListened": false
+      "status": "dictionary-selected-default",
+      "reason": "词库首义“地址、网址”为名词，默认采用美音名词读法；动词读法另设变体。",
+      "humanListened": false,
+      "defaultPos": "noun",
+      "selectedPhonemes": "ˈædɹˌɛs",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/address",
+      "availablePosVariants": [
+        "noun",
+        "verb"
+      ]
     },
     {
       "word": "advocate",
@@ -78,9 +90,12 @@
       "wordId": "word_1476",
       "chinese": "影响；感动；假装",
       "basePhonemes": "ɐfˈɛkt",
-      "status": "first-sense-g2p-retained",
-      "reason": "本次文字核对未发现与中文首义明确冲突；保留原base，不代表已人工听审。",
-      "humanListened": false
+      "status": "dictionary-selected-default",
+      "reason": "词库首义“影响”为动词；根据 Cambridge 美音 /əˈfekt/ 与 CMU AH0 F EH1 K T 显式合成，原base留存。",
+      "humanListened": false,
+      "defaultPos": "verb",
+      "selectedPhonemes": "əfˈɛkt",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/affect"
     },
     {
       "word": "alternate",
@@ -258,9 +273,16 @@
       "wordId": "word_0908",
       "chinese": "减少；降低",
       "basePhonemes": "dˈiːkɹiːs",
-      "status": "ambiguous-base-retained",
-      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
-      "humanListened": false
+      "status": "dictionary-selected-default",
+      "reason": "词库释义“减少、降低”按动作义选动词默认；名词读音另设变体。",
+      "humanListened": false,
+      "defaultPos": "verb",
+      "selectedPhonemes": "dɪkɹˈis",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/decrease",
+      "availablePosVariants": [
+        "noun",
+        "verb"
+      ]
     },
     {
       "word": "defect",
@@ -368,9 +390,16 @@
       "wordId": "word_0232",
       "chinese": "估算；估价",
       "basePhonemes": "ˈɛstᵻmət",
-      "status": "ambiguous-base-retained",
-      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
-      "humanListened": false
+      "status": "dictionary-selected-default",
+      "reason": "词库首义“估算”按动作义选动词默认；名词读音另设变体。",
+      "humanListened": false,
+      "defaultPos": "verb",
+      "selectedPhonemes": "ˈɛstəməˌeɪt",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/estimate",
+      "availablePosVariants": [
+        "noun",
+        "verb"
+      ]
     },
     {
       "word": "excuse",
@@ -451,9 +480,16 @@
       "wordId": "word_1353",
       "chinese": "增加；增长；增多",
       "basePhonemes": "ˈɪŋkɹiːs",
-      "status": "ambiguous-base-retained",
-      "reason": "中文释义不能可靠区分名词/动词等用法；保持原base，需上下文确认。",
-      "humanListened": false
+      "status": "dictionary-selected-default",
+      "reason": "词库释义“增加、增长、增多”按动作义选动词默认；名词读音另设变体。",
+      "humanListened": false,
+      "defaultPos": "verb",
+      "selectedPhonemes": "ˌɪnkɹˈis",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/increase",
+      "availablePosVariants": [
+        "noun",
+        "verb"
+      ]
     },
     {
       "word": "insult",

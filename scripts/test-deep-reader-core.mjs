@@ -4,31 +4,42 @@ import * as flow from '../src/readingFlow.js';
 import { createUnknownSelectionHooks } from '../src/unknownWordInteraction.js';
 import { LONG_PRESS_MS } from '../src/inkEngine.js';
 
-test('explicit redo survives reload without inventing translation completion', () => {
+test('first redo requires translation completion; historical skipped redo survives reload', () => {
   const initial = flow.emptyFlow('r','p', 1);
-  const next = flow.enterReadingStage(initial, 'deep-redo', 10);
+  assert.equal(flow.enterReadingStage(initial, 'deep-redo', 10), initial);
+  assert.equal(flow.hasReachedStage(initial, 'deep-redo'), false);
+  const translation = { ...initial, currentStage: 'deep-translation', stages: {
+    ...initial.stages, 'deep-translation': { status: 'current', completedAt: null, visitedAt: 8 },
+  } };
+  const next = flow.completeStage(translation, 'deep-translation', 10);
   assert.equal(next.currentStage, 'deep-redo');
-  assert.equal(next.stages['deep-translation'].status, 'skipped');
-  assert.equal(next.stages['deep-translation'].completedAt, null);
+  assert.equal(next.stages['deep-translation'].status, 'completed');
   assert.equal(flow.normalizeFlow(next).currentStage, 'deep-redo');
   assert.equal(flow.activeQuestionAttempt(next), 'redo');
   const first = flow.enterReadingStage(next, 'deep-translation', 20);
   assert.equal(flow.activeQuestionAttempt(first), 'first');
+  assert.equal(flow.hasReachedStage(first, 'deep-redo'), true);
+  const historical = flow.normalizeFlow({ ...next, currentStage: 'deep-translation', stages: {
+    ...next.stages, 'deep-translation': { status: 'skipped', completedAt: null },
+    'deep-redo': { status: 'pending', completedAt: null, visitedAt: 10 },
+  } });
+  assert.equal(flow.hasReachedStage(historical, 'deep-redo'), true);
   const ended = flow.completeStage(flow.completeStage(next, 'deep-redo', 30), 'deep-review', 40);
-  assert.equal(flow.isWorkflowCompleted(ended), true);
-  assert.equal(ended.stages['deep-translation'].status, 'skipped');
+  assert.equal(ended.stages['deep-redo'].status, 'completed');
+  assert.equal(flow.isWorkflowCompleted(ended), false);
   assert.equal(initial.currentStage, 'deep-cover');
 });
-test('redo navigation pauses running initial timer and never completes it', () => {
+test('redo navigation during initial timer is rejected without changing timer', () => {
   const initial = flow.enterInitialStage({...flow.emptyFlow('r','p',1),currentStage:'deep-clean-text'},10);
   const next = flow.enterReadingStage(initial,'deep-redo',100);
-  assert.equal(next.timedReading.phase,'paused');
-  assert.equal(next.timedReading.elapsedMs,90);
-  assert.equal(next.timedReading.completedAt,null);
-  assert.equal(flow.isStageLocked(initial,'deep-redo'),false);
+  assert.equal(next, initial);
+  assert.equal(next.timedReading.phase,'running');
+  assert.equal(flow.isStageLocked(initial,'deep-redo'),true);
 });
 test('leaving a reached unfinished review never locks it again after reload', () => {
-  const redo = flow.enterReadingStage(flow.emptyFlow('r', 'p', 1), 'deep-redo', 10);
+  const initial = flow.emptyFlow('r', 'p', 1);
+  const translation = { ...initial, currentStage: 'deep-translation', stages: { ...initial.stages, 'deep-translation': { status: 'current', completedAt: null } } };
+  const redo = flow.completeStage(translation, 'deep-translation', 10);
   const review = flow.completeStage(redo, 'deep-redo', 20);
   const earlier = flow.enterReadingStage(review, 'deep-cover', 30);
   const reloaded = flow.normalizeFlow(earlier);

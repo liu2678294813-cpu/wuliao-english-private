@@ -210,13 +210,12 @@ export function QuestionDrawer({
           <button className="icon-button" onClick={onClose} aria-label="关闭题窗">×</button>
         </div>
       </div>
-      <div className="parse-status">
+      {parseInfo.status !== "ready" && <div className="parse-status">
         <span className={parseInfo.status} />
         {parseInfo.status === "loading" && "正在本地识别题目…"}
-        {parseInfo.status === "ready" && `已离线识别 ${questions.length} 道题`}
         {parseInfo.status === "text-only" && "已读取文字，未发现标准选择题"}
         {parseInfo.status === "scanned" && "扫描件无文字层，可阅读批注，暂不自动识题"}
-      </div>
+      </div>}
       <div className="question-list">
         {questions.map((question) => {
           const isExpanded = expanded === question.number;

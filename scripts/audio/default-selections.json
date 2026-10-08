@@ -120,6 +120,97 @@
       "sourceChinese": "交替的；轮流的；间隔的",
       "reason": "依据词库首义“交替的”选择adjective；音素采用 CMU 美音词典。",
       "reference": "https://dictionary.cambridge.org/us/pronunciation/english/alternate"
+    },
+    "address": {
+      "pos": "noun",
+      "sourceWordId": "word_1087",
+      "sourceChinese": "地址；网址；演说",
+      "reason": "词库首义“地址、网址”为名词，采用美音名词的首音节重读；原动词读音保留为verb变体。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/address"
+    },
+    "decrease": {
+      "pos": "verb",
+      "sourceWordId": "word_0908",
+      "sourceChinese": "减少；降低",
+      "reason": "词库释义“减少、降低”按动作义选择动词；名词原读音保留为noun变体。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/decrease"
+    },
+    "estimate": {
+      "pos": "verb",
+      "sourceWordId": "word_0232",
+      "sourceChinese": "估算；估价",
+      "reason": "词库首义“估算”是动作义，按美音动词读法设默认；名词原读音保留为noun变体。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/estimate"
+    },
+    "increase": {
+      "pos": "verb",
+      "sourceWordId": "word_1353",
+      "sourceChinese": "增加；增长；增多",
+      "reason": "词库释义“增加、增长、增多”按动作义选择动词；已存在的名词音频保留为noun变体。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/increase"
+    },
+    "affect": {
+      "pos": "verb",
+      "sourceWordId": "word_1476",
+      "sourceChinese": "影响；感动；假装",
+      "reason": "词库首义“影响”为动词；用字典音素重新合成，并保留旧base以便追溯。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/affect"
+    },
+    "ashore": {
+      "pos": "adverb",
+      "sourceWordId": "word_3855",
+      "sourceChinese": "在岸上；到岸上",
+      "reason": "词库释义“在岸上、到岸上”采用字典确认的美音adverb读法重新合成。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/ashore"
+    },
+    "appal": {
+      "pos": "verb",
+      "sourceWordId": "word_2377",
+      "sourceChinese": "使大为震惊；使惊骇",
+      "reason": "词库释义指向动词；Oxford 将 appal 的北美拼写列为 appall，并标注 /əˈpɔːl/，故按 AH0 P AO1 L 选为默认读音。",
+      "reference": "https://www.oxfordlearnersdictionaries.com/us/definition/english/appal"
+    },
+    "appall": {
+      "pos": "verb",
+      "sourceWordId": "word_2378",
+      "sourceChinese": "使胆寒；使惊骇",
+      "reason": "词库释义指向动词；Oxford 将 appal 的北美拼写列为 appall，并标注 /əˈpɔːl/，故按 AH0 P AO1 L 选为默认读音。",
+      "reference": "https://www.oxfordlearnersdictionaries.com/us/definition/english/appal"
+    },
+    "fox": {
+      "pos": "noun",
+      "sourceWordId": "word_4679",
+      "sourceChinese": "狐狸；狡猾的人",
+      "reason": "词库首义“狐狸”为名词；多轮ASR将旧音频识别为/v/开头，按美音/fɑːks/与CMU F AA1 K S显式合成。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/fox"
+    },
+    "clasp": {
+      "pos": "verb",
+      "sourceWordId": "word_3578",
+      "sourceChinese": "钩；扣；紧握",
+      "reason": "多轮ASR将旧音频识别成/gl/开头；按美音/k/+/l/+/æ/与CMU K L AE1 S P显式合成。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/clasp"
+    },
+    "clout": {
+      "pos": "noun",
+      "sourceWordId": "word_5644",
+      "sourceChinese": "猛击；打；击",
+      "reason": "多轮ASR漏掉旧音频开头的/k l/；按美音/klaʊt/与CMU K L AW1 T显式合成。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/clout"
+    },
+    "laugh": {
+      "pos": "verb",
+      "sourceWordId": "word_5241",
+      "sourceChinese": "笑；发笑；笑声",
+      "reason": "多轮ASR把旧音频识别成left；按美音/læf/与CMU L AE1 F显式合成。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/laugh"
+    },
+    "mouth": {
+      "pos": "noun",
+      "sourceWordId": "word_5284",
+      "sourceChinese": "嘴；口",
+      "reason": "词库首义为名词；多轮ASR将旧音频末尾/θ/识别成/s/，按美音/maʊθ/与CMU M AW1 TH显式合成。",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/mouth"
     }
   },
   "ambiguous": {
@@ -127,11 +218,6 @@
       "sourceWordId": "word_4931",
       "sourceChinese": "记录；唱片；录制",
       "reason": "记录可名可动，另含唱片和录制；词库无词性，保留当前base并明确歧义。"
-    },
-    "increase": {
-      "sourceWordId": "word_1353",
-      "sourceChinese": "增加；增长；增多",
-      "reason": "增加、增长、增多未标明名词或动词；不能仅凭中文强判重音，保留当前base并明确歧义。"
     },
     "conflict": {
       "sourceWordId": "word_0197",
@@ -141,16 +227,6 @@
     "contrast": {
       "sourceWordId": "word_0019",
       "sourceChinese": "对照；反差；对立",
-      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
-    },
-    "decrease": {
-      "sourceWordId": "word_0908",
-      "sourceChinese": "减少；降低",
-      "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
-    },
-    "estimate": {
-      "sourceWordId": "word_0232",
-      "sourceChinese": "估算；估价",
       "reason": "中文首义不足以可靠区分名词和动词等用法，保持原base；需要上下文选音。"
     },
     "export": {

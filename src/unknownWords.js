@@ -8,6 +8,12 @@ export function normalizeUnknownWord(value) {
     .replace(/^[^a-z]+|[^a-z']+$/g, "");
 }
 
+export function normalizeUnknownTerm(value) {
+  return String(value || "").normalize("NFKC").toLowerCase()
+    .replace(/’/g, "'").replace(/\s+/g, " ").trim()
+    .replace(/^[^a-z]+|[^a-z]+$/g, "");
+}
+
 async function loadDictionary() {
   const response = await fetch("/vocabulary/word-assets.json", { cache: "force-cache" });
   if (!response.ok) throw new Error(`离线词库读取失败（${response.status}）`);

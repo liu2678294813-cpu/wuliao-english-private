@@ -234,5 +234,138 @@
       "pronunciationSource": "https://github.com/cmusphinx/cmudict",
       "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
     }
+  },
+  "address": {
+    "noun": {
+      "phonemes": "ˈædɹˌɛs",
+      "arpabet": "AE1 D R EH2 S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/address",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "verb": {
+      "phonemes": "ədɹˈɛs",
+      "arpabet": "AH0 D R EH1 S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/address",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "decrease": {
+    "verb": {
+      "phonemes": "dɪkɹˈis",
+      "arpabet": "D IH0 K R IY1 S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/decrease",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "noun": {
+      "phonemes": "dˈikɹˌis",
+      "arpabet": "D IY1 K R IY2 S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/decrease",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "estimate": {
+    "verb": {
+      "phonemes": "ˈɛstəməˌeɪt",
+      "arpabet": "EH1 S T AH0 M EY2 T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/estimate",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    },
+    "noun": {
+      "phonemes": "ˈɛstəmət",
+      "arpabet": "EH1 S T AH0 M AH0 T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/estimate",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "affect": {
+    "verb": {
+      "phonemes": "əfˈɛkt",
+      "arpabet": "AH0 F EH1 K T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/affect",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "ashore": {
+    "adverb": {
+      "phonemes": "əʃˈɔɹ",
+      "arpabet": "AH0 SH AO1 R",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/ashore",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "appal": {
+    "verb": {
+      "phonemes": "əpˈɔl",
+      "arpabet": "AH0 P AO1 L",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://www.oxfordlearnersdictionaries.com/us/definition/english/appal",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "appall": {
+    "verb": {
+      "phonemes": "əpˈɔl",
+      "arpabet": "AH0 P AO1 L",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://www.oxfordlearnersdictionaries.com/us/definition/english/appal",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "fox": {
+    "noun": {
+      "phonemes": "fˈɑks",
+      "arpabet": "F AA1 K S",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/fox",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_heart. Phonemes from CMU Pronouncing Dictionary (BSD-style license)."
+    }
+  },
+  "clasp": {
+    "verb": {
+      "phonemes": "klˈæsp",
+      "arpabet": "K L AE1 S P",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/clasp",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_bella. Phonemes from CMU Pronouncing Dictionary (BSD-style license).",
+      "voice": "af_bella"
+    }
+  },
+  "clout": {
+    "noun": {
+      "phonemes": "klˈaʊt",
+      "arpabet": "K L AW1 T",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/clout",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_bella. Phonemes from CMU Pronouncing Dictionary (BSD-style license).",
+      "voice": "af_bella"
+    }
+  },
+  "laugh": {
+    "verb": {
+      "phonemes": "lˈæf",
+      "arpabet": "L AE1 F",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/laugh",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_bella. Phonemes from CMU Pronouncing Dictionary (BSD-style license).",
+      "voice": "af_bella"
+    }
+  },
+  "mouth": {
+    "noun": {
+      "phonemes": "mˈaʊθ",
+      "arpabet": "M AW1 TH",
+      "pronunciationSource": "https://github.com/cmusphinx/cmudict",
+      "reference": "https://dictionary.cambridge.org/us/dictionary/english/mouth",
+      "attribution": "Locally synthesized with Kokoro-82M v1.0 af_sarah. Phonemes from CMU Pronouncing Dictionary (BSD-style license).",
+      "voice": "af_sarah"
+    }
   }
 }

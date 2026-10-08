@@ -112,8 +112,13 @@ test("failed IDB write blocks leaving, keeps pending stroke and retries", async 
   expect((await ink(page, username)).flatMap((r) => r.strokes)).toHaveLength(0);
   await page.evaluate(() => { window.failInkWrites = false; });
   await page.getByRole("button", { name: "重试保存", exact: true }).click();
-  await expect(page.locator(".learning-save-status")).toContainText("已保存");
+  // Saved status is hidden by default. Verify the commit before navigating.
+  await expect.poll(async () => (await ink(page, username)).flatMap((row) => row.strokes).length).toBe(1);
+  await expect(page.locator(".learning-save-status")).toHaveCount(0);
   await page.locator(".reader-header .back-button").first().click();
+  await expect(page.locator(".library-page")).toBeVisible();
+  expect((await ink(page, username)).flatMap((r) => r.strokes)).toHaveLength(1);
+  await page.reload();
   await expect(page.locator(".library-page")).toBeVisible();
   expect((await ink(page, username)).flatMap((r) => r.strokes)).toHaveLength(1);
   expect(errors).toEqual([]);

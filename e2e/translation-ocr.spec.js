@@ -258,11 +258,9 @@ test("legacy binding stays explicit and clearing cannot resurrect it", async ({ 
   await dialog.getByRole("button", { name: "这是本句译文，使用并校对", exact: true }).click();
   await dialog.getByRole("button", { name: "确认保存", exact: true }).click();
   await expect(unit.locator("textarea")).toHaveValue("旧译文需要确认归属");
-  page.once("dialog", d => d.accept());
-  await page.getByRole("button", { name: "清空页面", exact: true }).click();
-  await expect(unit.locator("textarea")).toHaveValue("");
-  await expect(unit.getByRole("button", { name: "查看旧文字", exact: true })).toHaveCount(0);
-  expect(Object.keys(await textRecords(page)).filter(k => !k.includes("[object Object]"))).toEqual([]);
+  await expect(page.getByRole("button", { name: "清空页面", exact: true })).toHaveCount(0);
+  await expect(unit.locator("textarea")).toHaveValue("旧译文需要确认归属");
+  expect(Object.keys(await textRecords(page)).filter(k => !k.includes("[object Object]")).length).toBeGreaterThan(0);
   expect(await page.evaluate(u => localStorage.getItem(`wuliao:user:${encodeURIComponent(u)}:wuliao:deep-translation:[object Object]:[object Object]:1:0`), username)).toBe("旧译文需要确认归属");
 });
 

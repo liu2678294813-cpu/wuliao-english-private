@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { getOfficialAnswerKey } from "../src/answerKeys.js";
 
 class MemoryStorage {
   constructor() {
@@ -210,7 +211,9 @@ function seedD(resourceId, passageId, sentenceKey, reviewQuestionKey) {
     checkUnlocked: true,
     paragraphRecall: { "1": { completedAt: NEXT_DAY_MS + 1000, summary: "重新读懂" } },
     sentenceResults: { [sentenceKey]: "mastered" },
-    reviewAnswers: { [reviewQuestionKey]: "C" },
+    // The official keys were corrected separately. Keep this review correct
+    // so only the intentionally wrong redo answer contributes a pending task.
+    reviewAnswers: { [reviewQuestionKey]: getOfficialAnswerKey(RESOURCE)[21] },
   }, NEXT_DAY_MS + 2000);
   assert.equal(updated.ok, true);
   const completed = completeReviewSession(created.task.taskKey, {

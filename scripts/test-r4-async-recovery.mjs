@@ -68,7 +68,9 @@ test("CustomDeepReader：陌生词 AI 释义链卸载后不再写 IndexedDB", as
   assert.match(sourceCode, /const isCurrent = \(\) => mountedRef\.current && getCurrentUsername\(\) === storageUsername && ocrContextRef\.current === context/);
   assert.match(sourceCode, /if \(!isCurrent\(\)\) return;/);
   assert.match(sourceCode, /signal: controller\.signal, isCurrent/);
-  assert.match(sourceCode, /if \(aiMeaning && isCurrent\(\)\) await updateUnknownWordMeaning/);
+  const resolver = await source("src/unknownWordContext.js");
+  assert.match(resolver, /if \(!current\(\) \|\| !meaning\) return null/);
+  assert.match(resolver, /expectedRevision: sense\.meaningRevision, isCurrent: current/);
 });
 
 // ---------------- 导入编辑器 / 词汇导入 ----------------

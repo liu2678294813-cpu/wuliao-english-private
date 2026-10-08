@@ -3,23 +3,27 @@ import assert from "node:assert/strict";
 import * as readingFlow from "../src/readingFlow.js";
 import { createUnknownSelectionHooks } from "../src/unknownWordInteraction.js";
 
-test("manual redo is an active attempt without fabricating translation completion", () => {
+test("redo begins only after translation stage is completed; first answers remain separate", () => {
   assert.equal(typeof readingFlow.enterReadingStage, "function", "explicit stage entry API is required");
   assert.equal(typeof readingFlow.activeQuestionAttempt, "function", "drawer attempt must have one source of truth");
   const original = readingFlow.emptyFlow("interaction-resource", "passage-1", 100);
   const before = JSON.stringify(original);
   assert.equal(readingFlow.activeQuestionAttempt(original), "first");
-  const redo = readingFlow.enterReadingStage(original, "deep-redo", 200);
+  assert.equal(readingFlow.enterReadingStage(original, "deep-redo", 150), original);
+  const translation = { ...original, currentStage: "deep-translation", stages: {
+    ...original.stages, "deep-translation": { status: "current", completedAt: null },
+  } };
+  const redo = readingFlow.completeStage(translation, "deep-translation", 200);
   assert.equal(redo.currentStage, "deep-redo");
   assert.equal(readingFlow.activeQuestionAttempt(redo), "redo");
-  assert.notEqual(redo.stages["deep-translation"].status, "completed");
-  assert.equal(redo.stages["deep-translation"].completedAt, null);
+  assert.equal(redo.stages["deep-translation"].status, "completed");
+  assert.equal(redo.stages["deep-translation"].completedAt, 200);
   assert.equal(readingFlow.normalizeFlow(redo).currentStage, "deep-redo", "reload must retain the explicitly entered stage");
   assert.equal(JSON.stringify(original), before, "entry must not mutate the caller's flow");
   const resumed = readingFlow.enterReadingStage(redo, "deep-translation", 300);
   assert.equal(resumed.currentStage, "deep-translation");
   assert.equal(readingFlow.activeQuestionAttempt(resumed), "first");
-  assert.notEqual(resumed.stages["deep-translation"].status, "completed");
+  assert.equal(resumed.stages["deep-translation"].status, "completed");
 });
 
 function unknownHarness({ token = null, writing = true, enabled = true } = {}) {

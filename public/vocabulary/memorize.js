@@ -1,6 +1,8 @@
 import { memoryProgress, memoryState, advanceMemory, swipeDirection } from "./memory-modes.js";
+import { withMemoryProgress } from "./memory-record.js";
 import { createWordSaveQueue } from "./word-save-queue.js";
 import { interactionTiming } from "./interaction-timing.js";
+import { UNKNOWN_LIST_KEY, isUnknownWordId, readUnknownWordList } from "./unknown-word-list.js";
 const CURRENT_USER_KEY = "kaoyan_vocab_current_user";
 const MAIN_DB_NAME = "KaoyanVocabDB";
 const MEMORY_DB_NAME = "KaoyanVocabMemorizeDB";
@@ -24,7 +26,6 @@ const OVERSCAN = 8;
 const listSelect = document.getElementById("listSelect");
 const clearButton = document.getElementById("clearButton");
 const accountLabel = document.getElementById("accountLabel");
-const learnLink = document.getElementById("learnLink");
 const listSummary = document.getElementById("listSummary");
 const todaySummary = document.getElementById("todaySummary");
 const maskSummary = document.getElementById("maskSummary");
@@ -32,6 +33,11 @@ const viewport = document.getElementById("viewport");
 const spacer = document.getElementById("spacer");
 const rowsLayer = document.getElementById("rowsLayer");
 const message = document.getElementById("message");
+const rangeButton = document.getElementById("rangeButton");
+const rangePanel = document.getElementById("rangePanel");
+const rangeDescription = document.getElementById("rangeDescription");
+const rangeConfirm = document.getElementById("rangeConfirm");
+const rangeCancel = document.getElementById("rangeCancel");
 
 const state = {
   username: localStorage.getItem(CURRENT_USER_KEY) || "",
@@ -45,23 +51,18 @@ const state = {
   wordChunks: new Map(),
   todayDate: "",
   todayWordIds: new Set(),
+  unknownWords: [],
+  unknownWordMap: new Map(),
+  unknownError: "",
 };
 
 let messageTimer = 0;
 let saveScrollFrame = 0;
+let positionReady = false;
+let rangeStart = null;
+let rangeEnd = null;
+let rangeSelecting = false;
 const renderedRows = new Map();
-
-learnLink.addEventListener("click", () => {
-  try {
-    const href = learnLink.getAttribute("href") || "/vocabulary/index.html#/learning?from=memorize";
-    const hashIndex = href.indexOf("#");
-    const target = hashIndex >= 0 ? href.slice(hashIndex + 1) : href;
-    sessionStorage.setItem("wuliao:vocab:learn-target", target);
-    sessionStorage.setItem("wuliao:vocab:learn-from", "memorize");
-  } catch {
-    // Session storage unavailable: the normal link still navigates.
-  }
-});
 
 function progressStorageKey() {
   return `${PROGRESS_KEY_PREFIX}${state.username}`;
@@ -77,19 +78,33 @@ function readProgress() {
 }
 
 function saveProgress() {
-  if (!state.username || !state.currentListKey) return;
+  if (!positionReady || !state.username || !state.currentListKey || !state.words.length) return;
   const progress = readProgress();
+  const index = Math.min(state.words.length - 1, Math.max(0, Math.floor(viewport.scrollTop / ROW_HEIGHT)));
   progress.currentListKey = state.currentListKey;
   progress.scrollPositions = {
     ...(progress.scrollPositions || {}),
     [state.currentListKey]: viewport.scrollTop,
   };
+  progress.positionAnchors = {
+    ...(progress.positionAnchors || {}),
+    [state.currentListKey]: { wordId: state.words[index].wordId, index, offset: viewport.scrollTop - index * ROW_HEIGHT },
+  };
   localStorage.setItem(progressStorageKey(), JSON.stringify(progress));
 }
 
-function savedScrollTop(listKey) {
-  const value = readProgress().scrollPositions?.[listKey];
-  return Number.isFinite(value) ? Math.max(0, value) : 0;
+function savedScrollTop(progress, listKey, words) {
+  const anchor = progress.positionAnchors?.[listKey];
+  const offset = Number.isFinite(anchor?.offset) ? Math.max(0, Math.min(ROW_HEIGHT - 1, anchor.offset)) : 0;
+  if (typeof anchor?.wordId === "string") {
+    const index = words.findIndex((word) => word.wordId === anchor.wordId);
+    if (index >= 0) return index * ROW_HEIGHT + offset;
+  }
+  if (Number.isInteger(anchor?.index) && anchor.index >= 0 && anchor.index < words.length) {
+    return anchor.index * ROW_HEIGHT + offset;
+  }
+  const legacy = progress.scrollPositions?.[listKey];
+  return Number.isFinite(legacy) ? Math.max(0, legacy) : 0;
 }
 
 function showMessage(text) {
@@ -232,7 +247,7 @@ function chunkIndexForWordId(wordId) {
 }
 
 async function loadWords(wordIds) {
-  const builtInIds = wordIds.filter((wordId) => !String(wordId).startsWith("import:"));
+  const builtInIds = wordIds.filter((wordId) => !String(wordId).startsWith("import:") && !isUnknownWordId(wordId));
   const importedIds = wordIds.filter((wordId) => String(wordId).startsWith("import:"));
   const chunkIndexes = [...new Set(builtInIds.map(chunkIndexForWordId))];
   const chunks = await Promise.all(chunkIndexes.map(loadChunk));
@@ -241,6 +256,9 @@ async function loadWords(wordIds) {
     chunk.entries.forEach((entry) => wordMap.set(entry.wordId, entry));
   });
   (await readImportedWords(importedIds)).forEach((entry) => wordMap.set(entry.wordId, entry));
+  wordIds.filter(isUnknownWordId).forEach((id) => {
+    if (state.unknownWordMap.has(id)) wordMap.set(id, state.unknownWordMap.get(id));
+  });
   return wordIds.map((wordId) => wordMap.get(wordId)).filter(Boolean);
 }
 
@@ -294,6 +312,7 @@ async function refreshTodaySummary() {
   try {
     const today = localDateKey();
     const records = await readAllUserMemoryRecords();
+    if (!isCurrentAccount()) return;
     state.todayDate = today;
     state.todayWordIds = new Set(
       records
@@ -313,29 +332,6 @@ async function refreshTodaySummary() {
   }
 }
 
-function buildMemoryRecord(wordId, clickCount, previous = {}) {
-  const now = Date.now();
-  const newlyMasked = clickCount >= 3 && (previous.clickCount || 0) < 3;
-  const maskedAt = newlyMasked ? now : previous.maskedAt;
-  const maskedDates = new Set(Array.isArray(previous.maskedDates) ? previous.maskedDates : []);
-  if (!maskedDates.size && previous.maskedAt) maskedDates.add(localDateKey(previous.maskedAt));
-  if (!maskedDates.size && previous.clickCount >= 3 && previous.updatedAt) {
-    maskedDates.add(localDateKey(previous.updatedAt));
-  }
-  if (newlyMasked) maskedDates.add(localDateKey(now));
-  return {
-    ...previous,
-    memoryKey: `${state.username}:${state.currentListKey}:${wordId}`,
-    username: state.username,
-    listKey: state.currentListKey,
-    wordId,
-    clickCount,
-    maskedAt,
-    maskedDates: [...maskedDates],
-    updatedAt: now,
-  };
-}
-
 async function saveMemoryRecord(record) {
   const db = await openMemoryDatabase();
   try {
@@ -351,25 +347,21 @@ async function saveRecords(records) {
   const db = await openMemoryDatabase();
   try {
     const tx = db.transaction(MEMORY_STORE, "readwrite");
-    records.forEach((record) => tx.objectStore(MEMORY_STORE).put(record));
-    await transactionDone(tx);
+    const committed = transactionDone(tx);
+    try {
+      const store = tx.objectStore(MEMORY_STORE);
+      for (const record of records) store.put(record);
+    } catch (error) {
+      tx.abort();
+      await committed.catch(() => {});
+      throw error;
+    }
+    await committed;
   } finally { db.close(); }
 }
 
 function withProgress(previous, wordId, step) {
-  const before = previous || {};
-  const now = Date.now();
-  const next = buildMemoryRecord(wordId, before.clickCount || 0, before);
-  next.legacyClickCount = before.legacyClickCount ?? before.clickCount ?? 0;
-  next.sharedProgress = { count: Math.ceil(step / 2), masked: step % 2 === 1 };
-  // Compatibility projections; the shared state is authoritative, including clear.
-  next.modeProgress = { default: step === 5 ? 1 : 0, cycle: step };
-  next.clickCount = next.sharedProgress.count;
-  if (step === 5 && !memoryState(before).locked) {
-    next.maskedAt = now;
-    next.maskedDates = [...new Set([...(before.maskedDates || recordDates(before)), localDateKey(now)])];
-  }
-  return next;
+  return withMemoryProgress(previous, wordId, step, { username: state.username, listKey: state.currentListKey });
 }
 
 function refreshModes() {
@@ -385,7 +377,88 @@ function refreshModes() {
   undoButton.disabled = saving || loadingList || !undoStack.length;
   clearButton.disabled = saving || loadingList;
   listSelect.disabled = saving || loadingList;
+  rangeButton.disabled = saving || loadingList;
+  rangeConfirm.disabled = saving || loadingList || rangeStart === null || rangeEnd === null;
+  rangeCancel.disabled = saving || loadingList;
 }
+
+function cancelRange() {
+  rangeSelecting = false;
+  rangeStart = null;
+  rangeEnd = null;
+  rangePanel.classList.add("hidden");
+  rangeButton.setAttribute("aria-pressed", "false");
+  renderVisibleRows(true);
+  refreshModes();
+}
+
+function selectRangeEndpoint(index) {
+  if (saving || loadingList || !rangeSelecting) return;
+  if (rangeStart === null || rangeEnd !== null) {
+    rangeStart = index;
+    rangeEnd = null;
+  } else {
+    rangeEnd = index;
+  }
+  const start = state.words[rangeStart];
+  const end = rangeEnd === null ? null : state.words[rangeEnd];
+  rangeDescription.textContent = end
+    ? `起点：${start.english}　终点：${end.english}　共 ${Math.abs(rangeEnd - rangeStart) + 1} 个词`
+    : `起点：${start.english}　请选择终点`;
+  renderVisibleRows(true);
+  refreshModes();
+}
+
+rangeButton.addEventListener("click", () => {
+  if (saving || loadingList) return;
+  rangeSelecting = true;
+  rangeStart = null;
+  rangeEnd = null;
+  rangeDescription.textContent = "请选择起点";
+  rangePanel.classList.remove("hidden");
+  rangeButton.setAttribute("aria-pressed", "true");
+  renderVisibleRows(true);
+  refreshModes();
+});
+rangeCancel.addEventListener("click", cancelRange);
+
+rangeConfirm.addEventListener("click", async () => {
+  if (saving || loadingList || !rangeSelecting || rangeStart === null || rangeEnd === null) return;
+  bulkSaving = true;
+  saving = true;
+  refreshModes();
+  try {
+    await wordSaves.flush();
+    if (state.todayDate !== localDateKey()) await refreshTodaySummary();
+    const first = Math.min(rangeStart, rangeEnd);
+    const last = Math.max(rangeStart, rangeEnd);
+    const entries = state.words.slice(first, last + 1)
+      .filter((word) => !memoryState(state.records.get(word.wordId)).locked)
+      .map((word) => ({ wordId: word.wordId, step: memoryProgress(state.records.get(word.wordId)) }));
+    if (entries.length) {
+      const records = entries.map(({ wordId }) => withProgress(state.records.get(wordId), wordId, 5));
+      bulkWrite = saveRecords(records);
+      await bulkWrite;
+      for (const record of records) state.records.set(record.wordId, record);
+      undoStack.push(entries);
+      await refreshTodaySummary();
+      window.VocabularyBridge?.reportSessionUpdated?.();
+    }
+    const total = last - first + 1;
+    cancelRange();
+    showMessage(`已完成 ${entries.length} 个词，原已完成 ${total - entries.length} 个`);
+  } catch (error) {
+    console.error(error);
+    showMessage("区间保存失败，未完成全黑，请重试");
+  } finally {
+    bulkWrite = null;
+    bulkSaving = false;
+    saving = false;
+    renderVisibleRows(true);
+    updateSummary();
+    refreshModes();
+  }
+});
 
 function updateWordRow(wordId) {
   for (const [index, row] of renderedRows) {
@@ -416,7 +489,7 @@ const wordSaves = createWordSaveQueue({
 });
 window.__wuliaoFlushVocabulary = async () => { await Promise.all([wordSaves.flush(), bulkWrite]); saveProgress(); };
 async function changeWord(wordId, direction) {
-  if (bulkSaving || loadingList) return;
+  if (!isCurrentAccount() || bulkSaving || loadingList || rangeSelecting) return;
   if (state.todayDate !== localDateKey()) {
     await wordSaves.flush(); await refreshTodaySummary();
   }
@@ -429,15 +502,25 @@ async function changeWord(wordId, direction) {
 }
 
 function updateSummary(reconcile = true) {
-  if (reconcile) maskedCount = [...state.records.values()].filter((record) => memoryState(record, state.rule).masked).length;
+  if (reconcile) {
+    const records = state.currentListKey === UNKNOWN_LIST_KEY
+      ? state.words.map((word) => state.records.get(word.wordId))
+      : [...state.records.values()];
+    maskedCount = records.filter((record) => memoryState(record, state.rule).masked).length;
+  }
   listSummary.textContent = `共 ${state.words.length} 个单词，按词库原顺序排列`;
   maskSummary.textContent = `已遮挡 ${maskedCount} 个`;
+  if (state.currentListKey === UNKNOWN_LIST_KEY) {
+    listSummary.textContent = state.unknownError || (state.words.length
+      ? "共 " + state.words.length + " 个词条，按英文排序"
+      : "陌生词库为空，请在精读或完形中添加陌生词");
+  }
 }
 
 function createRow(word, index) {
   const { count, masked, locked } = memoryState(state.records.get(word.wordId), state.rule);
   const row = document.createElement("div");
-  row.className = `word-row${index % 2 ? " is-alternate" : ""}${masked ? " masked" : ""}`;
+  row.className = `word-row${index % 2 ? " is-alternate" : ""}${masked ? " masked" : ""}${rangeSelecting && (index === rangeStart || index === rangeEnd) ? " range-selected" : ""}`;
   row.style.transform = `translateY(${index * ROW_HEIGHT}px)`;
   row.dataset.wordId = word.wordId;
   const content = document.createElement("div");
@@ -455,18 +538,20 @@ function createRow(word, index) {
   });
   const chinese = document.createElement("span");
   chinese.className = "chinese";
-  chinese.textContent = word.chinese;
+  chinese.textContent = word.chinese || (isUnknownWordId(word.wordId) ? "暂无释义" : "");
   if (masked) chinese.setAttribute("aria-hidden", "true");
   const button = document.createElement("button");
   button.type = "button";
   button.className = "mark-button";
-  button.textContent = state.rule === "cycle" ? (locked ? "已完成 3/3" : `${masked ? "揭开" : "记录"} ${count}/3`) : `记录 ${count}/3`;
-  button.disabled = locked || bulkSaving || loadingList || state.input === "swipe";
-  if (state.input === "swipe" && !locked) button.textContent = state.rule === "cycle" && masked ? "← 左滑揭开" : "右滑遮挡 →";
-  button.addEventListener("click", () => changeWord(word.wordId, "click"));
+  button.textContent = rangeSelecting
+    ? (rangeStart === null || rangeEnd !== null ? "设为起点" : "设为终点")
+    : state.rule === "cycle" ? (locked ? "已完成 3/3" : `${masked ? "揭开" : "记录"} ${count}/3`) : `记录 ${count}/3`;
+  button.disabled = bulkSaving || loadingList || (!rangeSelecting && (locked || state.input === "swipe"));
+  if (!rangeSelecting && state.input === "swipe" && !locked) button.textContent = state.rule === "cycle" && masked ? "← 左滑揭开" : "右滑遮挡 →";
+  button.addEventListener("click", () => rangeSelecting ? selectRangeEndpoint(index) : changeWord(word.wordId, "click"));
   let start = null;
   content.addEventListener("pointerdown", (event) => {
-    if (state.input !== "swipe" || locked || bulkSaving || loadingList || !event.isPrimary || event.button !== 0) return;
+    if (rangeSelecting || state.input !== "swipe" || locked || bulkSaving || loadingList || !event.isPrimary || event.button !== 0) return;
     start = { x: event.clientX, y: event.clientY, id: event.pointerId };
   });
   content.addEventListener("pointermove", (event) => {
@@ -516,13 +601,77 @@ function renderVisibleRows(force = false) {
   }
 }
 
-async function selectList(listKey) {
+function isCurrentAccount() {
+  return state.username === (localStorage.getItem(CURRENT_USER_KEY)?.trim() || "");
+}
+
+function applyUnknownSnapshot(snapshot) {
+  state.unknownWords = snapshot.words;
+  state.unknownWordMap = snapshot.wordMap;
+  state.unknownError = snapshot.error;
+  let list = state.lists.find((item) => item.key === UNKNOWN_LIST_KEY);
+  if (!list) {
+    list = { key: UNKNOWN_LIST_KEY, virtualUnknown: true };
+    state.lists.push(list);
+  }
+  list.name = "陌生词库（" + snapshot.words.length + "词）";
+  list.wordIds = snapshot.words.map((word) => word.wordId);
+  let option = [...listSelect.options].find((item) => item.value === UNKNOWN_LIST_KEY);
+  if (!option) {
+    option = document.createElement("option");
+    option.value = UNKNOWN_LIST_KEY;
+    listSelect.append(option);
+  }
+  option.textContent = list.name;
+}
+
+let unknownRefreshTask = null;
+let unknownRefreshPending = false;
+let unknownRefreshVersion = 0;
+let initialized = false;
+function requestUnknownRefresh() {
+  if (!isCurrentAccount()) return Promise.resolve();
+  unknownRefreshPending = true;
+  ++unknownRefreshVersion;
+  if (!initialized) return Promise.resolve();
+  if (unknownRefreshTask || loadingList) return unknownRefreshTask || Promise.resolve();
+  unknownRefreshTask = (async () => {
+    while (unknownRefreshPending && isCurrentAccount()) {
+      unknownRefreshPending = false;
+      const refreshVersion = unknownRefreshVersion;
+      await window.__wuliaoFlushVocabulary();
+      const snapshot = await readUnknownWordList(state.username);
+      await window.__wuliaoFlushVocabulary();
+      if (!isCurrentAccount()) return;
+      if (loadingList) { unknownRefreshPending = true; break; }
+      if (refreshVersion !== unknownRefreshVersion) continue;
+      const changed = JSON.stringify(state.unknownWords) !== JSON.stringify(snapshot.words)
+        || state.unknownError !== snapshot.error;
+      applyUnknownSnapshot(snapshot);
+      if (changed && state.currentListKey === UNKNOWN_LIST_KEY) {
+        await selectList(UNKNOWN_LIST_KEY, { refreshUnknown: false });
+      }
+    }
+  })().catch(() => showMessage("保存或读取失败，请重试后刷新陌生词库"))
+    .finally(() => {
+      unknownRefreshTask = null;
+      if (unknownRefreshPending && !loadingList && isCurrentAccount()) queueMicrotask(requestUnknownRefresh);
+    });
+  return unknownRefreshTask;
+}
+
+async function selectList(listKey, { refreshUnknown = true } = {}) {
+  if (!isCurrentAccount()) return;
   if (saving || loadingList) return;
   const version = ++listLoadVersion;
   const selected = state.lists.find((list) => list.key === listKey);
   if (!selected) return;
 
   saveProgress();
+  window.cancelAnimationFrame(saveScrollFrame);
+  const savedPosition = readProgress();
+  positionReady = false;
+  if (rangeSelecting) cancelRange();
   undoStack.length = 0;
   loadingList = true;
   state.words = [];
@@ -531,13 +680,17 @@ async function selectList(listKey) {
   spacer.style.height = "0";
   refreshModes();
   state.currentListKey = listKey;
-  learnLink.href = `/vocabulary/index.html#/learning?from=memorize&list=${encodeURIComponent(listKey)}`;
   listSelect.disabled = true;
   clearButton.disabled = true;
   listSummary.textContent = "正在加载单词…";
   maskSummary.textContent = "";
 
   try {
+    if (selected.virtualUnknown && refreshUnknown) {
+      const snapshot = await readUnknownWordList(state.username);
+      if (version !== listLoadVersion || !isCurrentAccount()) return;
+      applyUnknownSnapshot(snapshot);
+    }
     const wordIds = selected.virtualOriginal
       ? await getOriginalWordIds()
       : selected.wordIds;
@@ -545,15 +698,27 @@ async function selectList(listKey) {
       loadWords(wordIds),
       readMemoryRecords(listKey),
     ]);
-    if (version !== listLoadVersion) return;
+    if (version !== listLoadVersion || !isCurrentAccount()) return;
     state.words = words;
     state.records = records;
     spacer.style.height = `${state.words.length * ROW_HEIGHT}px`;
+    if (state.words.length && !viewport.clientHeight) {
+      await new Promise((resolve) => {
+        const observer = new ResizeObserver(() => {
+          if (viewport.clientHeight) { observer.disconnect(); resolve(); }
+        });
+        observer.observe(viewport);
+      });
+    }
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    if (version !== listLoadVersion || !isCurrentAccount()) return;
     const maxScrollTop = Math.max(0, state.words.length * ROW_HEIGHT - viewport.clientHeight);
-    viewport.scrollTop = Math.min(savedScrollTop(listKey), maxScrollTop);
+    viewport.scrollTop = Math.min(savedScrollTop(savedPosition, listKey, state.words), maxScrollTop);
     renderVisibleRows(true);
+    positionReady = true;
     updateSummary();
     await refreshTodaySummary();
+    if (version !== listLoadVersion || !isCurrentAccount()) return;
     saveProgress();
     history.replaceState(null, "", `/vocabulary/memorize.html?list=${encodeURIComponent(listKey)}`);
   } catch (error) {
@@ -568,6 +733,7 @@ async function selectList(listKey) {
     loadingList = false;
     refreshModes();
     renderVisibleRows(true);
+    if (unknownRefreshPending && !unknownRefreshTask) requestUnknownRefresh();
   }
 }
 
@@ -584,6 +750,8 @@ async function initialize() {
   accountLabel.textContent = state.username;
   await loadAssetMap();
   const [userLists, importedLists] = await Promise.all([readWordLists(), readImportedLists()]);
+  const unknownSnapshot = await readUnknownWordList(state.username);
+  if (!isCurrentAccount()) return;
   const mirroredImportIds = new Set(
     userLists.map((list) => list.sourceImportId).filter(Boolean)
   );
@@ -615,6 +783,7 @@ async function initialize() {
       return option;
     })
   );
+  applyUnknownSnapshot(unknownSnapshot);
 
   const requestedKey = new URLSearchParams(location.search).get("list");
   const savedListKey = readProgress().currentListKey;
@@ -625,10 +794,13 @@ async function initialize() {
       : state.lists[0].key;
   listSelect.value = initialKey;
   await selectList(initialKey);
+  initialized = true;
+  if (unknownRefreshPending) requestUnknownRefresh();
 }
 
 viewport.addEventListener("scroll", () => {
   renderVisibleRows();
+  if (!positionReady) return;
   window.cancelAnimationFrame(saveScrollFrame);
   saveScrollFrame = window.requestAnimationFrame(saveProgress);
 }, { passive: true });
@@ -636,13 +808,38 @@ window.addEventListener("resize", renderVisibleRows);
 window.addEventListener("pagehide", saveProgress);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") saveProgress();
-  else if (!saving && !loadingList) refreshTodaySummary();
+  else {
+    requestUnknownRefresh();
+    if (!saving && !loadingList) refreshTodaySummary();
+  }
 });
-window.addEventListener("storage", () => {
-  if (!saving && !loadingList) selectList(state.currentListKey);
+window.addEventListener("focus", requestUnknownRefresh);
+window.addEventListener("pageshow", requestUnknownRefresh);
+window.addEventListener("wuliao:unknown-words-refresh", (event) => {
+  if (event.detail?.username === state.username) requestUnknownRefresh();
+});
+window.addEventListener("storage", (event) => {
+  if (event.key !== CURRENT_USER_KEY || isCurrentAccount()) return;
+  ++listLoadVersion;
+  ++unknownRefreshVersion;
+  positionReady = false;
+  unknownRefreshPending = false;
+  state.unknownWords = [];
+  state.unknownWordMap.clear();
+  state.unknownError = "";
+  state.words = [];
+  rowsLayer.replaceChildren();
+  listSelect.disabled = true;
+  window.__wuliaoFlushVocabulary().then(() => location.reload())
+    .catch(() => showMessage("保存失败，请重试后切换账号"));
 });
 listSelect.addEventListener("change", () => selectList(listSelect.value));
 async function resetProgress(entries, remember = false) {
+  if (!isCurrentAccount()) return;
+  if (state.currentListKey === UNKNOWN_LIST_KEY) {
+    const visibleIds = new Set(state.words.map((word) => word.wordId));
+    entries = entries.filter((entry) => visibleIds.has(entry.wordId));
+  }
   if (saving || loadingList || !entries.length) return;
   saving = true; bulkSaving = true;
   refreshModes();

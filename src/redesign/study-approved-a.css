@@ -34,25 +34,24 @@
 }
 .reader-page .annotation-toolbar,
 .cloze-reader-page .annotation-toolbar,
-.exam-session .annotation-toolbar,
 .writing-workspace .annotation-toolbar {
   background: var(--study-a-paper);
   border-color: var(--study-a-border);
   color: var(--ds-ink);
   box-shadow: none;
 }
-:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .annotation-toolbar > button,
-:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .input-mode-picker button,
-:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .tool-mode-picker button {
+:is(.reader-page,.cloze-reader-page,.writing-workspace) .annotation-toolbar > button,
+:is(.reader-page,.cloze-reader-page,.writing-workspace) .input-mode-picker button,
+:is(.reader-page,.cloze-reader-page,.writing-workspace) .tool-mode-picker button {
   border-color: var(--study-a-border);
   border-radius: 8px;
   color: var(--ds-ink-soft);
   background: transparent;
   box-shadow: none;
 }
-:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .annotation-toolbar > button.active,
-:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .input-mode-picker button.active,
-:is(.reader-page,.cloze-reader-page,.exam-session,.writing-workspace) .tool-mode-picker button.active {
+:is(.reader-page,.cloze-reader-page,.writing-workspace) .annotation-toolbar > button.active,
+:is(.reader-page,.cloze-reader-page,.writing-workspace) .input-mode-picker button.active,
+:is(.reader-page,.cloze-reader-page,.writing-workspace) .tool-mode-picker button.active {
   color: white;
   background: #176f79;
   border-color: #176f79;

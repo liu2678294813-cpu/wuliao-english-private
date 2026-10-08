@@ -28,7 +28,7 @@ test("collapsed AppShell keeps the shared navigation as a clickable icon rail", 
     onOpenSettings: () => {},
   }, React.createElement("header", { className: "home-greeting" }, React.createElement("button", null, "返回")))));
   const expandedLabels = [...document.querySelectorAll(".ds-nav > button > span")].map((node) => node.textContent);
-  assert.deepEqual(expandedLabels, ["首页", "精读", "完形", "模拟", "写作", "词库", "筛查", "背诵", "复习"]);
+  assert.deepEqual(expandedLabels, ["首页", "精读", "完形", "长难句", "写作", "词库", "筛查", "背诵", "复习"]);
   await act(async () => document.querySelector(".ds-brand").dispatchEvent(new MouseEvent("click", { bubbles: true })));
   assert.ok(document.querySelector(".ds-shell").classList.contains("ds-shell-collapsed"));
   assert.ok(document.querySelector(".ds-rail"), "the rail stays mounted while collapsed");
@@ -41,6 +41,12 @@ test("collapsed AppShell keeps the shared navigation as a clickable icon rail", 
   await act(async () => document.querySelector(".ds-brand").dispatchEvent(new MouseEvent("click", { bubbles: true })));
   assert.ok(!document.querySelector(".ds-shell").classList.contains("ds-shell-collapsed"));
   assert.equal(document.querySelector(".ds-brand").getAttribute("aria-label"), "收起侧栏");
+  await act(async () => root.render(React.createElement(AppShell, {
+    activeView: "home", username: "alice", longSentenceTrainingEnabled: false,
+    onNavigate: (...args) => navigations.push(args), onOpenAiApi() {}, onOpenSettings() {},
+  }, React.createElement("p", null, "content"))));
+  assert.equal(document.querySelector('.ds-nav button[aria-label="长难句"]'), null);
+  assert.equal(document.querySelectorAll(".ds-nav > button").length, expandedLabels.length - 1);
   await act(async () => root.unmount());
   await vite.close();
 });
@@ -48,7 +54,7 @@ test("collapsed AppShell keeps the shared navigation as a clickable icon rail", 
 test("collapsed rail CSS removes labels without shrinking touch targets", async () => {
   const shell = await readFile(new URL("../src/ui/AppShell.jsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../src/redesign/app-shell.css", import.meta.url), "utf8");
-  assert.match(shell, /PRIMARY_NAV\.map/);
+  assert.match(shell, /visibleNav\.map/);
   assert.match(shell, /aria-label=\{child\.label\}/);
   assert.match(shell, /aria-label=\{item\.label\}/);
   assert.doesNotMatch(shell, /ds-sidebar-restore/);

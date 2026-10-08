@@ -63,14 +63,14 @@ test("真实 sentenceKey 格式：occurrenceId 反查恒命中（AI 释义句子
   assert.ok(!realKey.startsWith("cloze:cloze:"), "sentenceKey 本身只含单层 cloze: 前缀");
 });
 
-test("normalize / toggle 语义共享：两宿主都消费 storage.toggleUnknownWord 与共享模块", () => {
+test("normalization 兼容：精读语境 toggle、完形保留 toggle，同一 store", () => {
   const deepReader = read("src/CustomDeepReader.jsx");
   const clozeReader = read("src/ClozeReader.jsx");
   // 两个宿主都 import 同一共享 interaction 模块
   assert.match(deepReader, /from "\.\/unknownWordInteraction"/);
   assert.match(clozeReader, /from "\.\/unknownWordInteraction"/);
   // 两个宿主都直接调用 storage.toggleUnknownWord（同一 unknown-words store）
-  assert.match(deepReader, /toggleUnknownWord\(\{/);
+  assert.match(deepReader, /toggleUnknownWordContext\(\{/);
   assert.match(clozeReader, /toggleUnknownWord\(buildClozeUnknownEntry/);
   // normalize 同一实现
   assert.equal(normalizeUnknownWord("  It’s "), "it's");
@@ -103,9 +103,10 @@ test("释义链同构：离线 lookupUnknownWordMeaning → AI lookupWordMeaning
   assert.match(clozeReader, /lookupWordMeaningWithAi/);
   assert.match(clozeReader, /updateUnknownWordMeaning/);
   const deepReader = read("src/CustomDeepReader.jsx");
-  assert.match(deepReader, /lookupUnknownWordMeaning\(token\.word\)/);
-  assert.match(deepReader, /lookupWordMeaningWithAi/);
-  assert.match(deepReader, /updateUnknownWordMeaning/);
+  assert.match(deepReader, /resolveUnknownContextMeaning/);
+  const contextual = read("src/unknownWordContext.js");
+  assert.match(contextual, /lookupWordMeaningWithAi/);
+  assert.match(contextual, /updateUnknownWordContextMeaning/);
 });
 
 test("selection 钩子共享：collectUnknownTokenInto 收集 + beforeInk* abort 语义", () => {

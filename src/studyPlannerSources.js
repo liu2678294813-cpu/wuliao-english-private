@@ -28,7 +28,6 @@ import {
 } from "./clozeReview";
 import {
   TASK_TYPE_CLOZE_REVIEW,
-  TASK_TYPE_EXAM_FOLLOWUP,
   TASK_TYPE_CONTINUE_READING,
   TASK_TYPE_CONTINUE_WRITING,
   TASK_TYPE_BLOCKED_READING,
@@ -46,37 +45,9 @@ import {
   estimateTaskDuration,
   planStudyDay,
 } from "./studyPlanner";
-import { listUserItems } from "./userData";
 
-function buildExamFollowupCandidates() {
-  const records = listUserItems("wuliao:exam-handoff:v1:");
-  return records.map(({ value }) => {
-    try { return JSON.parse(value); } catch { return null; }
-  }).filter((record) => record && (record.status === "selected" || record.status === "started"))
-    .sort((a, b) => String(a.targetId).localeCompare(String(b.targetId)))
-    .slice(0, 5)
-    .map((record) => {
-      const started = record.status === "started";
-      const candidate = {
-        id: `exam-followup:${record.examResultId}:${record.targetId}`,
-        type: TASK_TYPE_EXAM_FOLLOWUP,
-        source: "examHandoff",
-        title: record.targetId.startsWith("cloze:") ? "整卷模拟：完形回看" : "整卷模拟：阅读回看",
-        subtitle: started ? "已开始的考试后续学习" : "来自整卷模拟的自选后续学习",
-        mandatory: false,
-        blocked: false,
-        reasonCodes: [started ? "exam-followup.started" : "exam-followup.selected"],
-        reasonText: started ? "继续完成已开始的考试后续学习" : "由你在成绩页主动加入",
-        statusLabel: started ? "进行中" : "待开始",
-        action: { type: "exam-followup", examResultId: record.examResultId, targetId: record.targetId },
-        metadata: record,
-        priorityTier: started ? TIER_CONTINUE_READING : TIER_LEARNING_REVIEW,
-      };
-      candidate.estimatedMinutes = estimateTaskDuration(candidate);
-      return candidate;
-    });
-}
 import { loadPlanState } from "./studyPlannerStorage";
+import { isUnknownWordId, readUnknownWordList, filterResolvableUnknownRecords } from "../public/vocabulary/unknown-word-list.js";
 
 export const VOCABULARY_MEMORY_DB_NAME = "KaoyanVocabMemorizeDB";
 export const VOCABULARY_MEMORY_RECORD_STORE = "records";
@@ -513,12 +484,17 @@ export async function readVocabularyTodayState({
   date = localDateKey(),
   openDb = defaultOpenVocabularyDb,
   readStorage = defaultReadStorage,
+  readUnknown = readUnknownWordList,
 } = {}) {
   if (!username) return { available: false, reason: "no-account" };
   let database = null;
   try {
     database = await openDb();
-    const records = await readVocabularyRecords(database, username);
+    let records = await readVocabularyRecords(database, username);
+    if (records.some((record) => isUnknownWordId(record.wordId))) {
+      const snapshot = await readUnknown(username);
+      records = filterResolvableUnknownRecords(records, snapshot.words);
+    }
     const todayWordIds = new Set();
     for (const record of records) {
       if (recordDates(record).includes(String(date))) {
@@ -589,7 +565,6 @@ export async function collectStudyCandidates({
   if (learning) candidates.push(learning);
   const vocabulary = buildVocabularyCandidate(vocabState, today);
   if (vocabulary) candidates.push(vocabulary);
-  candidates.push(...buildExamFollowupCandidates());
   candidates.push(buildNewReadingCandidate());
   return { candidates, vocabState, scan: resolvedScan };
 }

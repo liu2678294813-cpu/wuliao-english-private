@@ -68,6 +68,9 @@ const {
   reviewTaskStatus,
   reviewCheckUnlocked,
   overdueDays,
+  markOriginalSentenceLearned,
+  reconcileOriginalSentenceCompletions,
+  listLearnedSourceEntries,
   TASK_TYPE_NEXT_DAY,
   TASK_TYPE_SENTENCE_RECHECK,
 } = await import("../src/readingReview.js");
@@ -78,6 +81,8 @@ const {
   setReviewStatus,
   listNeedsReviewSentenceKeys,
   sentenceKeyFor,
+  saveTranslationProgress,
+  loadTranslationProgress,
 } = await import("../src/translationProgress.js");
 const {
   emptyEvidenceStore,
@@ -611,4 +616,228 @@ test("taskKey 稳定且包含资源/文章/日期", () => {
     sourceDate: "2026-08-07",
   });
   assert.equal(key, key2);
+});
+
+function prepareLongSentenceOriginalReview() {
+  fresh();
+  const sentenceText = "Although the results were unexpected, the team revised its model.";
+  const key = sentenceKeyFor({ paragraphNumber: 1, sentenceIndex: 0, sentenceText });
+  let progress = emptyProgress("r1", "p1");
+  progress = markTranslated(progress, key, 10);
+  progress = markCorrected(progress, key, { translationText: "尽管结果出乎意料，团队仍修改了模型。", now: 20 });
+  progress = setReviewStatus(progress, key, "needs_review", 30);
+  assert.equal(saveTranslationProgress(progress), true);
+  const created = createNextDayReviewTask({ resourceId: "r1", passageId: "p1", now: NOW_DAY });
+  startReviewSession(created.task.taskKey, NEXT_DAY);
+  return { taskKey: created.task.taskKey, item: { key, sentenceText, paragraphNumber: 1, sentenceIndex: 0 } };
+}
+
+test("长难句已学习仅来自原句复习掌握，旧 mastered 不被推断", () => {
+  const { taskKey, item } = prepareLongSentenceOriginalReview();
+  assert.equal(listLearnedSourceEntries().length, 0);
+  const result = markOriginalSentenceLearned(taskKey, item, NEXT_DAY);
+  assert.equal(result.ok, true);
+  assert.equal(loadTranslationProgress("r1", "p1").sentences[item.key].reviewStatus, "mastered");
+  assert.equal(listLearnedSourceEntries().length, 1);
+  assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY).alreadyDone, true);
+  const reset = setReviewStatus(loadTranslationProgress("r1", "p1"), item.key, "needs_review", NEXT_DAY + 1);
+  saveTranslationProgress(reset);
+  assert.equal(listLearnedSourceEntries().length, 0);
+});
+
+test("原句保存失败保留复习凭据但不误入已学习，重试幂等完成", () => {
+  const { taskKey, item } = prepareLongSentenceOriginalReview();
+  const storage = globalThis.localStorage;
+  const originalSet = storage.setItem;
+  storage.setItem = function(key, value) {
+    if (String(key).includes("wuliao:translation-progress:r1:p1")) throw new Error("quota");
+    return originalSet.call(this, key, value);
+  };
+  try {
+    const failed = markOriginalSentenceLearned(taskKey, item, NEXT_DAY);
+    assert.equal(failed.ok, false);
+    assert.equal(loadTranslationProgress("r1", "p1").sentences[item.key].reviewStatus, "needs_review");
+    assert.equal(loadReviewTask(taskKey).session.sentenceResults[item.key], undefined);
+    assert.equal(listLearnedSourceEntries().length, 0);
+  } finally { storage.setItem = originalSet; }
+  assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY + 100).ok, true);
+  assert.equal(listLearnedSourceEntries().length, 1);
+});
+
+test("原句已持久化而复习结果失败时只补任务记录", () => {
+  const { taskKey, item } = prepareLongSentenceOriginalReview();
+  const storage = globalThis.localStorage;
+  const originalSet = storage.setItem;
+  let taskWrites = 0;
+  storage.setItem = function(key, value) {
+    if (String(key).includes("wuliao:review-task:")) {
+      taskWrites += 1;
+      if (taskWrites === 2) throw new Error("quota");
+    }
+    return originalSet.call(this, key, value);
+  };
+  try {
+    const partial = markOriginalSentenceLearned(taskKey, item, NEXT_DAY);
+    assert.equal(partial.ok, false);
+    assert.equal(partial.sourceSaved, true);
+    assert.equal(listLearnedSourceEntries().length, 0);
+  } finally { storage.setItem = originalSet; }
+  assert.equal(reconcileOriginalSentenceCompletions(taskKey).ok, true);
+  assert.equal(listLearnedSourceEntries().length, 1);
+});
+
+test("凭据第一步保存失败时不改变原句、判断和已学习；重试重新建立完整凭据", () => {
+  const { taskKey, item } = prepareLongSentenceOriginalReview();
+  const originalSet = localStorage.setItem;
+  localStorage.setItem = function(key, value) {
+    if (String(key).includes("wuliao:review-task:")) throw new Error("intent-quota");
+    return originalSet.call(this, key, value);
+  };
+  try {
+    assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY).ok, false);
+    assert.equal(loadTranslationProgress("r1", "p1").sentences[item.key].reviewStatus, "needs_review");
+    assert.equal(loadReviewTask(taskKey).session.sentenceCompletions[item.key], undefined);
+    assert.equal(loadReviewTask(taskKey).session.sentenceResults[item.key], undefined);
+    assert.equal(listLearnedSourceEntries().length, 0);
+  } finally { localStorage.setItem = originalSet; }
+  assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY + 5).ok, true);
+  assert.equal(listLearnedSourceEntries()[0].learnedAt, NEXT_DAY + 5);
+});
+
+test("同一原句再次 needs_review 时旧 mastered 不生效，新复习生成新凭据", () => {
+  const { taskKey, item } = prepareLongSentenceOriginalReview();
+  assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY).ok, true);
+  saveTranslationProgress(setReviewStatus(loadTranslationProgress("r1", "p1"), item.key, "needs_review", NEXT_DAY + 10));
+  assert.equal(listLearnedSourceEntries().length, 0);
+  const restored = reconcileOriginalSentenceCompletions(taskKey);
+  assert.equal(restored.task.session.sentenceResults[item.key], undefined);
+  assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY + 20).ok, true);
+  const next = loadReviewTask(taskKey).session.sentenceCompletions[item.key];
+  assert.equal(next.before.reviewedAt, NEXT_DAY + 10);
+  assert.equal(next.learnedAt, NEXT_DAY + 20);
+  assert.equal(listLearnedSourceEntries()[0].learnedAt, NEXT_DAY + 20);
+});
+
+test("同日再次复查保留已经完成的任务，新 receipt 写入新任务", () => {
+  const { item } = prepareLongSentenceOriginalReview();
+  const first = ensureSentenceRecheckTask({ resourceId: "r1", passageId: "p1", sentenceKeys: [item.key], now: NEXT_DAY });
+  assert.equal(markOriginalSentenceLearned(first.task.taskKey, item, NEXT_DAY + 1).ok, true);
+  assert.equal(completeReviewSession(first.task.taskKey, {}, NEXT_DAY + 2).ok, true);
+  const originalTask = getUserItem(`wuliao:review-task:${first.task.taskKey}`);
+  saveTranslationProgress(setReviewStatus(loadTranslationProgress("r1", "p1"), item.key, "needs_review", NEXT_DAY + 3));
+  const second = ensureSentenceRecheckTask({ resourceId: "r1", passageId: "p1", sentenceKeys: [item.key], now: NEXT_DAY + 4 });
+  assert.notEqual(second.task.taskKey, first.task.taskKey);
+  assert.equal(getUserItem(`wuliao:review-task:${first.task.taskKey}`), originalTask);
+  assert.equal(markOriginalSentenceLearned(second.task.taskKey, item, NEXT_DAY + 5).ok, true);
+  assert.equal(listLearnedSourceEntries().length, 1);
+  assert.equal(listLearnedSourceEntries()[0].taskKey, second.task.taskKey);
+});
+
+test("同日仍困难创建后续任务不覆盖正在进行的复查", () => {
+  const { item } = prepareLongSentenceOriginalReview();
+  const first = ensureSentenceRecheckTask({ resourceId: "r1", passageId: "p1", sentenceKeys: [item.key], now: NEXT_DAY });
+  const originalTask = getUserItem(`wuliao:review-task:${first.task.taskKey}`);
+  const second = ensureSentenceRecheckTask({ resourceId: "r1", passageId: "p1", sentenceKeys: [item.key], now: NEXT_DAY, excludeTaskKey: first.task.taskKey });
+  assert.notEqual(second.task.taskKey, first.task.taskKey);
+  assert.equal(getUserItem(`wuliao:review-task:${first.task.taskKey}`), originalTask);
+});
+
+test("已学习查询使用同一指定账号的凭据和翻译状态，旧页面切账号后不能写入", () => {
+  const { taskKey, item } = prepareLongSentenceOriginalReview();
+  assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY).ok, true);
+  setCurrentUsername("bob");
+  assert.equal(listLearnedSourceEntries("alice").length, 1);
+  assert.equal(listLearnedSourceEntries("bob").length, 0);
+  const before = [...localStorage.map];
+  assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY + 1, "alice").accountChanged, true);
+  assert.equal(reconcileOriginalSentenceCompletions(taskKey, "alice").accountChanged, true);
+  assert.equal(updateReviewSession(taskKey, { sentenceResults: { [item.key]: "mastered" } }, NEXT_DAY, "alice").accountChanged, true);
+  assert.equal(completeReviewSession(taskKey, {}, NEXT_DAY, "alice").accountChanged, true);
+  assert.deepEqual([...localStorage.map], before);
+});
+
+test("凭据或原句写入期间账号改变会停止后续步骤，绝不写到新账号", () => {
+  for (const boundary of ["intent", "source"]) {
+    const { taskKey, item } = prepareLongSentenceOriginalReview();
+    const originalSet = localStorage.setItem;
+    let switched = false;
+    localStorage.setItem = function(key, value) {
+      originalSet.call(this, key, value);
+      const target = boundary === "intent" ? "wuliao:review-task:" : "wuliao:translation-progress:";
+      if (!switched && String(key).includes(target)) { switched = true; setCurrentUsername("bob"); }
+    };
+    try {
+      const failed = markOriginalSentenceLearned(taskKey, item, NEXT_DAY, "alice");
+      assert.equal(failed.accountChanged, true);
+      assert.equal(loadReviewTask(taskKey, "bob"), null);
+      assert.equal(listLearnedSourceEntries("bob").length, 0);
+      assert.equal(listLearnedSourceEntries("alice").length, 0);
+    } finally { localStorage.setItem = originalSet; }
+    setCurrentUsername("alice");
+    assert.equal(loadTranslationProgress("r1", "p1").sentences[item.key].reviewStatus, boundary === "intent" ? "needs_review" : "mastered");
+    assert.equal(markOriginalSentenceLearned(taskKey, item, NEXT_DAY + 1, "alice").ok, true);
+    assert.equal(listLearnedSourceEntries("alice").length, 1);
+  }
+});
+
+test("文本或位置不匹配的句子不能为另一原句生成完成证据", () => {
+  const { taskKey, item } = prepareLongSentenceOriginalReview();
+  assert.equal(markOriginalSentenceLearned(taskKey, { ...item, sentenceText: "Another sentence." }, NEXT_DAY).ok, false);
+  assert.equal(markOriginalSentenceLearned(taskKey, { ...item, sentenceIndex: 1 }, NEXT_DAY).ok, false);
+  assert.equal(loadTranslationProgress("r1", "p1").sentences[item.key].reviewStatus, "needs_review");
+  assert.equal(listLearnedSourceEntries().length, 0);
+});
+
+test("最终任务写失败后 ReviewSession 保留可重试原句，不能静默跳过", async () => {
+  const { taskKey, item } = prepareLongSentenceOriginalReview();
+  updateReviewSession(taskKey, { currentStep: "difficult_sentences" }, NEXT_DAY);
+  const { JSDOM } = await import("jsdom");
+  const { fileURLToPath } = await import("node:url");
+  const { createViteModuleRunner } = await import("./vite-module-runner.mjs");
+  const dom = new JSDOM("<!doctype html><div id='root'></div>", { url: "https://localhost", pretendToBeVisual: true });
+  const previous = new Map(["window", "document", "navigator", "HTMLElement", "Node", "IS_REACT_ACT_ENVIRONMENT"].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  for (const key of ["window", "document", "navigator", "HTMLElement", "Node"]) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: key === "window" ? dom.window : dom.window[key] });
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const { default: React, act } = await import("react");
+  const { createRoot } = await import("react-dom/client");
+  const runner = await createViteModuleRunner(fileURLToPath(new URL("..", import.meta.url)));
+  const { default: ReviewSession } = await runner.import("/src/ReviewSession.jsx");
+  const root = createRoot(document.getElementById("root"));
+  const originalSet = localStorage.setItem;
+  let currentTask = loadReviewTask(taskKey);
+  let currentProgress = loadTranslationProgress("r1", "p1");
+  const render = () => root.render(React.createElement(ReviewSession, {
+    task: currentTask, resource: { id: "r1", title: "原句复习" }, passage: passageWithSentences([[item.sentenceText]]), translationProgress: currentProgress,
+    onTaskChanged(value) { currentTask = value; render(); },
+    onSentenceMastered(_key, _result, progress) { currentProgress = progress; render(); },
+  }));
+  try {
+    await act(async () => render());
+    let writes = 0;
+    localStorage.setItem = function(key, value) {
+      if (String(key).includes("wuliao:review-task:") && ++writes === 2) throw new Error("final-quota");
+      return originalSet.call(this, key, value);
+    };
+    await act(async () => document.querySelector(".review-judge-button.mastered").click());
+    assert.equal(currentProgress.sentences[item.key].reviewStatus, "mastered");
+    assert.ok(currentTask.session.sentenceCompletions[item.key], "persisted intent remains in mounted task");
+    assert.ok(document.querySelector(".review-judge-button.mastered"), "failed result stays visible for retry");
+    assert.equal(document.querySelector(".review-judge-button.mastered").textContent, "重试保存复习记录");
+    assert.equal(document.querySelector(".review-judge-button.difficult"), null, "a durable mastery decision only awaits task confirmation");
+    assert.match(document.body.textContent, /复习记录待补全/);
+    assert.equal(listLearnedSourceEntries().length, 0);
+    localStorage.setItem = originalSet;
+    await act(async () => document.querySelector(".review-judge-button.mastered").click());
+    assert.equal(listLearnedSourceEntries().length, 1);
+    assert.equal(currentTask.session.sentenceResults[item.key], "mastered");
+  } finally {
+    localStorage.setItem = originalSet;
+    await act(async () => root.unmount());
+    await runner.close();
+    dom.window.close();
+    for (const [key, descriptor] of previous) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
 });

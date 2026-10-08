@@ -89,6 +89,27 @@ const {
 const TODAY = "2026-08-09";
 const RECORDS_KEY = "wuliao:ai:learning-records";
 
+test("旧 Planner 模拟任务 ID 静默保留但无可见任务，Planner 不读取 exam payload", async () => {
+  fresh();
+  delete globalThis.indexedDB;
+  setUserItem("wuliao:exam-result:v1:legacy", JSON.stringify({ status: "submitted" }));
+  setUserItem("wuliao:exam-session:v1:legacy", JSON.stringify({ status: "in_progress" }));
+  const state = loadPlanState(TODAY);
+  savePlanState({ ...state, deferredTaskIds: ["exam-followup:legacy"], budgetMinutes: 30, budgetConfirmed: true });
+  const reads = [], storage = globalThis.localStorage, original = storage.getItem;
+  storage.getItem = function (key) {
+    if (String(key).includes("wuliao:exam-")) reads.push(key);
+    return original.call(this, key);
+  };
+  try {
+    const { plan, state: loaded } = await buildPlanState({ today: TODAY, resources: [officialResource()], customPdfs: [] });
+    assert.ok(loaded.deferredTaskIds.includes("exam-followup:legacy"));
+    assert.ok(![...plan.planned, ...plan.deferred, ...plan.completed, ...plan.overflow]
+      .some((task) => String(task.id).includes("exam") || task.type === "exam-followup"));
+    assert.deepEqual(reads, []);
+  } finally { storage.getItem = original; }
+});
+
 function timestampFor(dateKey) {
   return new Date(`${dateKey}T12:00:00`).getTime();
 }

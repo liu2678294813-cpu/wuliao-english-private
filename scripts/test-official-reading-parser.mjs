@@ -69,7 +69,9 @@ function wait(milliseconds = 0) {
 
 test("official reader wires disabled OCR and preserves structural failure", async () => {
   const appSource = await readFile(resolve("src/App.jsx"), "utf8");
-  assert.match(appSource, /ocrPolicy:\s*["']disabled["']/);
+  const analysisSource = await readFile(resolve("src/officialAnalysis.js"), "utf8");
+  assert.match(appSource, /loadOfficialAnalysis\(resource/);
+  assert.match(analysisSource, /ocrPolicy:\s*["']disabled["']/);
 
   const lowQuality = pageQuality([{ pageNumber: 1, text: "" }]);
   assert.deepEqual(ocrPageNumbers(lowQuality, "disabled"), []);

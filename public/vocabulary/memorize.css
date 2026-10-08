@@ -599,3 +599,19 @@ select {
 .memory-mode-switches button[aria-pressed="true"] { background: #126e70; color: white; }
 .word-viewport[data-input="swipe"] .word-content { touch-action: pan-y; user-select: none; }
 @media (max-width: 1000px) { .controls { flex-wrap: wrap; } .memory-controls-right { width: 100%; } .actions { flex-wrap: wrap; } }
+
+body:has(#viewport) .page { grid-template-rows: auto auto auto minmax(0, 1fr); }
+html.vocab-embedded body:has(#viewport) .page { height: 100%; }
+.memory-list-controls { display: grid; flex: 1; min-width: 0; max-width: 560px; gap: 7px; }
+.memory-list-controls h2 { margin: 0; color: #183e4a; font-size: 20px; line-height: 1.2; }
+.memory-list-controls label { max-width: none; }
+.range-panel { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: #f5faf8; color: #23494e; font-size: 13px; }
+.range-panel.hidden { display: none; }
+.range-actions { display: flex; gap: 8px; flex: none; }
+.range-actions button { min-height: 36px; padding: 0 11px; background: #126e70; color: white; }
+.range-actions #rangeCancel { background: #e8f0ff; color: #1d4ed8; }
+.word-row.range-selected { box-shadow: inset 3px 0 #126e70; background: #edf8f5; }
+@media (max-width: 640px) {
+  .memory-list-controls { max-width: none; width: 100%; }
+  .range-panel { align-items: flex-start; flex-direction: column; }
+}

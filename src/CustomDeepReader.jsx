@@ -75,20 +75,24 @@ import {
   markReadingStarted,
   setReadingCompleted as persistReadingCompleted,
 } from "./studyRank";
-import { deleteUnknownWord, listUnknownWords, toggleUnknownWord, updateUnknownWordMeaning } from "./storage";
-import { lookupUnknownWordMeaning, normalizeUnknownWord } from "./unknownWords";
+import { toggleUnknownWordContext, deleteUnknownWord, listUnknownWords } from "./storage";
+import { resolveUnknownContextMeaning } from "./unknownWordContext.js";
 import {
   ACTIVE_UNKNOWN_HIGHLIGHT,
   SAVED_UNKNOWN_HIGHLIGHT,
   collectUnknownTokenInto,
   createUnknownSelectionHooks,
+  createDirectUnknownTap,
+  expandUnknownSelectionSpans,
   highlightSavedUnknownWords,
+  shouldHandleDirectUnknownTap,
+  unknownPointerRegion,
+  unknownWordFromPoint,
 } from "./unknownWordInteraction";
 import { getCurrentUsername, getUserItem, removeUserItem, setUserItem } from "./userData";
 import { backgroundSave, saveBeforeNavigation, scheduleInkSave, cancelScheduledInkSave } from "./saveCoordinator.js";
 import { createInkSnapshotSerializer } from "./ink/inkSnapshot.js";
 import { setUserItem as writeOwnedUserItem } from "./userData.js";
-import { getAiApiKey, lookupWordMeaningWithAi } from "./ai";
 import { AppEvent } from "./events/eventTypes";
 import { emitAppEvent } from "./events/appEvents";
 import {
@@ -102,6 +106,7 @@ import {
   finishTimedReading,
   flowStorageKey,
   getReadingFlow,
+  hasReachedStage,
   isWorkflowCompleted,
   pauseTimedReading,
   resumeTimedReading,
@@ -149,6 +154,7 @@ import {
   quizCompletion,
   removeTextRange,
   resolveEntry,
+  resolveSentenceRef,
   saveEvidenceStore,
   sentenceRefLabel,
   setEvidence,
@@ -988,12 +994,13 @@ function PassageWorkbook({
   evidenceStore,
   evidenceEditor,
   onCaptureEvidenceSelection,
-  onUpdateEvidenceDraft,
+  onToggleSentenceEvidence,
   onOpenEvidence,
   onViewEvidence,
   onJumpEvidence,
   onFocusNextIncomplete,
   reviewReadOnly = false,
+  includeUnreachedRedo = false,
   onScheduleReview = null,
   onOpenSummary = null,
 }) {
@@ -1090,7 +1097,7 @@ function PassageWorkbook({
                 </div>
               )}
               <div
-                className={`clean-article ${evidenceEditor ? "evidence-select-mode" : ""}`}
+                className={`clean-article ${evidenceEditor?.draft?.mode === "sentences" ? "evidence-sentence-mode" : evidenceEditor?.draft?.mode === "text" ? "evidence-select-mode" : ""}`}
                 onPointerUp={(event) => {
                   if (evidenceEditor?.draft?.mode !== "text") return;
                   onCaptureEvidenceSelection?.(window.getSelection(), event.currentTarget);
@@ -1104,13 +1111,22 @@ function PassageWorkbook({
                         <span
                           key={`${paragraph.number}-clean-s${sentenceIndex}`}
                           data-sentence-scope={`clean:p${paragraph.number}:s${sentenceIndex + 1}`}
-                          onClick={() => {
-                            if (evidenceEditor?.draft?.mode !== "sentences") return;
-                            const ref = buildSentenceRef({ paragraphNumber: paragraph.number, sentenceIndex, sentenceText: sentence });
-                            const selected = evidenceEditor.draft.references.some((item) => item.sentenceKey === ref.sentenceKey);
-                            const result = selected ? { draft: removeSentenceRef(evidenceEditor.draft, ref.sentenceKey) } : addSentenceRef(evidenceEditor.draft, ref);
-                            if (result.rejected) return;
-                            onUpdateEvidenceDraft?.(result.draft);
+                          className={evidenceEditor?.draft?.mode === "sentences" && evidenceEditor.draft.references.some((item) => {
+                            const resolved = resolveSentenceRef(item, passage);
+                            return resolved.status === "resolved" && resolved.ref.paragraphNumber === paragraph.number && resolved.ref.sentenceIndex === sentenceIndex;
+                          }) ? "evidence-sentence-selected" : undefined}
+                          role={evidenceEditor?.draft?.mode === "sentences" ? "button" : undefined}
+                          tabIndex={evidenceEditor?.draft?.mode === "sentences" ? 0 : undefined}
+                          aria-pressed={evidenceEditor?.draft?.mode === "sentences" ? evidenceEditor.draft.references.some((item) => {
+                            const resolved = resolveSentenceRef(item, passage);
+                            return resolved.status === "resolved" && resolved.ref.paragraphNumber === paragraph.number && resolved.ref.sentenceIndex === sentenceIndex;
+                          }) : undefined}
+                          aria-label={evidenceEditor?.draft?.mode === "sentences" ? `P${paragraph.number} · S${sentenceIndex + 1} ${sentence}` : undefined}
+                          onClick={() => onToggleSentenceEvidence?.(paragraph.number, sentenceIndex, sentence)}
+                          onKeyDown={(event) => {
+                            if (evidenceEditor?.draft?.mode !== "sentences" || !["Enter", " "].includes(event.key)) return;
+                            event.preventDefault();
+                            onToggleSentenceEvidence?.(paragraph.number, sentenceIndex, sentence);
                           }}
                           data-evidence-paragraph={paragraph.number}
                           data-evidence-sentence={sentenceIndex}
@@ -1298,7 +1314,7 @@ function PassageWorkbook({
         </div>
       </section>
 
-      <section className="deep-paper" id="deep-redo" data-flow-locked={stageLocked("deep-redo") ? "true" : undefined}>
+      {(includeUnreachedRedo || hasReachedStage(flow, "deep-redo")) && <section className="deep-paper" id="deep-redo" data-flow-locked={stageLocked("deep-redo") ? "true" : undefined}>
         <SectionHeading
           index="5"
           title="全文核对后：正式重做"
@@ -1379,7 +1395,7 @@ function PassageWorkbook({
             </>
           );
         })()}
-      </section>
+      </section>}
 
       <section className="deep-paper" id="deep-review" data-flow-locked={stageLocked("deep-review") ? "true" : undefined}>
         <SectionHeading index="6" title="全文压缩与第二天复读" description="不预设结构答案。请用自己的话压缩全文，第二天遮住笔译复读。" />
@@ -1660,8 +1676,9 @@ function SimplifiedExportDocument({
 
 const ReaderSidePanels = forwardRef(function ReaderSidePanels({
   questionAvailable, questionCount, questionDrawerProps, aiProps, activeInkRef, paperKey,
+  initialPanel = null,
 }, ref) {
-  const [activePanel, setActivePanel] = useState(null);
+  const [activePanel, setActivePanel] = useState(() => initialPanel === "ai" || (initialPanel === "questions" && questionAvailable) ? initialPanel : null);
   const layoutBridgeRef = useRef(null);
   const pendingFrameRef = useRef(0);
   const activePanelRef = useRef(activePanel);
@@ -1689,6 +1706,7 @@ const ReaderSidePanels = forwardRef(function ReaderSidePanels({
   }, [questionAvailable]);
   useImperativeHandle(ref, () => ({
     openQuestion() { if (questionAvailable) selectPanel("questions"); },
+    getPanel() { return activePanelRef.current; },
   }), [questionAvailable]);
 
   return (
@@ -1728,20 +1746,23 @@ export default function CustomDeepReader({
   summaryInitially = false,
   summaryTabInitially = "summary",
   onRequestReview = null,
+  onOpenLongSentence = null,
+  restoreContext = null,
 }) {
   const storageUsername = useRef(getCurrentUsername()).current;
   const setUserItem = (key, value) => writeOwnedUserItem(key, value, storageUsername);
   const androidApp = isAndroidApp();
   const analysis = resource.analysis;
-  const initialPosition = loadJson(positionKey(resource.id), {});
+  const restoredOrigin = restoreContext?.resourceId === resource.id ? restoreContext : null;
+  const initialPosition = restoredOrigin || loadJson(positionKey(resource.id), {});
   const [passageIndex, setPassageIndex] = useState(() => {
     const index = analysis.passages.findIndex((item) => item.id === initialPosition.passageId);
     return Math.max(0, index);
   });
   const [showSource, setShowSource] = useState(false);
-  const [drawerFocusQuestionId, setDrawerFocusQuestionId] = useState(null);
+  const [drawerFocusQuestionId, setDrawerFocusQuestionId] = useState(restoredOrigin?.questionId ?? null);
   const readerPanelsRef = useRef(null);
-  const [topAreaCollapsed, setTopAreaCollapsed] = useState(false);
+  const [topAreaCollapsed, setTopAreaCollapsed] = useState(Boolean(restoredOrigin?.topAreaCollapsed));
   const [hasClearableText, setHasClearableText] = useState(false);
   const clearableTextApiRef = useRef(null);
   const [activeStage, setActiveStage] = useState(() => initialPosition.anchorId || "deep-cover");
@@ -1792,13 +1813,13 @@ export default function CustomDeepReader({
   const [ocrTarget, setOcrTarget] = useState(null);
   const ocrGenerationRef = useRef(0);
   const ocrContextRef = useRef("");
+  const directUnknownTapRef = useRef(null);
   const [reviewTask, setReviewTask] = useState(null);
   const [reviewError, setReviewError] = useState("");
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryTab, setSummaryTab] = useState("summary");
   const [summaryRecords, setSummaryRecords] = useState([]);
   const [articleReviewTasks, setArticleReviewTasks] = useState([]);
-  const aiLookupChainRef = useRef(Promise.resolve());
   const unknownAiControllersRef = useRef(new Set());
   const mountedRef = useRef(true);
   const hintTimerRef = useRef(null);
@@ -1813,6 +1834,9 @@ export default function CustomDeepReader({
     setOcrTarget(null);
     setTranscriptionTarget(null);
     return () => {
+      directUnknownTapRef.current?.reset();
+      unknownSelectionRef.current = null;
+      globalThis.CSS?.highlights?.delete(ACTIVE_UNKNOWN_HIGHLIGHT);
       for (const controller of unknownAiControllersRef.current) controller.abort();
       unknownAiControllersRef.current.clear();
     };
@@ -2019,14 +2043,54 @@ export default function CustomDeepReader({
     ...createUnknownSelectionHooks({
       toolRef,
       fallbackToPenOnPenMiss: true,
-      isWritingArea: (event) => Boolean(contentRef.current?.contains(event.target)) && !event.target.closest?.("button,input,textarea:not([data-ink-only=true]),select,[contenteditable=true],[data-unknown-ignore]") && !evidenceEditorRef.current,
-      onRequestPenMode: () => { toolRef.current = "pen"; noteModeRef.current = true; setTool("pen"); setNoteMode(true); },
+      cancelOnInterrupted: true,
+      isWritingArea: (event) => !evidenceEditorRef.current && unknownPointerRegion(event, contentRef.current) === "writing",
+      onRequestPenMode: () => { toolRef.current = "pen"; setTool("pen"); },
       selectionRef: unknownSelectionRef,
       onCollect: collectUnknownToken,
       onCommit: commitUnknownSelection,
       onError: setHint,
     }),
   });
+  const directUnknownTap = useMemo(() => createDirectUnknownTap({
+    canHandle: (event) => shouldHandleDirectUnknownTap({
+      pointerType: event.pointerType, button: event.button, noteMode: noteModeRef.current,
+      activeInk: activeInkRef.current || unknownSelectionRef.current,
+      enabled: !reviewActive && !evidenceEditorRef.current && flowRef.current?.currentStage === "deep-translation",
+    }),
+    hitTest: (x, y) => {
+      const token = unknownWordFromPoint(x, y);
+      return token?.scope?.closest(".sentence-source") && contentRef.current?.contains(token.scope) ? token : null;
+    },
+    onCommit: commitUnknownSelection,
+    onError: (reason) => setHint(`陌生词保存失败：${reason?.message || reason}`),
+  }), [storageUsername, resource.id, passage.id, reviewActive]);
+  directUnknownTapRef.current = directUnknownTap;
+  useEffect(() => {
+    directUnknownTap.reset();
+    unknownSelectionRef.current = null;
+    globalThis.CSS?.highlights?.delete(ACTIVE_UNKNOWN_HIGHLIGHT);
+  }, [noteMode, tool, directUnknownTap]);
+  useEffect(() => {
+    const cancel = () => directUnknownTap.cancel();
+    const outsideUp = (event) => {
+      if (!contentRef.current?.contains(event.target)) directUnknownTap.finish(event);
+    };
+    const outsideDown = (event) => {
+      if (!contentRef.current?.contains(event.target)) directUnknownTap.reset();
+    };
+    window.addEventListener("scroll", cancel, true);
+    window.addEventListener("pointerdown", outsideDown, true);
+    window.addEventListener("pointerup", outsideUp);
+    window.addEventListener("pointercancel", outsideUp);
+    return () => {
+      directUnknownTap.reset();
+      window.removeEventListener("scroll", cancel, true);
+      window.removeEventListener("pointerdown", outsideDown, true);
+      window.removeEventListener("pointerup", outsideUp);
+      window.removeEventListener("pointercancel", outsideUp);
+    };
+  }, [directUnknownTap]);
   useEffect(() => { flowRef.current = flow; }, [flow]);
   useEffect(() => { inkStageIdRef.current = inkStageId; }, [inkStageId]);
   useEffect(() => {
@@ -2262,12 +2326,13 @@ export default function CustomDeepReader({
   }, [resource.id, resource.kind, passage.id]);
 
   useEffect(() => {
+    let active = true;
     const refresh = () => listUnknownWords().then((records) => {
-      setUnknownWords(records.filter((record) => record.resourceId === resource.id && record.passageId === passage.id));
+      if (active && getCurrentUsername() === storageUsername) setUnknownWords(records.filter((record) => record.resourceId === resource.id && record.passageId === passage.id));
     });
     refresh();
     window.addEventListener("wuliao:unknown-words-updated", refresh);
-    return () => window.removeEventListener("wuliao:unknown-words-updated", refresh);
+    return () => { active = false; window.removeEventListener("wuliao:unknown-words-updated", refresh); };
   }, [resource.id, passage.id]);
 
   useEffect(() => {
@@ -2416,7 +2481,7 @@ export default function CustomDeepReader({
   useEffect(() => {
     if (positionRestoredRef.current) return;
     if (reviewActive) return;
-    const saved = loadJson(positionKey(resource.id), null);
+    const saved = restoredOrigin || loadJson(positionKey(resource.id), null);
     if (!saved || saved.passageId !== passage.id) {
       positionRestoredRef.current = true;
       return;
@@ -2441,7 +2506,7 @@ export default function CustomDeepReader({
   useEffect(() => {
     if (!reviewActive || !activeReviewTaskKey) return;
     if (reviewPositionRestoredRef.current) return;
-    const saved = loadJson(reviewPositionKey(activeReviewTaskKey), null);
+    const saved = restoredOrigin || loadJson(reviewPositionKey(activeReviewTaskKey), null);
     if (!saved || saved.passageId !== passage.id) {
       reviewPositionRestoredRef.current = true;
       return;
@@ -2545,9 +2610,11 @@ export default function CustomDeepReader({
 
   function jumpTo(id) {
     return saveBeforeNavigation(() => {
-    persistFlow(enterReadingStage(flowRef.current, id));
+    const next = enterReadingStage(flowRef.current, id);
+    if (next === flowRef.current) return;
+    persistFlow(next);
     changeViewedStage(id, true);
-    stableScrollToElement(document.getElementById(id), { retries: 1 });
+    setPendingStageScrollTarget(id);
     }, storageUsername);
   }
   
@@ -3085,9 +3152,12 @@ export default function CustomDeepReader({
   }
 
   function handleCompleteStage(stageId, saved = false) {
-    if (stageId === "deep-translation") return jumpTo("deep-redo");
     if (!saved) return saveBeforeNavigation(() => handleCompleteStage(stageId, true), storageUsername);
     const current = flowRef.current;
+    if (stageId === "deep-translation" && current.currentStage !== stageId) {
+      showHint("请先按顺序进入逐段精读");
+      return;
+    }
     const now = Date.now();
     let prepared = current;
     if (stageId === "deep-first-quiz" && current.timedReading.phase !== "done") {
@@ -3204,8 +3274,9 @@ export default function CustomDeepReader({
     evidenceHighlightCleanupRef.current = null;
   }
 
-    function scrollToQuestionCard(questionKey) {
-      const element = contentRef.current?.querySelector(`[data-question-key="${cssEscape(questionKey)}"]`);
+    function scrollToQuestionCard(questionKey, stageId = "") {
+      const scope = stageId ? contentRef.current?.querySelector(`#${stageId}`) : contentRef.current;
+      const element = scope?.querySelector(`[data-question-key="${cssEscape(questionKey)}"]`);
       if (!element) return;
       stableScrollToElement(element, { offset: 110 });
     }
@@ -3236,7 +3307,7 @@ export default function CustomDeepReader({
     const stageId = editor.attempt === "redo" ? "deep-redo" : "deep-first-quiz";
     changeViewedStage(stageId);
     scrollToStage(stageId);
-    window.setTimeout(() => scrollToQuestionCard(editor.questionKey), 420);
+    window.setTimeout(() => scrollToQuestionCard(editor.questionKey, stageId), 420);
   }
 
   function openEvidenceEditor(question, attempt, origin, mode = "text") {
@@ -3249,11 +3320,58 @@ export default function CustomDeepReader({
     const existing = entryFor(evidenceRef.current, questionKey, attempt);
     const requestedMode = ["global", "sentences"].includes(mode) ? mode : "text";
     const draft = setEvidenceMode(draftFromEntry(existing, passage, { preserveSentences: true }), requestedMode);
-    setEvidenceEditor({ question, questionKey, attempt, origin, draft });
+    setEvidenceEditor({ question, questionKey, attempt, origin, draft, feedback: "" });
     if (draft.mode !== "global") {
       changeViewedStage("deep-clean-text");
       scrollToStage("deep-clean-text");
     }
+  }
+
+  function openLongSentenceTraining() {
+    if (!onOpenLongSentence) return;
+    saveReadingPosition();
+    const saved = loadJson(reviewActive ? reviewPositionKey(activeReviewTaskKey) : positionKey(resource.id), {});
+    const panel = readerPanelsRef.current?.getPanel() || null;
+    return onOpenLongSentence({
+      resourceId: resource.id,
+      passageId: passage.id,
+      readingStage: flowRef.current?.currentStage || "deep-cover",
+      questionId: drawerFocusQuestionId,
+      drawerWasOpen: panel === "questions",
+      panel,
+      topAreaCollapsed,
+      anchorId: saved.anchorId || activeStage,
+      offset: saved.offset || 0,
+      scrollY: window.scrollY,
+      reviewTaskKey: reviewActive ? reviewTaskKey : "",
+    });
+  }
+
+  function toggleSentenceEvidence(paragraphNumber, sentenceIndex, sentenceText) {
+    setEvidenceEditor((current) => {
+      if (current?.draft?.mode !== "sentences") return current;
+      const ref = buildSentenceRef({ paragraphNumber, sentenceIndex, sentenceText });
+      const selected = current.draft.references.find((item) => {
+        const resolved = resolveSentenceRef(item, passage);
+        return resolved.status === "resolved" && resolved.ref.paragraphNumber === paragraphNumber
+          && resolved.ref.sentenceIndex === sentenceIndex;
+      });
+      if (selected) return { ...current, draft: removeSentenceRef(current.draft, selected.sentenceKey), feedback: "" };
+      const result = addSentenceRef(current.draft, ref);
+      if (result.rejected) return { ...current, feedback: result.reason === "limit" ? "每题最多选择 3 句核心依据" : "无法选择这句话" };
+      return { ...current, draft: result.draft, feedback: "" };
+    });
+  }
+
+  function scrollToEvidenceSentence(ref) {
+    const resolved = resolveSentenceRef(ref, passage);
+    if (resolved.status !== "resolved") {
+      showHint("原文结构发生变化，旧依据无法精确定位");
+      return;
+    }
+    const { paragraphNumber, sentenceIndex } = resolved.ref;
+    const target = contentRef.current?.querySelector(`[data-sentence-scope="clean:p${paragraphNumber}:s${sentenceIndex + 1}"]`);
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function captureEvidenceSelection(selection, articleElement) {
@@ -3279,7 +3397,7 @@ export default function CustomDeepReader({
     const editor = evidenceEditor;
     if (!editor) return;
     const draft = setEvidenceMode(editor.draft, mode);
-    setEvidenceEditor({ ...editor, draft });
+    setEvidenceEditor({ ...editor, draft, feedback: "" });
     if (mode !== "global") {
       changeViewedStage("deep-clean-text");
       scrollToStage("deep-clean-text");
@@ -3290,7 +3408,7 @@ export default function CustomDeepReader({
     const editor = evidenceEditor;
     if (!editor) return;
     const draft = setEvidenceMode(emptyTextEvidenceEntry(), editor.draft.mode);
-    setEvidenceEditor({ ...editor, draft });
+    setEvidenceEditor({ ...editor, draft, feedback: "" });
   }
 
   function completeEvidenceEditor() {
@@ -3299,7 +3417,7 @@ export default function CustomDeepReader({
     if (!entryComplete(editor.draft)) {
       showHint(editor.draft.mode === "global"
         ? "请先选择全文依据类型"
-        : "请先选择原文片段，并选择依据类型");
+        : editor.draft.mode === "sentences" ? "请先选择至少一句原文依据" : "请先选择原文片段，并选择依据类型");
       return;
     }
     if (editor.draft.mode === "text" && !entryResolutionOk(editor.draft, passage)) {
@@ -3921,78 +4039,29 @@ export default function CustomDeepReader({
   async function commitUnknownSelection(selection) {
     const context = ocrContextRef.current;
     const isCurrent = () => mountedRef.current && getCurrentUsername() === storageUsername && ocrContextRef.current === context;
-    try {
-      for (const token of selection.tokens.values()) {
-        if (!isCurrent()) return;
-        const normalizedWord = normalizeUnknownWord(token.word);
-        if (!normalizedWord) continue;
-        // 离线词库查找失败（如 E2E dev 下词库 chunk 不可用）→ 降级为空释义，
-        // 继续走 AI / 人工补充链，绝不中止整次 commit。
-        let meaning = "";
-        try {
-          meaning = await lookupUnknownWordMeaning(token.word);
-        } catch {
-          meaning = "";
-        }
-        if (!isCurrent()) return;
-        const current = unknownWords.find((word) => word.normalizedWord === normalizedWord);
-        meaning ||= current?.meaning || "";
-        if (!meaning) {
-          const apiKey = await getAiApiKey();
-          if (!isCurrent()) return;
-          if (apiKey) {
-            const contextSentence = sentenceTextByOccurrence(token.occurrenceId);
-            const record = await toggleUnknownWord({
-              resourceId: resource.id,
-              passageId: passage.id,
-              passageLabel: passage.label,
-              year: resource.year || null,
-              chapter: resource.text ? `Text ${resource.text} · ${passage.label}` : passage.label,
-              word: token.word,
-              normalizedWord,
-              meaning: "",
-              occurrenceId: token.occurrenceId,
-            });
-            if (record) {
-              aiLookupChainRef.current = aiLookupChainRef.current
-                .then(async () => {
-                  if (!isCurrent()) return;
-                  const controller = new AbortController();
-                  unknownAiControllersRef.current.add(controller);
-                  try {
-                    const aiMeaning = await lookupWordMeaningWithAi({
-                      apiKey, word: token.word, sentence: contextSentence,
-                      signal: controller.signal, isCurrent,
-                    });
-                    if (aiMeaning && isCurrent()) await updateUnknownWordMeaning(record.id, aiMeaning);
-                  } finally { unknownAiControllersRef.current.delete(controller); }
-                })
-                .catch(() => {});
-            }
-            continue;
-          }
-          const entered = window.prompt(`离线词库没有收录 ${token.word}，请补充中文释义`, "");
-          if (entered === null) continue;
-          meaning = entered.trim();
-        }
-        await toggleUnknownWord({
-          resourceId: resource.id,
-          passageId: passage.id,
-          passageLabel: passage.label,
-          year: resource.year || null,
-          chapter: resource.text ? `Text ${resource.text} · ${passage.label}` : passage.label,
-          word: token.word,
-          normalizedWord,
-          meaning,
-          occurrenceId: token.occurrenceId,
-        });
-      }
-    } finally {
-      globalThis.CSS?.highlights?.delete(ACTIVE_UNKNOWN_HIGHLIGHT);
+    const spans = expandUnknownSelectionSpans(selection, passage.id);
+    globalThis.CSS?.highlights?.delete(ACTIVE_UNKNOWN_HIGHLIGHT);
+    let removed = false, added = false;
+    for (const span of spans) {
+      if (!isCurrent()) return;
+      const result = await toggleUnknownWordContext({
+        ...span, username: storageUsername, resourceId: resource.id, passageId: passage.id,
+        passageLabel: passage.label, year: resource.year || null, sourceType: "reading",
+        chapter: resource.text ? `Text ${resource.text} · ${passage.label}` : passage.label,
+      }, { isCurrent });
+      if (result?.action === "removed") removed = true;
+      if (result?.action === "added") added = true;
+      const record = result?.record;
+      if (!record || !isCurrent()) continue;
+      const controller = new AbortController();
+      unknownAiControllersRef.current.add(controller);
+      resolveUnknownContextMeaning(record, span.contextKey, { signal: controller.signal, isCurrent })
+        .catch(() => {}).finally(() => unknownAiControllersRef.current.delete(controller));
     }
     if (!isCurrent()) return;
-    setHint(selection.tokens.size ? "陌生词库已更新" : "笔尖没有经过英文单词");
-    window.setTimeout(() => setHint(""), 1500);
+    setHint(removed ? (added ? "已更新陌生词标记" : "已取消陌生词标记") : added ? "已加入陌生词" : "笔尖没有经过英文单词");
+    if (hintTimerRef.current) window.clearTimeout(hintTimerRef.current);
+    hintTimerRef.current = window.setTimeout(() => setHint(""), 1500);
   }
 
   function clearPassage() {
@@ -4277,6 +4346,7 @@ export default function CustomDeepReader({
         <button className="back-button light" onClick={onClose}>← 资料库</button>
         <div className="reader-title"><small>{editionLabel}</small><strong>{resource.title}</strong></div>
         <div className="reader-header-actions">
+          {onOpenLongSentence && <button type="button" className="source-button" onClick={openLongSentenceTraining}>长难句训练</button>}
           {!timedReadingActive && !(reviewActive && !reviewCheckUnlocked) && (
             <button className="export-pdf-button" onClick={exportFinishedPdf} disabled={exportingPdf}>{exportingPdf ? "正在导出…" : "导出成品 PDF"}</button>
           )}
@@ -4391,6 +4461,7 @@ export default function CustomDeepReader({
           onClear={clearPassage}
           canClear={canClearPassage}
           clearLabel="清空页面"
+          showClear={false}
           unknownEnabled={!timedReadingActive}
           tabletInk={androidApp}
         />
@@ -4406,13 +4477,14 @@ export default function CustomDeepReader({
           ref={contentRef}
           className={`deep-reader-content ${reviewActive ? "review-content" : ""} ${noteMode ? "note-mode" : ""} ${simplifiedExport ? "simplified-export" : ""} ${timedReadingActive ? "timed-reading-active" : ""}`}
           key={passage.id}
-          onPointerDownCapture={reviewActive ? undefined : (event) => { redirectPenFromTextField(event); inkController.handlePointerDown(event); }}
+          onPointerDownCapture={reviewActive ? undefined : (event) => { if (directUnknownTap.down(event)) return; redirectPenFromTextField(event); inkController.handlePointerDown(event); }}
           onPointerMoveCapture={reviewActive ? undefined : (event) => {
+            if (directUnknownTap.move(event)) return;
             inkController.handlePointerMove(event);
           }}
-          onPointerUpCapture={reviewActive ? undefined : (event) => { inkController.handlePointerUp(event); }}
-          onPointerCancelCapture={reviewActive ? undefined : (event) => { inkController.handlePointerCancel(event); }}
-          onLostPointerCapture={reviewActive ? undefined : (event) => { inkController.handlePointerUp(event); }}
+          onPointerUpCapture={reviewActive ? undefined : (event) => { if (!directUnknownTap.finish(event)) inkController.handlePointerUp(event); }}
+          onPointerCancelCapture={reviewActive ? undefined : (event) => { if (!directUnknownTap.finish(event)) inkController.handlePointerCancel(event); }}
+          onLostPointerCapture={reviewActive ? undefined : (event) => { directUnknownTap.finish(event); inkController.handlePointerCancel(event); }}
           onBeforeInputCapture={reviewActive ? undefined : blockInkModeTextInput}
           onFocusCapture={reviewActive ? undefined : (event) => {
             if (androidApp && noteMode && isTextEntryTarget(event.target)) event.target.blur();
@@ -4477,7 +4549,7 @@ export default function CustomDeepReader({
                 evidenceStore={evidenceStore}
                 evidenceEditor={evidenceEditor}
                 onCaptureEvidenceSelection={captureEvidenceSelection}
-                onUpdateEvidenceDraft={(draft) => setEvidenceEditor((current) => current ? ({ ...current, draft }) : current)}
+                onToggleSentenceEvidence={toggleSentenceEvidence}
                 onOpenEvidence={openEvidenceEditor}
                 onViewEvidence={viewEvidence}
                 onJumpEvidence={viewEvidence}
@@ -4485,6 +4557,7 @@ export default function CustomDeepReader({
                 onScheduleReview={handleScheduleReview}
                 onOpenSummary={() => openArticleSummary("summary")}
                 reviewReadOnly
+                includeUnreachedRedo={exportingPdf}
               />
             </>
           ) : (
@@ -4496,7 +4569,11 @@ export default function CustomDeepReader({
               correctAnswers={correctAnswers}
               firstAnswers={answers}
               redoAnswers={redoAnswers}
-              onSentenceMastered={setSentenceReviewStatus}
+              onSentenceMastered={(_key, _status, savedProgress) => {
+                if (!savedProgress) return;
+                translationProgressRef.current = savedProgress;
+                setTranslationProgress(savedProgress);
+              }}
               onTaskChanged={setReviewTask}
               onExit={onClose}
             />
@@ -4539,13 +4616,14 @@ export default function CustomDeepReader({
             evidenceStore={evidenceStore}
             evidenceEditor={evidenceEditor}
             onCaptureEvidenceSelection={captureEvidenceSelection}
-                onUpdateEvidenceDraft={(draft) => setEvidenceEditor((current) => current ? ({ ...current, draft }) : current)}
+            onToggleSentenceEvidence={toggleSentenceEvidence}
             onOpenEvidence={openEvidenceEditor}
             onViewEvidence={viewEvidence}
             onJumpEvidence={viewEvidence}
             onFocusNextIncomplete={focusNextIncomplete}
             onScheduleReview={handleScheduleReview}
             onOpenSummary={() => openArticleSummary("summary")}
+            includeUnreachedRedo={exportingPdf}
           />
         )}
         {simplifiedExport && (
@@ -4569,6 +4647,7 @@ export default function CustomDeepReader({
 
       <ReaderSidePanels
         ref={readerPanelsRef}
+        initialPanel={restoredOrigin?.panel || (restoredOrigin?.drawerWasOpen ? "questions" : null)}
         activeInkRef={activeInkRef}
         paperKey={`${resource.id}:${passage.id}`}
         questionAvailable={questionDrawerAvailable}
@@ -4636,11 +4715,13 @@ export default function CustomDeepReader({
       {evidenceEditor && !exportingPdf && !simplifiedExport && (!reviewActive || reviewCheckUnlocked) && (
         <div className="evidence-editor-bar">
           <div className="evidence-editor-head">
-            <strong>正在为 Q{evidenceEditor.question.number} 标记原文证据（{evidenceEditor.attempt === "first" ? "首次" : "重做"}）</strong>
+            <strong>{evidenceEditor.draft.mode === "sentences"
+              ? `Q${evidenceEditor.question.number} · ${evidenceEditor.attempt === "first" ? "首次" : "重做"}定位`
+              : `正在为 Q${evidenceEditor.question.number} 标记原文证据（${evidenceEditor.attempt === "first" ? "首次" : "重做"}）`}</strong>
             <span>
               {evidenceEditor.draft.mode === "text"
                 ? `已选 ${evidenceEditor.draft.ranges.length} / 3 处原文`
-                : evidenceEditor.draft.mode === "sentences" ? `已选 ${evidenceEditor.draft.references.length} / 3 句` : "全文/结构依据"}
+                : evidenceEditor.draft.mode === "sentences" ? `已选择 ${evidenceEditor.draft.references.length} / 3 句` : "全文/结构依据"}
             </span>
           </div>
           <div className="evidence-editor-mode">
@@ -4693,7 +4774,24 @@ export default function CustomDeepReader({
               </div>
             </div>
           )}
-          {evidenceEditor.draft.mode === "sentences" && <div className="evidence-text-ranges">{evidenceEditor.draft.references.map((ref) => <button type="button" key={ref.sentenceKey} onClick={() => setEvidenceEditor((current) => ({ ...current, draft: removeSentenceRef(current.draft, ref.sentenceKey) }))}>{sentenceRefLabel(ref)} ×</button>)}</div>}
+          {evidenceEditor.draft.mode === "sentences" && (
+            <div className="evidence-sentence-editor">
+              <p>点击原文句子选择核心依据；再次点击可取消。</p>
+              <div className="evidence-sentence-chips">
+                {evidenceEditor.draft.references.map((ref) => {
+                  const resolved = resolveSentenceRef(ref, passage);
+                  const label = resolved.status === "resolved" ? sentenceRefLabel(resolved.ref) : sentenceRefLabel(ref);
+                  return <span className="evidence-sentence-chip" key={ref.sentenceKey}>
+                    <button type="button" className="evidence-sentence-chip-jump" onClick={() => scrollToEvidenceSentence(ref)}>
+                      {label} · {ref.excerpt || "原文片段"}{resolved.status !== "resolved" ? "（原文已变化）" : ""}
+                    </button>
+                    <button type="button" className="evidence-sentence-chip-remove" aria-label={`取消 ${label}`} onClick={() => setEvidenceEditor((current) => current ? ({ ...current, draft: removeSentenceRef(current.draft, ref.sentenceKey), feedback: "" }) : current)}>×</button>
+                  </span>;
+                })}
+              </div>
+              {evidenceEditor.feedback && <p className="evidence-sentence-feedback" role="alert">{evidenceEditor.feedback}</p>}
+            </div>
+          )}
           <label>我的理解 / 判断依据（可选）<textarea className="evidence-note-input" maxLength={500} value={evidenceEditor.draft.note} onChange={(event) => setEvidenceEditor((current) => ({ ...current, draft: setEvidenceNote(current.draft, event.target.value) }))} /></label>
           {evidenceEditor.draft.mode === "global" && (
             <div className="evidence-global-types">
@@ -4722,7 +4820,7 @@ export default function CustomDeepReader({
             >
               {entryComplete(evidenceEditor.draft)
                 ? "确认依据"
-                : evidenceEditor.draft.mode === "global" ? "请选择全文类型" : "请选择原文与类型"}
+                : evidenceEditor.draft.mode === "global" ? "请选择全文类型" : evidenceEditor.draft.mode === "sentences" ? "请选择原文句子" : "请选择原文与类型"}
             </button>
             <button type="button" className="evidence-editor-action" onClick={clearEvidenceEditorDraft}>
               清空

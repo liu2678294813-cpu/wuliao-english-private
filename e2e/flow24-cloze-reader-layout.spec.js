@@ -154,34 +154,3 @@ for (const width of [1440, 1104, 820, 390]) {
     expect(errors).toEqual([]);
   });
 }
-
-test("exam collapse hides all chrome, preserves answers and keeps the timer running", async ({ page }) => {
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await createAccount(page);
-  await navTo(page, "模拟");
-  await page.getByRole("button", { name: /^2007 / }).click();
-  await page.getByRole("button", { name: "开始计时", exact: true }).click();
-  await expect(page.locator(".exam-navigator button")).toHaveCount(40);
-  await page.locator(".exam-options button").first().click();
-  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-  const time = page.locator('.exam-session time');
-  const before = await time.textContent();
-  const topBefore = (await page.locator(".exam-ink-content").boundingBox()).y;
-  await page.getByRole("button", { name: "收起工具", exact: false }).click();
-  for (const selector of [".exam-session-header", ".exam-status-bar", ".exam-navigator"]) {
-    await expect(page.locator(selector)).toBeHidden();
-  }
-  expect((await page.locator(".annotation-toolbar").boundingBox()).height).toBe(0);
-  expect((await page.locator(".exam-ink-content").boundingBox()).y).toBeLessThan(topBefore);
-  await expect(time).not.toHaveText(before);
-  await mkdir(evidence, { recursive: true });
-  await page.screenshot({ path: `${evidence}/exam-collapsed.png` });
-  await page.locator(".exam-session footer button", { hasText: "下一题" }).click();
-  await page.getByRole("button", { name: "展开工具", exact: false }).click();
-  await expect(page.locator(".exam-navigator button").nth(1)).toHaveClass(/active/);
-  await expect(page.locator(".exam-navigator button").first()).toHaveClass(/answered/);
-  await expect(page.locator(".exam-session-header")).toBeVisible();
-  await expect(page.locator(".exam-status-bar")).toBeVisible();
-  expect(errors).toEqual([]);
-});

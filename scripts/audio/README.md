@@ -41,7 +41,7 @@ python <脚本目录>/generate_audio.py --source-dir <项目>/public/vocabulary/
 
 也可用 `--words-file <words.json>` 替换 `--source-dir`，JSON格式为包含 `english` 字段的数组。所有目录都由参数传入，脚本没有用户机器的固定绝对路径。
 
-重新执行同一命令会检查已有文件的SHA256和处理策略后复用已完成单词；中断时最多重做没有有效检查点的词。新模型/声线或新的处理算法应使用新的输出目录，不混用旧缓存。变体数量很少，当前会重新生成32条变体。
+重新执行同一命令会检查已有文件的SHA256和处理策略后复用已完成单词；中断时最多重做没有有效检查点的词。新模型/声线或新的处理算法应使用新的输出目录，不混用旧缓存。当前词性配置有47条变体。
 
 可选 `--recorded-sources <脚本目录>/recorded-sources.json` 尝试优先下载已审核的真实录音。仅包含真实验证过的abandon原始来源及CC BY-SA许可元数据。遇429立即停止录音下载并用本地合成补齐；不能把元数据存在当作已下载成功。正式v2批次因429全部使用Kokoro，**不再携带旧裁剪的abandon录音**。
 
@@ -59,9 +59,9 @@ python <脚本目录>/validate_audio.py --output-dir <资产工作目录>/uncut-
 
 只复制 `index.json`、`manifest.json`、`variants.json`、`audio/`、`licenses/`、`docs/audit/`、`AUDIO-CREDITS.md`、`model-info.json`、`validation.json`。`index.json`供播放端读取，完整manifest用于许可/出处详情。目录下 `.raw/`、`.checkpoints/`、模型、runtime、生成日志均留在本地。
 
-归一化英文键为 `trim().toLowerCase()`；明确词性时先查 `index.variants[word][noun|verb|adjective]`，否则查 `index.entries[word]`。未覆盖的私人导入词和浏览器不支持Ogg的情况继续使用设备美音朗读兜底。
+归一化英文键为 `trim().toLowerCase()`；调用方明确传入词性时先查 `index.variants[word][noun|verb|adjective]`，未传词性时先按 `index.defaultPos[word]` 选择词性变体，再退回 `index.entries[word]`。`record` 等无默认词性选择的异读词继续使用基础音频；未覆盖的私人导入词和浏览器不支持Ogg的情况继续使用设备美音朗读兜底。
 
-22词32变体的发音音素配置来自CMUdict，保留了原ARPABET、来源和BSD式许可。只有明确词性才能据此正确选择变体；其他异读词仍需结合上下文审核。完整保留模型波形解决了处理阶段截音风险，不能替代人工英语发音质量审查。
+34词47变体的美式发音配置保留了ARPABET、词典来源和许可信息。调用方传入词性时优先选择对应变体；省略词性时按已审核的`index.defaultPos`选择默认变体。`record`仍保留歧义基础音频。完整保留模型波形解决了处理阶段截音风险，但自动转写和信号校验不能替代人工英语听审。
 
 ## 发布清单与缓存版本
 
@@ -71,14 +71,14 @@ python <脚本目录>/validate_audio.py --output-dir <资产工作目录>/uncut-
 
 在生成进程正常结束、输出 `complete 6515 / 6515` 后依次执行：
 
-1. `python <脚本目录>/apply_defaults.py --output-dir <完整输出目录> --words-file <完整输出目录>/words.json`：依据已经审核的中文优先释义应用20个默认词性；record/increase 等13词保持原base并说明歧义。每条清单显示实际默认音频，并将被替换的20条base放到 `basePronunciations` 留存溯源，不修改任何音频或生成检查点。
+1. `python <脚本目录>/apply_defaults.py --output-dir <完整输出目录> --words-file <完整输出目录>/words.json`：依据已经审核的中文释义和字典音素应用33个默认覆盖，其中75个异读候选中25个有明确词性选择；仍有10个词保留歧义说明。每条清单显示实际默认音频，并将被替换的33条base放到 `basePronunciations` 留存溯源，不修改任何原始WAV或生成检查点。
 2. `python <脚本目录>/validate_audio.py --output-dir <完整输出目录> --runtime-dir <runtime目录> --require-raw`：全部文件校验，报告绑定当时manifest/variants的SHA256。需要修复过冲时显式加 `--repair-peaks`，之后重新验证。
 3. `python <脚本目录>/build_catalog.py --output-dir <完整输出目录>`：按最终实际默认文件生成path/revision。
 4. `python <脚本目录>/package_audio.py --output-dir <完整输出目录> --zip-path <目标zip文件>`：要求验证报告与当前清单hash一致、覆盖完整、全部文件通过，输出CRC检查过的zip及SHA256。
 
-20项选择仅针对已核对的内置词库中文释义。词库释义改变时应用工具会要求重新审核，不静默猜测新词性。显式POS依旧优先于默认选择。
+33项选择仅针对已核对的内置词库中文释义。词库释义改变时应用工具会要求重新审核，不静默猜测新词性。显式POS依旧优先于默认选择。
 
-完整目录的6515个默认条目、32个词性变体和20个保留base共6567条溯源记录；其中默认选择与变体有重复路径，实际只有6547个不同音频文件。验证和打包按路径去重，分别报告记录数与真实文件数，不把重复记录当作新增音频。
+完整目录的6515个默认条目、47个词性变体和33个保留base共6595条溯源记录；其中默认选择与变体有重复路径，实际只有6562个不同音频文件。验证和打包按路径去重，分别报告记录数与真实文件数，不把重复记录当作新增音频。
 
 ## 快速回归测试
 
@@ -86,4 +86,4 @@ python <脚本目录>/validate_audio.py --output-dir <资产工作目录>/uncut-
 
 ## 已有批次只补词性变体
 
-`generate_variants_only.py` 接受 `--output-dir --model --voices --variant-config --runtime-dir --espeak-data-path`，在独立目录生成指定变体及原始WAV，不触碰正在运行的完整批次。完整批次生成结束后可用 `merge_variants.py --output-dir <完整输出目录> --extras <补充目录1> <补充目录2>` 合并清单及文件，重新执行默认选择、全量验证和打包。
+`generate_variants_only.py` 接受 `--output-dir --model --voices --variant-config --runtime-dir --espeak-data-path`，在独立目录生成指定变体及原始WAV，不触碰正在运行的完整批次。每个变体可在配置中选填 `voice`；未填写时沿用命令行 `--voice`。完整批次生成结束后可用 `merge_variants.py --output-dir <完整输出目录> --extras <补充目录1> <补充目录2>` 合并清单及文件，重新执行默认选择、全量验证和打包。

@@ -3,7 +3,7 @@ import { createAccount, navTo, openOfficialCloze, openOfficialResource, setScope
 
 // Flow 16：2026-08-13 平板 UI/交互统一修正。
 // 覆盖：导航/设置、底部导航 9 项、Home 删减、资料库 4/2/1 列、
-// 词库/筛查单屏、完形题窗收起+笔迹不变、Lasso 预览、Exam Chrome、折叠 pill 拖拽。
+// 词库/筛查单屏、完形题窗收起+笔迹不变、Lasso 预览、折叠 pill 拖拽。
 
 const CLOZE_RESOURCE_ID = "postgraduate-2007-cloze";
 
@@ -40,16 +40,6 @@ function seedClozeProgress(page, username, { firstSubmitted = false, attempts = 
   });
 }
 
-async function openX1AndStart(page, year = 2007) {
-  await expect(page.locator(".exam-year-grid")).toBeVisible();
-  await page.getByRole("button", { name: new RegExp(`^${year} `) }).click();
-  const start = page.getByRole("button", { name: "开始计时" });
-  await expect(start).toBeEnabled({ timeout: 120000 });
-  await start.click();
-  await expect(page.locator(".exam-session")).toBeVisible({ timeout: 30000 });
-  await expect(page.locator(".exam-navigator button")).toHaveCount(40);
-}
-
 async function drawStroke(page, box, from = [0.25, 0.2], to = [0.45, 0.35]) {
   const startX = box.x + box.width * from[0];
   const startY = box.y + box.height * from[1];
@@ -81,10 +71,9 @@ async function dragPill(page, pill, dx = 90, dy = 50) {
   await page.mouse.up();
 }
 
-test("导航与设置：模拟进入 Exam Library，rail 无独立账号，设置内可切换账号", async ({ page }) => {
+test("导航与设置：无模拟入口，设置内可切换账号", async ({ page }) => {
   await createAccount(page);
-  await navTo(page, "模拟");
-  await expect(page.getByRole("heading", { name: "整卷模拟" })).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole("button", { name: "模拟", exact: true })).toHaveCount(0);
   await expect(page.locator(".ds-account")).toHaveCount(0);
   await expect(page.locator(".ds-rail-footer button")).toHaveCount(2);
   await page.locator(".ds-settings").click();
@@ -215,52 +204,6 @@ test("完形：题窗收起/展开 + 笔迹 persisted 不变 + Lasso 预览非�
   await page.mouse.up();
 });
 
-test("Exam：作答页 Chrome/状态栏/工具栏拖拽 + Library 按钮样式", async ({ page }) => {
-  await createAccount(page, uniqueUsername("ui-exam"));
-  await navTo(page, "模拟");
-  await expect(page.getByRole("heading", { name: "整卷模拟" })).toBeVisible();
-  await openX1AndStart(page);
-  await expect(page.locator(".exam-session-title strong")).toContainText("2007 英语（一） · 完形填空");
-  await expect(page.locator(".exam-status-bar")).toContainText("已答 0 / 40");
-  await expect(page.locator(".exam-status-bar")).toContainText("当前第 1 题");
-  const navButton = page.locator(".exam-navigator button").first();
-  const navBox = await navButton.boundingBox();
-  expect(navBox.width).toBeGreaterThanOrEqual(40);
-  expect(navBox.height).toBeGreaterThanOrEqual(40);
-
-  await page.locator(".toolbar-collapse-toggle", { hasText: "收起工具" }).click();
-  const pill = page.locator(".toolbar-collapse-toggle", { hasText: "展开工具" });
-  await expect(pill).toBeVisible();
-  await dragPill(page, pill);
-  await expect(pill).toBeVisible();
-  const transform = await pill.evaluate((el) => getComputedStyle(el).transform);
-  expect(transform).toMatch(/matrix/);
-  expect(transform).not.toBe("none");
-  await pill.click();
-  await expect(page.locator(".toolbar-collapse-toggle", { hasText: "收起工具" })).toBeVisible();
-
-  await page.locator(".exam-session-header .back-button").click();
-  await page.locator(".exam-page .back-button").click();
-  await expect(page.getByRole("heading", { name: "整卷模拟" })).toBeVisible();
-  await expect(page.locator(".exam-danger-button")).toContainText("放弃本次考试");
-  await expect(page.getByRole("button", { name: "继续未完成考试" })).toHaveClass(/primary-button/);
-  await expect(page.locator(".exam-library-heading-row").getByRole("button", { name: "历史成绩" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "历史成绩" })).toHaveClass(/exam-secondary-action/);
-  const historyStyle = await page.getByRole("button", { name: "历史成绩" }).evaluate((el) => {
-    const style = getComputedStyle(el);
-    return { appearance: style.appearance, radius: style.borderRadius, border: style.borderTopColor, background: style.backgroundColor };
-  });
-  expect(historyStyle.appearance).toBe("none");
-  expect(historyStyle.radius).not.toBe("0px");
-  expect(historyStyle.border).not.toBe("rgba(0, 0, 0, 0)");
-  const yearCardStyle = await page.locator(".exam-year-card").first().evaluate((el) => {
-    const style = getComputedStyle(el);
-    return { radius: style.borderRadius, border: style.borderTopColor, background: style.backgroundColor };
-  });
-  expect(yearCardStyle.radius).not.toBe("0px");
-  expect(yearCardStyle.border).not.toBe("rgba(0, 0, 0, 0)");
-  expect(yearCardStyle.background).not.toBe("rgba(0, 0, 0, 0)");
-});
 
 test("精读：收起顶部后保留完整工具栏，轻点可展开", async ({ page }) => {
   await createAccount(page);
@@ -327,7 +270,7 @@ test("移动端不出现 desktop restore，immersive reader 不渲染侧栏", as
   expect(mobileLeft).toBe(0);
 });
 
-test("三宿主 Toolbar 实测视觉几何一致（row/button/slider/swatch/divider ≤1px）", async ({ page }) => {
+test("精读与完形 Toolbar 实测视觉几何一致（row/button/slider/swatch/divider ≤1px）", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const username = await createAccount(page, uniqueUsername("ui-toolbar"));
 
@@ -353,14 +296,6 @@ test("三宿主 Toolbar 实测视觉几何一致（row/button/slider/swatch/divi
     };
   };
 
-  await navTo(page, "模拟");
-  await openX1AndStart(page);
-  const exam = await measure(page.locator(".exam-session > .annotation-toolbar"));
-  await page.locator(".exam-session-header .back-button").click();
-  await expect(page.getByRole("heading", { name: "开始 X1 整卷模拟" })).toBeVisible({ timeout: 30000 });
-  await page.locator(".exam-page .back-button").click();
-  await expect(page.locator(".exam-library-page")).toBeVisible({ timeout: 30000 });
-
   const now = Date.now();
   await seedClozeFlow(page, username, "cloze-self-review", now, {
     stages: { "cloze-self-review": { status: "current", completedAt: null } },
@@ -375,7 +310,7 @@ test("三宿主 Toolbar 实测视觉几何一致（row/button/slider/swatch/divi
   await openOfficialResource(page, "2007 英语（一）Text 1");
   const reader = await measure(page.locator(".reader-page > .annotation-toolbar"));
 
-  const samples = { 精读: reader, 完形: cloze, Exam: exam };
+  const samples = { 精读: reader, 完形: cloze };
   const assertWithin = (getter, label) => {
     const values = Object.entries(samples).map(([host, sample]) => [host, getter(sample)]);
     const reference = values[0][1];

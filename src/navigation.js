@@ -43,12 +43,12 @@ export const VOCABULARY_STATIC_PAGES = {
 export const READING_NAV = [
   { id: "reading", label: "精读", icon: "book", view: "library" },
   { id: "cloze", label: "完形", icon: "cloze", view: "cloze-library" },
-  { id: "exam", label: "模拟", icon: "exam", view: "exam-library" },
 ];
 
 export const PRIMARY_NAV = [
   { id: "home", label: "首页", icon: "home", view: "home" },
   { id: "reading-group", label: "阅读", kind: "group", children: READING_NAV },
+  { id: "long-sentence", label: "长难句", icon: "book", view: "long-sentence" },
   { id: "writing", label: "写作", icon: "vocabulary", view: "writing-library" },
   { id: "vocabulary-home", label: "词库", icon: "dashboard", view: "vocabulary", kind: "spa", route: "/dashboard" },
   { id: "screening", label: "筛查", icon: "screening", view: "vocabulary", kind: "spa", route: "/screening/1" },
@@ -154,28 +154,26 @@ export function writingHostHash(route) {
   return "#/writing";
 }
 
+export function longSentenceRouteFromHost() {
+  const hash = String(window.location.hash || "");
+  if (hash === "#/long-sentence") return { view: "long-sentence", sessionId: "" };
+  const match = /^#\/long-sentence\/session\/([^/?#]+)$/.exec(hash);
+  if (!match) return null;
+  try { return { view: "long-sentence", sessionId: decodeURIComponent(match[1]) }; }
+  catch { return null; }
+}
+
+export function longSentenceHostHash(sessionId = "") {
+  return sessionId ? `#/long-sentence/session/${encodeURIComponent(sessionId)}` : "#/long-sentence";
+}
+
 export function isWritingView(view) {
   return view === "writing-library" || view === "writing-session";
 }
 
-export function examRouteFromHost() {
-  const match = /^#\/exam\/(library|history|cover\/([^/?#]+)|session\/([^/?#]+)|result\/([^/?#]+))$/.exec(window.location.hash);
-  if (!match) return null;
-  const kind = match[1];
-  try {
-    if (kind === "library" || kind === "history") return { view: `exam-${kind}` };
-    if (kind.startsWith("cover/")) return { view: "exam-cover", year: Number(decodeURIComponent(match[2])) };
-    if (kind.startsWith("session/")) return { view: "exam-session", sessionId: decodeURIComponent(match[3]) };
-    return { view: "exam-result", resultId: decodeURIComponent(match[4]) };
-  } catch { return null; }
-}
-
-export function examHostHash(route) {
-  if (route?.view === "exam-cover") return `#/exam/cover/${encodeURIComponent(route.year || "")}`;
-  if (route?.view === "exam-session") return `#/exam/session/${encodeURIComponent(route.sessionId || "")}`;
-  if (route?.view === "exam-result") return `#/exam/result/${encodeURIComponent(route.resultId || "")}`;
-  if (route?.view === "exam-history") return "#/exam/history";
-  return "#/exam/library";
+// Legacy addresses are recognized without importing the removed business module.
+export function isLegacyExamHash(hash = window.location.hash) {
+  return /^#\/exam(?:\/|$)/.test(String(hash || ""));
 }
 
 export function navigationBackTarget(stack = []) {

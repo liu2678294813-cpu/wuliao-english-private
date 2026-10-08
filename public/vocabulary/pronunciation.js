@@ -16,13 +16,15 @@
   }
   async function find(word, pos) {
     const manifest = await catalog();
-    if (pos) {
-      if (manifest.variants?.[key(word)]?.[pos]) return manifest.variants[key(word)][pos];
+    const wordKey = key(word);
+    const selectedPos = String(pos || manifest.defaultPos?.[wordKey] || "").trim().toLowerCase();
+    if (selectedPos) {
+      if (manifest.variants?.[wordKey]?.[selectedPos]) return manifest.variants[wordKey][selectedPos];
       variantsPromise ||= fetch(base + "variants.json", { cache: "no-cache" }).then((r) => r.ok ? r.json() : {}).catch(() => ({}));
       const variants = await variantsPromise;
-      if (variants[key(word)]?.[pos]) return variants[key(word)][pos];
+      if (variants[wordKey]?.[selectedPos]) return variants[wordKey][selectedPos];
     }
-    return manifest.entries?.[key(word)];
+    return manifest.entries?.[wordKey];
   }
   function fallback(word, token) {
     if (token !== sequence) return Promise.resolve();

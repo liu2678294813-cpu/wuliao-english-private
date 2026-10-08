@@ -502,9 +502,9 @@ export function buildWordMeaningMessages({ word, sentence }) {
   return [
     {
       role: "system",
-      content: "你是英语词汇老师。只输出这个单词在当前句子中最合适的简短中文释义（一到两个义项），不要解释、不要列举其它义项、不要输出任何其它内容。",
+      content: "你是英语词汇老师。只输出该词或短语在当前完整句子中最合适的简短中文释义，不解释、不罗列无关义项，不要输出任何其它内容。",
     },
-    { role: "user", content: `单词：${word}\n所在句子：${sentence || "（无上下文）"}` },
+    { role: "user", content: `词或短语：${word}\n所在句子：${sentence || "（无上下文）"}` },
   ];
 }
 

@@ -27,6 +27,7 @@ export const VOCABULARY_PROTOCOL_VERSION = 1;
 export const VocabMessageType = Object.freeze({
   /** 子端初始化完成，父端可安全发送导航/设置指令 */
   READY: "READY",
+  UNKNOWN_WORDS_CHANGED: "UNKNOWN_WORDS_CHANGED",
   FLUSH_PENDING: "FLUSH_PENDING",
   FLUSH_RESULT: "FLUSH_RESULT",
   REQUEST_SCREENING_CONTEXT: "REQUEST_SCREENING_CONTEXT",
@@ -79,6 +80,8 @@ export function validateVocabularyPayload(type, payload) {
   const value = payload === undefined || payload === null ? {} : payload;
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   switch (type) {
+    case VocabMessageType.UNKNOWN_WORDS_CHANGED:
+      return typeof value.username === "string" && value.username.length > 0;
     case VocabMessageType.FLUSH_PENDING:
       return typeof value.requestId === "string";
     case VocabMessageType.FLUSH_RESULT:

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
 // 共享笔工具栏（唯一 source of truth）。
-// 精读 / 普通完形 / 模拟考试必须使用同一份实现与同一份视觉契约。
+// 精读 / 普通完形必须使用同一份实现与同一份视觉契约。
 // 视觉尺寸契约位于 src/redesign/reader.css（.reader-page > .annotation-toolbar 系列）。
 
 function viewportSafeInsets() {
@@ -96,6 +96,7 @@ export function AnnotationToolbar({
   onClear,
   canClear,
   clearLabel = "清空本页",
+  showClear = true,
   noteMode,
   onToggleNoteMode,
   penSize = 2.6,
@@ -133,7 +134,7 @@ export function AnnotationToolbar({
     return () => observer.disconnect();
   }, [collapseMode, collapsed]);
   const clearDisabled = canClear === undefined ? !annotations.length : !canClear;
-  // 未提供 noteMode 的宿主（普通完形 / 模拟考试）视为始终处于手写模式。
+  // 未提供 noteMode 的宿主（普通完形）视为始终处于手写模式。
   const handwritingMode = noteMode ?? true;
 
   function toggleCollapsed() {
@@ -277,7 +278,7 @@ export function AnnotationToolbar({
       )}
       {!compactPenOnly && <span className="toolbar-divider" />}
       {!compactPenOnly && <button onClick={onUndo} disabled={canUndo === undefined ? !annotations.length : !canUndo}><span className="toolbar-icon" aria-hidden="true">↶</span>撤销</button>}
-      {!compactPenOnly && <button onClick={onClear} disabled={clearDisabled}>{clearLabel}</button>}
+      {!compactPenOnly && showClear && <button onClick={onClear} disabled={clearDisabled}>{clearLabel}</button>}
       {!compactPenOnly && <small>{!handwritingMode ? "键盘输入模式：横线文本框接收文字" : tool === "unknown" ? "用笔点按或划过英文单词，自动加入陌生词库" : tool === "eraser" && eraserMode === "lasso" ? "虚线随笔尖移动，松笔后删除真实圈选范围" : tool === "pen" && penMode === "fountain" ? "钢笔直接跟随笔尖并保留笔压；长按临时套索" : tool === "pen" ? "圆珠笔直接跟随笔尖并保持固定粗细；长按临时套索" : "普通橡皮；手指仍可上下滑动"}</small>}
         </>
       )}

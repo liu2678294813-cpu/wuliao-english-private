@@ -13,7 +13,8 @@ g.init_worker(vars(a));result={}
 for word,choices in json.loads(pathlib.Path(a.variant_config).read_text(encoding='utf8')).items():
  result[word]={}
  for pos,choice in choices.items():
-  audio,sr=g.MODEL.create(choice['phonemes'],voice=a.voice,speed=.95,is_phonemes=True,trim=False)
-  result[word][pos]={**g.write_audio(word,audio,sr,pos),**g.base_metadata(),**choice,'qualityReview':'dictionary-phoneme-and-automated-signal-check; not human-listened'}
+  voice=choice.get('voice',a.voice)
+  audio,sr=g.MODEL.create(choice['phonemes'],voice=voice,speed=.95,is_phonemes=True,trim=False)
+  result[word][pos]={**g.write_audio(word,audio,sr,pos),**g.base_metadata(voice),**choice,'qualityReview':'dictionary-phoneme-and-automated-signal-check; not human-listened'}
   print(word,pos,flush=True)
 g.save_json(out/'variants.json',result)

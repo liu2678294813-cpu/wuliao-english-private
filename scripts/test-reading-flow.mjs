@@ -53,6 +53,7 @@ const {
   saveReadingFlow,
   completeStage,
   isStageLocked,
+  hasReachedStage,
   currentStageOf,
   isWorkflowCompleted,
   hasAllQuestionsAnswered,
@@ -65,6 +66,20 @@ const {
 } = await import("../src/readingFlow.js");
 const { setReadingCompleted, isReadingCompleted } = await import("../src/studyRank.js");
 const { hasReliableOfficialAnswer, questionCapabilities } = await import("../src/questionCapabilities.js");
+
+test("redo 到达事实区分当前、访问、完成、后续阶段与单独跳过", () => {
+  const initial = emptyFlow("r", "p", 1);
+  assert.equal(hasReachedStage(initial, "deep-redo"), false);
+  assert.equal(hasReachedStage({ ...initial, stages: { ...initial.stages, "deep-redo": { status: "skipped", completedAt: null } } }, "deep-redo"), false);
+  for (const stage of [
+    { status: "current", completedAt: null },
+    { status: "pending", completedAt: null, visitedAt: 10 },
+    { status: "completed", completedAt: 10 },
+  ]) {
+    assert.equal(hasReachedStage({ ...initial, stages: { ...initial.stages, "deep-redo": stage } }, "deep-redo"), true);
+  }
+  assert.equal(hasReachedStage({ ...initial, currentStage: "deep-review" }, "deep-redo"), true);
+});
 
 function fresh() {
   globalThis.localStorage.clear();

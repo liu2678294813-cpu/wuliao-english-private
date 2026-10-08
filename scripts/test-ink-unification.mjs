@@ -21,10 +21,8 @@ function read(path) {
 test("精读 / 普通完形 / 考试四个 Surface 引用同一个 Shared Ink Runtime 模块", () => {
   const deepReader = read("src/CustomDeepReader.jsx");
   const clozeSurface = read("src/ink/ClozeInkSurface.jsx");
-  const examSurface = read("src/exam/ExamInkSurface.jsx");
   assert.match(deepReader, /from "\.\/ink\/useStructuredInk"/);
   assert.match(clozeSurface, /from "\.\/useStructuredInk"/);
-  assert.match(examSurface, /from "\.\.\/ink\/useStructuredInk"/);
   // 普通完形 / 考试通过 ClozeInkSurface / ExamInkSurface 使用同一 Runtime（不另起炉灶）。
   assert.match(read("src/ClozeReader.jsx"), /<ClozeInkSurface/);
 });
@@ -49,8 +47,7 @@ test("Shared Runtime 导出精读正式笔系统全部关键能力", async () =>
 
 test("普通完形 / 考试不再出现独立劣化渲染生命周期", () => {
   const cloze = read("src/ink/ClozeInkSurface.jsx");
-  const exam = read("src/exam/ExamInkSurface.jsx");
-  for (const source of [cloze, exam]) {
+  for (const source of [cloze]) {
     assert.doesNotMatch(source, /pointermove[\s\S]{0,200}clearRect/);
     assert.doesNotMatch(source, /function renderPreview\(/);
     assert.doesNotMatch(source, /function commitStrokes\(/);

@@ -49,6 +49,86 @@ async function openDrawer(page) {
   return item;
 }
 
+test("reader redo: unreached section is absent and stage navigation cannot skip translation", async ({ page }) => {
+  await createAccount(page, uniqueUsername("reader-redo-gate"));
+  await openOfficialResource(page, TITLE);
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(page.locator("#deep-redo")).toHaveCount(0);
+  const redoNav = page.locator(".stage-nav button", { hasText: "重做" });
+  await expect(redoNav).toHaveAttribute("aria-disabled", "true");
+  await redoNav.evaluate((button) => button.click());
+  await expect(page.locator("#deep-redo")).toHaveCount(0);
+  const stage = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((item) => item.includes("wuliao:reading-flow:"));
+    return key ? JSON.parse(localStorage.getItem(key)).currentStage : "deep-cover";
+  });
+  expect(stage).not.toBe("deep-redo");
+});
+
+test("reader redo: normal entry reveals cards and shares answer state with drawer", async ({ page }) => {
+  const keys = await translationFixture(page);
+  await expect(page.locator("#deep-redo")).toHaveCount(0);
+  await clickStageAdvance(page, "进入重做");
+  await expect.poll(async () => (await readJson(page, keys.flow)).currentStage).toBe("deep-redo");
+  await expect(page.locator("#deep-redo")).toBeVisible();
+  const item = await openDrawer(page);
+  await expect(item.locator(".question-options button.selected")).toHaveCount(0);
+  await expect(page.locator(".question-drawer.open .parse-status")).toHaveCount(0);
+  await item.locator(".question-options button").nth(3).click();
+  await expect.poll(() => readJson(page, keys.redo)).toEqual({ 21: "D" });
+  await expect(page.locator("#deep-redo .deep-question-card").first().locator(".deep-options button").nth(3)).toHaveClass(/selected/);
+  await page.locator("#deep-redo .deep-question-card").nth(1).locator(".deep-options button").nth(2).click();
+  await openDrawer(page);
+  const second = page.locator(".question-drawer.open .question-item").nth(1);
+  if (!(await second.locator(".question-options").isVisible())) await second.locator(".question-stem").click();
+  await expect(second.locator(".question-options button").nth(2)).toHaveClass(/selected/);
+  expect(await readJson(page, keys.first)).toEqual({ 21: "B" });
+  await reopen(page);
+  await expect(page.locator("#deep-redo")).toBeVisible();
+  expect(await readJson(page, keys.redo)).toEqual({ 21: "D", 22: "C" });
+});
+
+test("reader redo: sentence chips, selection limit, cancel and saved recovery", async ({ page }) => {
+  await page.setViewportSize({ width: 832, height: 544 });
+  const keys = await translationFixture(page);
+  await clickStageAdvance(page, "进入重做");
+  const card = page.locator("#deep-redo .deep-question-card").first();
+  await card.locator(".deep-options button").first().click();
+  await card.getByRole("button", { name: "去原文定位" }).click();
+  const editor = page.locator(".evidence-editor-bar");
+  await editor.getByRole("button", { name: "句子定位" }).click();
+  const sentences = page.locator(".clean-article [data-evidence-sentence]");
+  const first = sentences.nth(0);
+  await first.click();
+  await expect(first).toHaveAttribute("aria-pressed", "true");
+  await expect(first).toHaveClass(/evidence-sentence-selected/);
+  await expect(editor).toContainText("已选择 1 / 3 句");
+  await expect(editor.locator(".evidence-sentence-chip")).toContainText("P1 · S1");
+  await expect.poll(() => editor.locator(".evidence-sentence-chip-jump").first().evaluate((button) => button.getBoundingClientRect().width)).toBeGreaterThan(150);
+  expect(await first.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
+  await first.click();
+  await expect(first).toHaveAttribute("aria-pressed", "false");
+  await expect(editor.locator(".evidence-sentence-chip")).toHaveCount(0);
+  for (let i = 0; i < 3; i += 1) await sentences.nth(i).click();
+  await sentences.nth(3).click();
+  await expect(editor.getByRole("alert")).toContainText("每题最多选择 3 句核心依据");
+  await expect(editor.locator(".evidence-sentence-chip")).toHaveCount(3);
+  await editor.locator(".evidence-sentence-chip-remove").nth(2).click();
+  await expect(editor.locator(".evidence-sentence-chip")).toHaveCount(2);
+  await editor.getByRole("button", { name: "确认依据" }).click();
+  const stored = await readJson(page, keys.evidence);
+  const key = await card.getAttribute("data-question-key");
+  expect(stored.questions[key].redo.references).toHaveLength(2);
+  await card.getByRole("button", { name: "修改" }).click();
+  await expect(editor.locator(".evidence-sentence-chip")).toHaveCount(2);
+  await expect(sentences.nth(0)).toHaveAttribute("aria-pressed", "true");
+  await sentences.nth(2).click();
+  await editor.getByRole("button", { name: "取消", exact: true }).click();
+  await card.getByRole("button", { name: "修改" }).click();
+  await expect(editor.locator(".evidence-sentence-chip")).toHaveCount(2);
+  expect((await readJson(page, keys.evidence)).questions[key].redo.references).toHaveLength(2);
+});
+
 test("reader interaction: drawer follows first/redo and manual redo preserves unfinished translation", async ({ page }) => {
   const keys = await translationFixture(page);
   const progress = await readJson(page, keys.progress);
@@ -58,10 +138,10 @@ test("reader interaction: drawer follows first/redo and manual redo preserves un
   await expect.poll(() => readJson(page, keys.first)).toEqual({ 21: "C" });
   expect(await readJson(page, keys.redo)).toEqual({});
   await page.getByRole("button", { name: "关闭题窗", exact: true }).click();
-  await page.locator(".stage-nav button", { hasText: "重做" }).click();
+  await clickStageAdvance(page, "进入重做");
   await expect.poll(async () => (await readJson(page, keys.flow)).currentStage).toBe("deep-redo");
   expect(await readJson(page, keys.progress)).toEqual(progress);
-  expect((await readJson(page, keys.flow)).stages["deep-translation"].completedAt).toBeNull();
+  expect((await readJson(page, keys.flow)).stages["deep-translation"].completedAt).not.toBeNull();
   item = await openDrawer(page);
   await expect(item.locator(".question-options button.selected")).toHaveCount(0);
   await item.locator(".question-options button").nth(3).click();
@@ -99,7 +179,7 @@ test("reader interaction: sentence evidence and notes stay isolated across attem
     await editor.locator(".evidence-note-input").fill(note);
     await editor.getByRole("button", { name: "确认依据", exact: true }).click();
   };
-  await page.locator(".stage-nav button", { hasText: "重做" }).click();
+  await clickStageAdvance(page, "进入重做");
   await expect.poll(async () => (await readJson(page, keys.flow)).currentStage).toBe("deep-redo");
   const redoItem = await openDrawer(page);
   await redoItem.locator(".question-options button").nth(2).click();
@@ -146,7 +226,7 @@ test("reader interaction: one synthetic pen gesture after unknown miss creates d
   }, { capture: true, once: true }));
   // Desktop translation textareas remain editable; use non-token article space
   // so this exercises the writable-body fallback rather than a text-input tap.
-  const writing = page.locator(".translation-paragraph .sentence-work-meta").first();
+  const writing = page.locator(".translation-unit-tools").first();
   // Reader stage restoration and toolbar resizing can scroll after Playwright's
   // initial scrollIntoView. Verify the actual target before the sole pen down.
   let penPoint;
@@ -155,8 +235,8 @@ test("reader interaction: one synthetic pen gesture after unknown miss creates d
     element.scrollIntoView({ block: "center", behavior: "instant" });
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const rect = element.getBoundingClientRect();
-    const x = rect.left + rect.width * 0.3;
-    const y = rect.top + Math.min(rect.height * 0.5, 35);
+    const x = rect.right - 70;
+    const y = rect.top + 20;
     const target = document.elementFromPoint(x, y);
     return { x, y, ready: y > (document.querySelector(".annotation-toolbar")?.getBoundingClientRect().bottom || 0)
       && y < innerHeight - 20 && Boolean(target?.closest(".translation-unit, .sentence-work")) };

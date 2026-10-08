@@ -2,15 +2,65 @@ import { getCurrentUsername } from "./userData.js";
 import { computeFileFingerprint, stablePdfResourceId } from "./fingerprint.js";
 import { AppEvent } from "./events/eventTypes.js";
 import { emitAppEvent } from "./events/appEvents.js";
+import { normalizeUnknownTerm } from "./unknownWords.js";
 
 export const WULIAO_ENGLISH_DB_NAME = "wuliao-english";
-export const WULIAO_ENGLISH_DB_VERSION = 7;
+export const WULIAO_ENGLISH_DB_VERSION = 8;
 const STORE = "custom-pdfs";
 const UNKNOWN_STORE = "unknown-words";
 const CACHE_STORE = "pdf-parse-cache";
 export const EXAM_INK_STORE = "exam-ink";
 export const WRITING_INK_STORE = "writing-ink";
 export const DEVICE_PRIVATE_WRITING_SAMPLE_STORE = "device-private-writing-samples";
+export const LONG_SENTENCE_STORES = [
+  "long-sentence-sessions",
+  "long-sentence-items",
+  "long-sentence-attempts",
+  "long-sentence-skills",
+  "long-sentence-evaluations",
+  "long-sentence-schedules",
+  "long-sentence-ink",
+];
+let longSentenceStorageAvailable = true;
+export function isLongSentenceStorageAvailable() { return longSentenceStorageAvailable; }
+
+function openExistingVersionSeven(indexedDb) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDb.open(WULIAO_ENGLISH_DB_NAME);
+    request.onupgradeneeded = (event) => {
+      if (event.oldVersion === 0) request.transaction.abort();
+    };
+    request.onerror = () => reject(request.error || new Error("旧数据库无法打开"));
+    request.onsuccess = () => {
+      const db = request.result;
+      const required = ["reader-ink", STORE, UNKNOWN_STORE, CACHE_STORE,
+        EXAM_INK_STORE, WRITING_INK_STORE, DEVICE_PRIVATE_WRITING_SAMPLE_STORE];
+      const expected = {
+        "reader-ink": ["id", ["username"]],
+        [STORE]: ["id", ["username", "fingerprint"]],
+        [UNKNOWN_STORE]: ["id", ["username", "usernameResource"]],
+        [CACHE_STORE]: ["cacheKey", ["fingerprint"]],
+        [EXAM_INK_STORE]: ["id", ["username", "sessionId"]],
+        [WRITING_INK_STORE]: ["id", ["username", "sessionId", "ownerRecordId"]],
+        [DEVICE_PRIVATE_WRITING_SAMPLE_STORE]: ["id", ["username", "usernameQuestion"]],
+      };
+      let valid = db.version === 7 && required.every((name) => db.objectStoreNames.contains(name));
+      if (valid) {
+        try {
+          const transaction = db.transaction(required, "readonly");
+          valid = required.every((name) => {
+            const store = transaction.objectStore(name);
+            const [keyPath, indexes] = expected[name];
+            return store.keyPath === keyPath && indexes.every((index) => store.indexNames.contains(index));
+          });
+        } catch { valid = false; }
+      }
+      if (!valid) { db.close(); reject(new Error("旧数据库结构不完整，已停止写入")); return; }
+      longSentenceStorageAvailable = false;
+      resolve(db);
+    };
+  });
+}
 
 export function openWuliaoEnglishDatabase(indexedDb = globalThis.indexedDB) {
   return new Promise((resolve, reject) => {
@@ -58,9 +108,21 @@ export function openWuliaoEnglishDatabase(indexedDb = globalThis.indexedDB) {
         store.createIndex("username", "username", { unique: false });
         store.createIndex("usernameQuestion", ["username", "questionId"], { unique: true });
       }
+      for (const name of LONG_SENTENCE_STORES) {
+        if (request.result.objectStoreNames.contains(name)) continue;
+        const store = request.result.createObjectStore(name, { keyPath: "id" });
+        store.createIndex("username", "username", { unique: false });
+        if (name !== "long-sentence-skills") store.createIndex("usernameSession", ["username", "sessionId"], { unique: false });
+        if (name === "long-sentence-sessions") store.createIndex("usernameCreated", ["username", "createdAt"], { unique: false });
+        if (name === "long-sentence-skills") store.createIndex("usernameDue", ["username", "nextDueAt"], { unique: false });
+        if (name === "long-sentence-ink") store.createIndex("ownerRecordId", "ownerRecordId", { unique: false });
+      }
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => { longSentenceStorageAvailable = true; resolve(request.result); };
+    request.onerror = () => {
+      if (request.error?.name === "VersionError") { reject(request.error); return; }
+      openExistingVersionSeven(indexedDb).then(resolve, reject);
+    };
   });
 }
 
@@ -285,6 +347,132 @@ export async function updateUnknownWordMeaning(id, meaning) {
     UNKNOWN_STORE,
   );
   emitAppEvent(AppEvent.UNKNOWN_WORDS_UPDATED);
+}
+
+// A read and its merge must share a transaction: rapid adds cannot lose a sense.
+async function mutateUnknownWord(id, username, mutate, isCurrent = () => true) {
+  const db = await openWuliaoEnglishDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(UNKNOWN_STORE, "readwrite");
+    const store = transaction.objectStore(UNKNOWN_STORE);
+    let result = null;
+    const request = store.get(id);
+    request.onsuccess = () => {
+      if (username !== getCurrentUsername() || !isCurrent()) return;
+      const current = request.result;
+      if (current && current.username !== username) return;
+      try {
+        result = mutate(current);
+        if (result) store.put(result);
+      } catch (reason) { transaction.abort(); reject(reason); }
+    };
+    transaction.oncomplete = () => { db.close(); resolve(result); };
+    transaction.onerror = transaction.onabort = () => {
+      db.close(); reject(transaction.error || new Error("陌生词保存失败"));
+    };
+  });
+}
+
+export function upsertUnknownContextSense(current, entry, now = Date.now()) {
+  const senses = [...(current?.senses || [])];
+  const index = senses.findIndex((sense) => sense.contextKey === entry.contextKey);
+  const previous = senses[index];
+  const occurrenceIds = [...new Set([...(previous?.occurrenceIds || []), ...(entry.occurrenceIds || [])])];
+  const sense = previous
+    ? { ...previous, occurrenceIds, updatedAt: now }
+    : { contextKey: entry.contextKey, sentence: entry.sentence, occurrenceIds,
+      meaning: "", meaningSource: "pending-context", createdAt: now, updatedAt: now,
+      meaningRevision: globalThis.crypto?.randomUUID?.() || `${now}:${Math.random()}` };
+  if (index < 0) senses.push(sense);
+  else senses[index] = sense;
+  return { ...(current || {}), ...entry, senses,
+    meaning: current?.meaning || senses.find((item) => item.meaning)?.meaning || "",
+    occurrences: [...new Set([...(current?.occurrences || []), ...occurrenceIds])],
+    createdAt: current?.createdAt || now, updatedAt: now };
+}
+
+export async function addUnknownWordContext(entry, { isCurrent } = {}) {
+  const username = entry.username || getCurrentUsername();
+  if (!username) throw new Error("请先登录账号");
+  const normalizedWord = normalizeUnknownTerm(entry.word);
+  if (!normalizedWord || !entry.contextKey || !entry.sentence) return null;
+  const id = unknownWordId(username, entry.resourceId, entry.passageId, normalizedWord);
+  const result = await mutateUnknownWord(id, username, (current) => upsertUnknownContextSense(current,
+    { ...entry, id, username, normalizedWord }), isCurrent);
+  if (result) emitAppEvent(AppEvent.UNKNOWN_WORDS_UPDATED);
+  return result;
+}
+
+// A single-token gesture toggles its saved mark, including a phrase containing
+// that token. Other sentence senses and legacy positions remain intact.
+export async function toggleUnknownWordContext(entry, { isCurrent = () => true } = {}) {
+  if (entry.occurrenceIds?.length !== 1) {
+    const record = await addUnknownWordContext(entry, { isCurrent });
+    return record ? { action: "added", record } : null;
+  }
+  const username = entry.username || getCurrentUsername();
+  if (!username) throw new Error("请先登录账号");
+  const normalizedWord = normalizeUnknownTerm(entry.word);
+  if (!normalizedWord || !entry.contextKey || !entry.sentence) return null;
+  const id = unknownWordId(username, entry.resourceId, entry.passageId, normalizedWord);
+  const db = await openWuliaoEnglishDatabase();
+  const result = await new Promise((resolve, reject) => {
+    const transaction = db.transaction(UNKNOWN_STORE, "readwrite");
+    const store = transaction.objectStore(UNKNOWN_STORE);
+    const request = store.index("usernameResource").getAll([username, entry.resourceId]);
+    let result = null;
+    request.onsuccess = () => {
+      if (username !== getCurrentUsername() || !isCurrent()) return;
+      try {
+        const records = request.result.filter((record) => record.passageId === entry.passageId);
+        const occurrenceId = entry.occurrenceIds[0];
+        const marked = records.filter((record) => record.occurrences?.includes(occurrenceId));
+        if (marked.length) {
+          for (const record of marked) {
+            const removed = record.senses?.find((sense) => sense.contextKey === entry.contextKey
+              && sense.occurrenceIds?.includes(occurrenceId));
+            const removedIds = new Set(removed?.occurrenceIds || [occurrenceId]);
+            const senses = record.senses?.filter((sense) => sense !== removed);
+            const retainedIds = new Set(senses?.flatMap((sense) => sense.occurrenceIds || []));
+            const occurrences = record.occurrences.filter((item) => !removedIds.has(item) || retainedIds.has(item));
+            if (!occurrences.length) store.delete(record.id);
+            else store.put({ ...record, occurrences, ...(senses ? { senses } : {}),
+              meaning: senses?.length ? senses.find((sense) => sense.meaning)?.meaning || "" : record.meaning,
+              updatedAt: Date.now() });
+          }
+          result = { action: "removed", record: null };
+        } else {
+          const record = upsertUnknownContextSense(records.find((record) => record.id === id),
+            { ...entry, id, username, normalizedWord });
+          store.put(record);
+          result = { action: "added", record };
+        }
+      } catch (reason) { transaction.abort(); reject(reason); }
+    };
+    transaction.oncomplete = () => { db.close(); resolve(result); };
+    transaction.onerror = transaction.onabort = () => { db.close(); reject(transaction.error || new Error("陌生词保存失败")); };
+  });
+  if (result) emitAppEvent(AppEvent.UNKNOWN_WORDS_UPDATED);
+  return result;
+}
+
+export async function updateUnknownWordContextMeaning(id, contextKey, meaning, {
+  username = getCurrentUsername(), meaningSource = "manual-context", expectedRevision, isCurrent,
+} = {}) {
+  const result = await mutateUnknownWord(id, username, (current) => {
+    const index = current?.senses?.findIndex((sense) => sense.contextKey === contextKey) ?? -1;
+    if (index < 0) return null; // Never recreate a deleted record or context.
+    const previous = current.senses[index];
+    if (expectedRevision !== undefined && previous.meaningRevision !== expectedRevision) return null;
+    const senses = [...current.senses];
+    senses[index] = { ...previous, meaning: String(meaning || "").trim(), meaningSource,
+      meaningRevision: globalThis.crypto?.randomUUID?.() || `${Date.now()}:${Math.random()}`,
+      updatedAt: Date.now() };
+    return { ...current, senses, meaning: senses.find((sense) => sense.meaning)?.meaning || current.meaning || "",
+      updatedAt: Date.now() };
+  }, isCurrent);
+  if (result) emitAppEvent(AppEvent.UNKNOWN_WORDS_UPDATED);
+  return result;
 }
 
 export async function deleteUnknownWord(id) {

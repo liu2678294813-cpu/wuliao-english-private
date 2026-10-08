@@ -213,8 +213,20 @@ export function currentStageOf(flow) {
   return flow?.currentStage || "deep-cover";
 }
 
+export function hasReachedStage(flow, stageId) {
+  if (!flow?.stages?.[stageId] || !STAGE_IDS.includes(stageId)) return false;
+  if (STAGE_IDS.includes(flow.currentStage) && stageIndex(flow.currentStage) >= stageIndex(stageId)) return true;
+  const reached = (id) => {
+    const stage = flow.stages?.[id];
+    return stage?.status === "current" || stage?.status === "completed"
+      || stage?.visitedAt != null && Number.isFinite(Number(stage.visitedAt))
+      || stage?.completedAt != null && Number.isFinite(Number(stage.completedAt));
+  };
+  return reached(stageId) || STAGE_IDS.slice(stageIndex(stageId) + 1).some(reached);
+}
+
 export function isStageLocked(flow, stageId) {
-  if (stageId === "deep-redo") return false;
+  if (stageId === "deep-redo" && !hasReachedStage(flow, stageId)) return true;
   const reached = Math.max(stageIndex(currentStageOf(flow)), ...STAGE_IDS
     .filter((id) => ["completed", "skipped"].includes(flow?.stages?.[id]?.status)
       || (flow?.stages?.[id]?.visitedAt != null && Number.isFinite(Number(flow.stages[id].visitedAt)))).map(stageIndex));

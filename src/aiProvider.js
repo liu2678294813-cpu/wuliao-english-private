@@ -210,29 +210,29 @@ function profileStorageKey(modality) {
   return `${AI_PROVIDER_PROFILE_KEY}:${modality}`;
 }
 
-function migrateLegacyProfile(modality) {
+function migrateLegacyProfile(modality, username = getCurrentUsername()) {
   if (modality === "vision") {
     let config = {};
-    try { config = JSON.parse(getUserItem(LEGACY_VISION_CONFIG_KEY) || "{}"); } catch { /* compatible fallback */ }
+    try { config = JSON.parse(getUserItem(LEGACY_VISION_CONFIG_KEY, username) || "{}"); } catch { /* compatible fallback */ }
     const baseUrl = String(config?.baseUrl || "").trim();
-    if (!baseUrl && !getUserItem(LEGACY_VISION_MODEL_KEY)) return null;
+    if (!baseUrl && !getUserItem(LEGACY_VISION_MODEL_KEY, username)) return null;
     return normalizeProviderProfile({
       modality,
       providerId: "custom",
       endpointKind: "custom",
       baseUrl,
-      modelId: getUserItem(LEGACY_VISION_MODEL_KEY) || "",
+      modelId: getUserItem(LEGACY_VISION_MODEL_KEY, username) || "",
     });
   }
   let config = {};
-  try { config = JSON.parse(getUserItem(LEGACY_TEXT_CONFIG_KEY) || "{}"); } catch { /* compatible fallback */ }
+  try { config = JSON.parse(getUserItem(LEGACY_TEXT_CONFIG_KEY, username) || "{}"); } catch { /* compatible fallback */ }
   const baseUrl = String(config?.baseUrl || "https://api.deepseek.com").trim();
   return normalizeProviderProfile({
     modality,
     providerId: "deepseek",
     endpointKind: baseUrl === "https://api.deepseek.com" ? "official" : "custom",
     baseUrl,
-    modelId: getUserItem(LEGACY_TEXT_MODEL_KEY) || "deepseek-chat",
+    modelId: getUserItem(LEGACY_TEXT_MODEL_KEY, username) || "deepseek-chat",
   });
 }
 
@@ -267,6 +267,10 @@ function nativeCredentialKey(username, scopeId) {
   return `ai:credential:v2:${encodeURIComponent(username)}:${scopeId}`;
 }
 
+function legacyNativeCredentialKey(username, modality) {
+  return `ai:${modality === "vision" ? "vision-apikey" : "apikey"}:${encodeURIComponent(username)}`;
+}
+
 function webCredentialKey(scopeId) {
   return `wuliao:ai:credential:v2:${scopeId}`;
 }
@@ -284,7 +288,7 @@ export async function getCredential(profile, {
   const normalized = normalizeProviderProfile(profile);
   const scopeId = normalized.credentialScopeId;
   const fallbackKey = webCredentialKey(scopeId);
-  const legacyProfile = migrateLegacy ? migrateLegacyProfile(normalized.modality) : null;
+  const legacyProfile = migrateLegacy ? migrateLegacyProfile(normalized.modality, username) : null;
   const legacyMigrationAllowed = legacyProfile?.credentialScopeId === scopeId;
   if (secureStore?.get) {
     const storageKey = nativeCredentialKey(username, scopeId);
@@ -294,13 +298,13 @@ export async function getCredential(profile, {
     const scopedFallback = String(getUserItem(fallbackKey, username) || "").trim();
     const legacyFallback = legacyMigrationAllowed ? String(getUserItem(legacySecretKey(normalized.modality), username) || "").trim() : "";
     const plaintext = scopedFallback || legacyFallback;
-    // Older Android Writing stored Vision credentials natively, not in
-    // localStorage. Only migrate when its saved endpoint matches this scope;
-    // never borrow a Text key or a key belonging to another endpoint/account.
+    // Older Android Text and Vision adapters stored credentials natively.
+    // Only migrate the same modality, account and saved endpoint scope;
+    // retain the old native entry for rollback after verified migration.
     let legacyNative = "";
-    if (!value && legacyMigrationAllowed && normalized.modality === "vision") {
-      try { legacyNative = String(await secureStore.get(`ai:vision-apikey:${encodeURIComponent(username)}`) || "").trim(); }
-      catch { throw providerError("secure_storage_error", "Android 旧版视觉密钥读取失败"); }
+    if (!value && legacyMigrationAllowed) {
+      try { legacyNative = String(await secureStore.get(legacyNativeCredentialKey(username, normalized.modality)) || "").trim(); }
+      catch { throw providerError("secure_storage_error", "Android 旧版密钥读取失败"); }
     }
     const migrationValue = plaintext || legacyNative;
     if (!value && migrationValue) {
@@ -346,10 +350,10 @@ export async function bindCredential(profile, value, {
         }
       } else {
         await secureStore.remove?.(storageKey);
-        if (normalized.modality === "vision" && migrateLegacyProfile("vision")?.credentialScopeId === scopeId) {
+        if (migrateLegacyProfile(normalized.modality, username)?.credentialScopeId === scopeId) {
           // An explicit removal also removes this endpoint's old credential,
           // otherwise the next read would silently migrate it back again.
-          await secureStore.remove?.(`ai:vision-apikey:${encodeURIComponent(username)}`);
+          await secureStore.remove?.(legacyNativeCredentialKey(username, normalized.modality));
         }
       }
     } catch {
@@ -600,8 +604,11 @@ export async function callAi({
   const requestId = globalThis.crypto?.randomUUID?.() || `ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const path = transportKind === TRANSPORT_KINDS.RESPONSES ? "responses" : "chat/completions";
   const body = transportKind === TRANSPORT_KINDS.RESPONSES
-    ? { model: modelId, input: messages, temperature }
-    : { model: modelId, messages, temperature, stream: false };
+    ? { model: modelId, input: messages }
+    : { model: modelId, messages, stream: false };
+  // Explicit null lets callers use the provider default, including models
+  // that reject temperature. Existing callers retain the default 0.6.
+  if (temperature !== null) body.temperature = temperature;
   try {
     const response = await fetch(`${normalized.baseUrl}/${path}`, {
       method: "POST",
@@ -668,7 +675,7 @@ export function textAiCacheIdentity(options) {
   const namespace = options.cacheNamespace || options.taskType || "chat";
   const input = { task: namespace, promptVersion: options.promptVersion || 1, schemaVersion: 1,
     model, provider: [profile.providerId, profile.baseUrl, resolveModelTransport(model, profile), profile.credentialScopeId],
-    messages: options.messages, temperature: options.temperature ?? 0.6 };
+    messages: options.messages, temperature: options.temperature === null ? "omitted" : options.temperature ?? 0.6 };
   const fingerprint = fingerprintAiInput(input);
   return { namespace, fingerprint, identity: fingerprint };
 }

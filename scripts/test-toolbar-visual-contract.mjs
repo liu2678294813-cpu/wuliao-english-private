@@ -8,8 +8,8 @@ const inkToolsSource = readFileSync(new URL("../src/annotationTools.js", import.
 const inkRuntimeSource = readFileSync(new URL("../src/ink/inkRuntime.js", import.meta.url), "utf8");
 
 test("tablet ink toolbar keeps its row while controls meet the compact visual contract", () => {
-  // 共享 Toolbar 视觉契约同时作用于 reader / cloze / exam 三个宿主。
-  const toolbar = source.match(/\.reader-page > \.annotation-toolbar\.tablet-ink-toolbar,\n\.cloze-reader-page > \.annotation-toolbar\.tablet-ink-toolbar,\n\.exam-session > \.annotation-toolbar\.tablet-ink-toolbar \{([\s\S]*?)\n\}/);
+  // 共享 Toolbar 视觉契约作用于仍存在的 reader / cloze 宿主。
+  const toolbar = source.match(/\.reader-page > \.annotation-toolbar\.tablet-ink-toolbar,\n\.cloze-reader-page > \.annotation-toolbar\.tablet-ink-toolbar \{([\s\S]*?)\n\}/);
   assert.ok(toolbar);
   assert.match(toolbar[1], /height: var\(--reader-toolbar-height\)/);
   assert.match(toolbar[1], /min-height: var\(--reader-toolbar-height\)/);

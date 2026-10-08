@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getCurrentUsername } from "./userData";
 import { questionKeyFor } from "./questionEvidence";
 import { listNeedsReviewSentenceKeys } from "./translationProgress";
 import {
   completeReviewSession,
   ensureSentenceRecheckTask,
+  markOriginalSentenceLearned,
+  reconcileOriginalSentenceCompletions,
   resolveSentenceKeys,
   TASK_TYPE_SENTENCE_RECHECK,
   updateReviewSession,
@@ -54,6 +57,7 @@ export default function ReviewSession({
   onExit,
 }) {
   const [error, setError] = useState("");
+  const [storageUsername] = useState(getCurrentUsername);
   const [draftSummaries, setDraftSummaries] = useState({});
   const taskKey = task?.taskKey || "";
   const isRecheck = task?.type === TASK_TYPE_SENTENCE_RECHECK;
@@ -65,10 +69,22 @@ export default function ReviewSession({
     [translationProgress],
   );
 
+  useEffect(() => {
+    if (!taskKey) return;
+    const result = reconcileOriginalSentenceCompletions(taskKey, storageUsername);
+    if (storageUsername !== getCurrentUsername()) { setError("账号已切换，请重新打开复习"); return; }
+    if (!result.ok) { setError(result.error || "复习记录恢复失败，请重试"); return; }
+    const keys = new Set([...Object.keys(result.task?.session?.sentenceResults || {}), ...Object.keys(task?.session?.sentenceResults || {})]);
+    if ([...keys].some((key) => result.task.session.sentenceResults[key] !== task?.session?.sentenceResults?.[key])) onTaskChanged?.(result.task);
+  }, [taskKey]);
+
   const difficultItems = useMemo(() => {
-    const keys = isRecheck ? task.sentenceKeys || [] : needsReviewKeys;
+    const pending = Object.keys(session.sentenceCompletions || {})
+      .filter((key) => session.sentenceResults?.[key] !== "mastered");
+    const keys = isRecheck ? [...new Set([...(task.sentenceKeys || []), ...pending])]
+      : [...new Set([...needsReviewKeys, ...pending])];
     return resolveSentenceKeys(passage, keys);
-  }, [isRecheck, task?.sentenceKeys, needsReviewKeys, passage]);
+  }, [isRecheck, task?.sentenceKeys, needsReviewKeys, passage, session.sentenceCompletions, session.sentenceResults]);
 
   const resolvedDifficult = difficultItems.filter((item) => item.status === "resolved");
   const unresolvedCount = difficultItems.filter((item) => item.status === "unresolved").length;
@@ -103,7 +119,8 @@ export default function ReviewSession({
   ));
 
   function applyPatch(patch) {
-    const result = updateReviewSession(taskKey, patch);
+    const result = updateReviewSession(taskKey, patch, Date.now(), storageUsername);
+    if (storageUsername !== getCurrentUsername()) { setError("账号已切换，请重新打开复习"); return null; }
     if (!result.ok) {
       setError(`复读进度保存失败：${result.error || "存储空间不足"}`);
       return null;
@@ -123,14 +140,27 @@ export default function ReviewSession({
   }
 
   function judgeSentence(item, result) {
-    if (result === "mastered") onSentenceMastered?.(item.key, result);
+    if (result === "mastered") {
+      const saved = markOriginalSentenceLearned(taskKey, item, Date.now(), storageUsername);
+      if (saved.accountChanged || storageUsername !== getCurrentUsername()) {
+        setError("账号已切换，请重新打开复习");
+        return null;
+      }
+      if (saved.task) onTaskChanged?.(saved.task);
+      if (saved.progress) onSentenceMastered?.(item.key, result, saved.progress);
+      if (!saved.ok) { setError(saved.error || "原句复习保存失败"); return null; }
+      setError("");
+      return saved.task;
+    }
     if (result === "difficult") {
-      ensureSentenceRecheckTask({
+      const scheduled = ensureSentenceRecheckTask({
         resourceId: resource.id,
         passageId: passage.id,
         sentenceKeys: [item.key],
         excludeTaskKey: taskKey,
+        username: storageUsername,
       });
+      if (!scheduled.ok) { setError(scheduled.error || "后续复查保存失败，请重试"); return null; }
     }
     const next = applyPatch({
       sentenceResults: { [item.key]: result },
@@ -160,7 +190,8 @@ export default function ReviewSession({
       unresolvedCount,
       taskType: TASK_TYPE_SENTENCE_RECHECK,
     };
-    const result = completeReviewSession(taskKey, summary);
+    const result = completeReviewSession(taskKey, summary, Date.now(), storageUsername);
+    if (storageUsername !== getCurrentUsername()) { setError("账号已切换，请重新打开复习"); return; }
     if (!result.ok) {
       setError(`复读完成保存失败：${result.error || "存储空间不足"}`);
       return;
@@ -275,6 +306,10 @@ export default function ReviewSession({
           )}
           {difficultItems.map((item) => {
             const judged = session.sentenceResults?.[item.key];
+            const completion = session.sentenceCompletions?.[item.key];
+            const sourceEntry = translationProgress?.sentences?.[item.key];
+            const pendingConfirmation = !judged && completion && sourceEntry?.reviewStatus === "mastered"
+              && sourceEntry.reviewedAt === completion.learnedAt;
             if (item.status === "unresolved") {
               return (
                 <div className="review-sentence unresolved" key={item.key}>
@@ -289,11 +324,11 @@ export default function ReviewSession({
                 {!judged ? (
                   <div className="review-sentence-judge">
                     <button type="button" className="review-judge-button mastered" onClick={() => judgeSentence(item, "mastered")}>
-                      现在能独立理解
+                      {pendingConfirmation ? "重试保存复习记录" : "现在能独立理解"}
                     </button>
-                    <button type="button" className="review-judge-button difficult" onClick={() => judgeSentence(item, "difficult")}>
+                    {!pendingConfirmation && <button type="button" className="review-judge-button difficult" onClick={() => judgeSentence(item, "difficult")}>
                       仍然困难
-                    </button>
+                    </button>}
                   </div>
                 ) : (
                   <small className="review-sentence-result">

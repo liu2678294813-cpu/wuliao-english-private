@@ -40,7 +40,10 @@ export function unknownWordRanges(scope) {
       range.setEnd(node, match.index + match[0].length);
       ranges.push({
         word: match[0],
-        occurrenceId: `${scope.dataset.unknownScope}:${wordIndex++}`,
+        occurrenceId: `${scope.dataset.unknownScope}:${wordIndex}`,
+        wordIndex: wordIndex++,
+        scope,
+        sentenceElement: node.parentElement?.closest("[data-sentence-scope]") || scope,
         range,
       });
     }
@@ -48,7 +51,8 @@ export function unknownWordRanges(scope) {
   return ranges;
 }
 
-export function unknownWordFromPoint(clientX, clientY) {
+export function unknownWordFromPoint(clientX, clientY, cache) {
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return null;
   const caret = document.caretPositionFromPoint?.(clientX, clientY);
   const fallback = caret ? null : document.caretRangeFromPoint?.(clientX, clientY);
   const node = caret?.offsetNode || fallback?.startContainer;
@@ -56,7 +60,9 @@ export function unknownWordFromPoint(clientX, clientY) {
   if (node?.nodeType !== 3 || !Number.isFinite(offset)) return null; // TEXT_NODE = 3（不依赖全局 Text）
   const scope = node.parentElement?.closest("[data-unknown-scope]");
   if (!scope || node.parentElement?.closest("[data-unknown-ignore]")) return null;
-  return unknownWordRanges(scope).find((token) => {
+  let tokens = cache?.get(scope);
+  if (!tokens) { tokens = unknownWordRanges(scope); cache?.set(scope, tokens); }
+  return tokens.find((token) => {
     if (token.range.startContainer !== node) return false;
     if (offset < token.range.startOffset || offset > token.range.endOffset) return false;
     return [...token.range.getClientRects()].some((rect) => (
@@ -95,7 +101,7 @@ export function highlightSavedUnknownWords({ root, selectedOccurrences }) {
 // 把划过/点中的 token 收集进 selection 会话，并更新 active highlight。
 // 返回 token（无命中返回 null）——与精读 collectUnknownToken 语义一致。
 export function collectUnknownTokenInto(selection, event) {
-  const token = unknownWordFromPoint(event.clientX, event.clientY);
+  const token = unknownWordFromPoint(event.clientX, event.clientY, selection?.tokenCache);
   if (!token || !selection) return null;
   selection.tokens.set(token.occurrenceId, token);
   setUnknownHighlight(
@@ -109,11 +115,13 @@ export function collectUnknownTokenInto(selection, event) {
 //   toolRef.current === "unknown" 时启动 selection 会话并 abort 常规 ink 会话。
 // onCommit(selection) 由宿主实现释义链与存储；onError 报告失败。
 export function createUnknownSelectionHooks({ toolRef, selectionRef, onCollect, onCommit, onError,
-  fallbackToPenOnPenMiss = false, isWritingArea, onRequestPenMode }) {
+  fallbackToPenOnPenMiss = false, isWritingArea, onRequestPenMode, cancelOnInterrupted = false }) {
   return {
     beforeInkDown(event) {
       if (toolRef.current !== "unknown") return undefined;
-      selectionRef.current = { id: event.pointerId, tokens: new Map() };
+      if (selectionRef.current?.id === event.pointerId) return "abort";
+      setUnknownHighlight(ACTIVE_UNKNOWN_HIGHLIGHT, []);
+      selectionRef.current = { id: event.pointerId, tokens: new Map(), tokenCache: new WeakMap() };
       const token = onCollect(event);
       if (fallbackToPenOnPenMiss && event.pointerType === "pen" && !token
         && isWritingArea?.(event) && onRequestPenMode) {
@@ -134,11 +142,122 @@ export function createUnknownSelectionHooks({ toolRef, selectionRef, onCollect, 
     beforeInkFinish(event) {
       const selection = selectionRef.current;
       if (selection?.id !== event.pointerId) return undefined;
+      if (cancelOnInterrupted && event.type && event.type !== "pointerup") {
+        selectionRef.current = null;
+        setUnknownHighlight(ACTIVE_UNKNOWN_HIGHLIGHT, []);
+        return "abort";
+      }
+      if (cancelOnInterrupted) onCollect(event);
       selectionRef.current = null;
       Promise.resolve(onCommit(selection)).catch((reason) => {
         onError?.(`陌生词保存失败：${reason instanceof Error ? reason.message : String(reason)}`);
       });
       return "abort";
+    },
+  };
+}
+
+export function unknownSentenceContextFromToken(token, passageId) {
+  const element = token.sentenceElement || token.range?.startContainer?.parentElement?.closest("[data-sentence-scope]") || token.scope;
+  if (!element?.isConnected) return null;
+  const clone = element.cloneNode(true);
+  clone.querySelectorAll("[data-unknown-ignore]").forEach((node) => node.remove());
+  const sentence = (clone.textContent || "").replace(/\s+/g, " ").trim();
+  if (!sentence) return null;
+  const scope = element.dataset.sentenceScope || token.scope?.dataset.unknownScope || "custom";
+  const match = /^(?:(?:clean|translation|repeat):)?(p\d+:s\d+)$/.exec(scope);
+  const identity = match ? match[1] : `${scope.replace(/^(clean|translation|repeat):/, "")}:${sentence.normalize("NFKC")}`;
+  return { element, sentence, contextKey: `${passageId}:${identity}` };
+}
+
+// Group by physical DOM sentence before canonicalizing: repeated UI copies must
+// not bridge one another's token indexes. Only resolve a contiguous span on up.
+export function expandUnknownSelectionSpans(selection, passageId) {
+  const groups = new Map();
+  for (const token of selection?.tokens?.values() || []) {
+    const context = unknownSentenceContextFromToken(token, passageId);
+    // A replaced/unmounted sentence invalidates the entire gesture. Keeping
+    // only its surviving hits could otherwise save a truncated phrase.
+    if (!context || !token.scope?.isConnected || !token.range?.startContainer?.isConnected) return [];
+    let sentences = groups.get(token.scope);
+    if (!sentences) { sentences = new Map(); groups.set(token.scope, sentences); }
+    let group = sentences.get(context.element);
+    if (!group) { group = { ...context, hits: [] }; sentences.set(context.element, group); }
+    group.hits.push(token.wordIndex);
+  }
+  const spans = [];
+  for (const [scope, sentences] of groups) {
+    const tokens = selection.tokenCache?.get(scope) || unknownWordRanges(scope);
+    for (const group of sentences.values()) {
+      const min = Math.min(...group.hits), max = Math.max(...group.hits);
+      const selected = tokens.filter((token) => token.sentenceElement === group.element && token.wordIndex >= min && token.wordIndex <= max);
+      if (!selected.length) continue;
+      spans.push({ word: selected.map((token) => token.word).join(" "), sentence: group.sentence,
+        contextKey: group.contextKey, occurrenceIds: selected.map((token) => token.occurrenceId) });
+    }
+  }
+  return spans;
+}
+
+// Coordinates are authoritative when the input target is a captured surface or
+// an overlay. elementsFromPoint allows the paper beneath a canvas to be found.
+export function unknownPointerRegion(event, root) {
+  const elements = document.elementsFromPoint?.(event.clientX, event.clientY)
+    || [document.elementFromPoint?.(event.clientX, event.clientY) || event.target];
+  for (const element of elements) {
+    if (!element || !root?.contains(element)) continue;
+    if (element.closest?.("button,input,select,[contenteditable=true],[data-unknown-ignore],textarea:not([data-ink-only=true])")) return "control";
+    if (element.closest?.("[data-unknown-scope]")) return "english";
+    if (element.closest?.(".translation-unit,.deep-writing-lines")) return "writing";
+  }
+  return "other";
+}
+
+export function shouldHandleDirectUnknownTap({ pointerType, button = 0, noteMode, activeInk, enabled }) {
+  if (!enabled || activeInk || !["touch", "mouse", "pen"].includes(pointerType)) return false;
+  if (pointerType === "mouse" && button !== 0) return false;
+  return pointerType === "touch" || !noteMode;
+}
+
+export function createDirectUnknownTap({ canHandle, hitTest = unknownWordFromPoint, onCommit, onError,
+  maxDisplacement = 10, maxDuration = 350 }) {
+  let candidate = null;
+  const pointers = new Set();
+  const timestamp = (event) => Number.isFinite(event.timeStamp) ? event.timeStamp : performance.now();
+  function cancel() { candidate = null; }
+  function reset() { cancel(); pointers.clear(); }
+  return {
+    cancel, reset,
+    down(event) {
+      if (pointers.has(event.pointerId)) return Boolean(candidate?.id === event.pointerId);
+      pointers.add(event.pointerId);
+      if (pointers.size > 1) { cancel(); return false; }
+      if (!canHandle(event)) return false;
+      const token = hitTest(event.clientX, event.clientY);
+      if (!token) return false;
+      candidate = { id: event.pointerId, pointerType: event.pointerType, x: event.clientX,
+        y: event.clientY, time: timestamp(event), token, maxDisplacement: 0 };
+      return true;
+    },
+    move(event) {
+      if (candidate?.id !== event.pointerId) return false;
+      const samples = event.nativeEvent?.getCoalescedEvents?.() || event.getCoalescedEvents?.() || [];
+      for (const sample of [...samples, event]) candidate.maxDisplacement = Math.max(candidate.maxDisplacement,
+        Math.hypot(sample.clientX - candidate.x, sample.clientY - candidate.y));
+      return true;
+    },
+    finish(event) {
+      pointers.delete(event.pointerId);
+      if (candidate?.id !== event.pointerId) return false;
+      const tap = candidate;
+      cancel();
+      const distance = Math.max(tap.maxDisplacement, Math.hypot(event.clientX - tap.x, event.clientY - tap.y));
+      if (event.type !== "pointerup" || event.pointerType !== tap.pointerType || !canHandle(event)
+        || distance > maxDisplacement || timestamp(event) - tap.time > maxDuration) return true;
+      const token = hitTest(event.clientX, event.clientY);
+      if (!token || token.occurrenceId !== tap.token.occurrenceId || token.scope !== tap.token.scope) return true;
+      Promise.resolve().then(() => onCommit({ id: tap.id, tokens: new Map([[token.occurrenceId, token]]) })).catch(onError);
+      return true;
     },
   };
 }

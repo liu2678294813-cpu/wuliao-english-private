@@ -25,7 +25,7 @@ async function exercise(page, surface, scale = 1) {
       composite.width = innerWidth * 2; composite.height = innerHeight * 2;
       const context = composite.getContext("2d");
       context.scale(2, 2);
-      for (const canvas of document.querySelectorAll(".deep-ink-tile,.custom-viewport-ink-preview,.cloze-ink-canvas,.cloze-ink-preview,.exam-ink-canvas,.exam-ink-preview,.writing-ink-canvas,.writing-ink-preview,.ink-canvas,.ink-preview-canvas,.ink-tail-canvas")) {
+      for (const canvas of document.querySelectorAll(".deep-ink-tile,.custom-viewport-ink-preview,.cloze-ink-canvas,.cloze-ink-preview,.writing-ink-canvas,.writing-ink-preview,.ink-canvas,.ink-preview-canvas,.ink-tail-canvas")) {
         const box = canvas.getBoundingClientRect();
         if (canvas.width && canvas.height && box.width && box.height) context.drawImage(canvas, box.left, box.top, box.width, box.height);
       }
@@ -115,7 +115,7 @@ test("cloze direct pen preserves 100 closed paths and stable handoff", async ({ 
   expect(await storedStrokes(page)).toEqual(stored);
 });
 
-for (const area of ["PDF", "exam", "writing"]) {
+for (const area of ["PDF", "writing"]) {
   test(`${area} direct pen: immediate contact, 100 closed paths, handoff and reload`, async ({ page }, testInfo) => {
     await createAccount(page);
     await androidInk(page);
@@ -126,12 +126,6 @@ for (const area of ["PDF", "exam", "writing"]) {
       await expect(page.locator(".ink-canvas")).toBeVisible();
       await page.getByRole("button", { name: "手写批注", exact: true }).click();
       selector = ".canvas-stack"; store = "reader-ink";
-    } else if (area === "exam") {
-      await navTo(page, "模拟");
-      await page.getByRole("button", { name: /^2007 / }).click();
-      await page.getByRole("button", { name: "开始计时" }).click();
-      await expect(page.locator(".exam-ink-content")).toBeVisible();
-      selector = ".exam-ink-content"; store = "exam-ink";
     } else {
       await navTo(page, "写作");
       await page.getByLabel("按年份筛选写作").selectOption("2023");

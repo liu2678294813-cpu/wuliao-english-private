@@ -1,10 +1,10 @@
-import { getUserItem, listUserItems, setUserItem } from "./userData";
+import { getCurrentUsername, getUserItem, listUserItems, setUserItem } from "./userData";
 import { AppEvent } from "./events/eventTypes";
 import { emitAppEvent } from "./events/appEvents";
 import { questionKeyFor } from "./questionEvidence";
-import { sentenceKeyFor } from "./translationProgress";
+import { sentenceKeyFor, normalizeProgress, translationProgressKey, setReviewStatus } from "./translationProgress";
 
-export const REVIEW_SCHEMA_VERSION = 1;
+export const REVIEW_SCHEMA_VERSION = 2;
 export const REVIEW_TASK_PREFIX = "wuliao:review-task:";
 export const REVIEW_TASKS_UPDATED = AppEvent.REVIEW_TASKS_UPDATED;
 
@@ -72,6 +72,7 @@ function emptySession(taskType, now) {
     activeSince: null,
     paragraphRecall: {},
     sentenceResults: {},
+    sentenceCompletions: {},
     reviewAnswers: {},
     checkUnlocked: false,
     completedAt: null,
@@ -101,6 +102,29 @@ function normalizeStringMap(raw, allowed) {
     }
   }
   return output;
+}
+
+function normalizeSentenceCompletion(raw, task, sentenceKey) {
+  if (!raw || raw.version !== 1 || raw.beforeReviewStatus !== "needs_review") return null;
+  const ref = raw.sourceRef;
+  if (ref?.resourceId !== task.resourceId || ref?.passageId !== task.passageId || ref?.sentenceKey !== sentenceKey) return null;
+  const snapshot = raw.sourceSnapshot;
+  const learnedAt = normalizeTime(raw.learnedAt);
+  if (!learnedAt || typeof snapshot?.text !== "string" || !snapshot.text.trim()
+    || typeof raw.taskKey !== "string" || raw.taskKey !== task.taskKey) return null;
+  if (sentenceKeyFor({ paragraphNumber: snapshot.paragraphNumber, sentenceIndex: snapshot.sentenceIndex,
+    sentenceText: snapshot.text }) !== sentenceKey) return null;
+  return {
+    version: 1, taskKey: raw.taskKey, sourceRef: { ...ref },
+    sourceSnapshot: { text: snapshot.text, paragraphNumber: Number(snapshot.paragraphNumber), sentenceIndex: Number(snapshot.sentenceIndex) },
+    beforeReviewStatus: "needs_review",
+    before: {
+      reviewedAt: normalizeTime(raw.before?.reviewedAt),
+      correctedAt: normalizeTime(raw.before?.correctedAt),
+      translationFingerprint: raw.before?.translationFingerprint ?? null,
+    },
+    learnedAt,
+  };
 }
 
 export function normalizeTask(raw) {
@@ -136,6 +160,7 @@ export function normalizeTask(raw) {
       activeSince: normalizeTime(sessionRaw.activeSince),
       paragraphRecall: {},
       sentenceResults: normalizeStringMap(sessionRaw.sentenceResults, ["mastered", "difficult"]),
+      sentenceCompletions: {},
       reviewAnswers: normalizeStringMap(sessionRaw.reviewAnswers, /^[A-D]$/),
       checkUnlocked: Boolean(sessionRaw.checkUnlocked),
       completedAt: normalizeTime(sessionRaw.completedAt),
@@ -148,6 +173,12 @@ export function normalizeTask(raw) {
     for (const [number, value] of Object.entries(sessionRaw.paragraphRecall)) {
       const normalized = normalizeParagraphRecall(value);
       if (normalized) task.session.paragraphRecall[String(number)] = normalized;
+    }
+  }
+  if (sessionRaw.sentenceCompletions && typeof sessionRaw.sentenceCompletions === "object") {
+    for (const [key, value] of Object.entries(sessionRaw.sentenceCompletions)) {
+      const completion = normalizeSentenceCompletion(value, task, key);
+      if (completion) task.session.sentenceCompletions[key] = completion;
     }
   }
   return task;
@@ -348,8 +379,9 @@ export function resumeReviewTiming(taskKey, now = Date.now()) {
   return { ok: true, task };
 }
 
-export function updateReviewSession(taskKey, patch = {}, now = Date.now()) {
-  const task = loadReviewTask(taskKey);
+export function updateReviewSession(taskKey, patch = {}, now = Date.now(), username = getCurrentUsername()) {
+  if (username !== getCurrentUsername()) return { ok: false, error: "账号已切换，请重新打开复习", accountChanged: true };
+  const task = loadReviewTask(taskKey, username);
   if (!task) return { ok: false, error: "复读任务不存在" };
   if (task.completedAt != null || task.skippedAt != null) {
     return { ok: false, error: "复读任务已结束", task };
@@ -370,7 +402,15 @@ export function updateReviewSession(taskKey, patch = {}, now = Date.now()) {
     for (const [key, value] of Object.entries(patch.sentenceResults)) {
       if (key && (value === "mastered" || value === "difficult")) {
         session.sentenceResults[String(key)] = value;
+      } else if (key && value === null) {
+        delete session.sentenceResults[String(key)];
       }
+    }
+  }
+  if (patch.sentenceCompletions && typeof patch.sentenceCompletions === "object") {
+    for (const [key, value] of Object.entries(patch.sentenceCompletions)) {
+      const completion = normalizeSentenceCompletion(value, task, key);
+      if (completion) session.sentenceCompletions[key] = completion;
     }
   }
   if (patch.reviewAnswers && typeof patch.reviewAnswers === "object") {
@@ -379,12 +419,138 @@ export function updateReviewSession(taskKey, patch = {}, now = Date.now()) {
     }
   }
   if (patch.checkUnlocked !== undefined) session.checkUnlocked = Boolean(patch.checkUnlocked);
-  const result = saveReviewTask(task);
+  const result = saveReviewTask(task, username);
   return { ...result, task };
 }
 
-export function completeReviewSession(taskKey, summary = {}, now = Date.now()) {
-  const task = loadReviewTask(taskKey);
+function ownedTranslationProgress(resourceId, passageId, username) {
+  let raw = null;
+  try { raw = JSON.parse(getUserItem(translationProgressKey(resourceId, passageId), username) || "null"); } catch { /* Preserve unavailable progress as unconfirmed. */ }
+  return normalizeProgress(raw, resourceId, passageId);
+}
+
+function saveOwnedTranslationProgress(progress, username) {
+  if (username !== getCurrentUsername()) return false;
+  try {
+    setUserItem(translationProgressKey(progress.resourceId, progress.passageId), JSON.stringify(progress), username);
+    emitAppEvent(AppEvent.LEARNING_STATE_INVALIDATED);
+    return true;
+  } catch { return false; }
+}
+
+function samePreReviewState(entry, completion) {
+  return entry?.reviewStatus === "needs_review"
+    && entry.translationStatus === "corrected"
+    && (entry.reviewedAt ?? null) === completion.before.reviewedAt
+    && (entry.correctedAt ?? null) === completion.before.correctedAt
+    && (entry.translationFingerprint ?? null) === completion.before.translationFingerprint;
+}
+
+function matchesCompletedReview(entry, completion) {
+  return entry?.translationStatus === "corrected"
+    && entry.reviewStatus === "mastered"
+    && entry.reviewedAt === completion.learnedAt
+    && (entry.correctedAt ?? null) === completion.before.correctedAt
+    && (entry.translationFingerprint ?? null) === completion.before.translationFingerprint;
+}
+
+// The existing original-sentence review decision is the sole authority for
+// this transition. Its small task-side receipt makes interrupted writes safe
+// to resume without treating a generated training answer as source mastery.
+export function markOriginalSentenceLearned(taskKey, item, now = Date.now(), username = getCurrentUsername()) {
+  if (username !== getCurrentUsername()) return { ok: false, error: "账号已切换，请重新打开复习", accountChanged: true };
+  let task = loadReviewTask(taskKey, username);
+  if (!task || !item?.key) return { ok: false, error: "原句复习任务不存在" };
+  if (task.completedAt != null || task.skippedAt != null) return { ok: false, error: "复读任务已结束，请重新进入原句复习" };
+  const key = item.key;
+  if (!String(item.sentenceText || "").trim() || sentenceKeyFor(item) !== key) return { ok: false, error: "原句内容与复习标识不一致" };
+  const progress = ownedTranslationProgress(task.resourceId, task.passageId, username);
+  const current = progress.sentences?.[key];
+  let completion = task.session.sentenceCompletions?.[key];
+  const newReview = current?.reviewStatus === "needs_review" && current.translationStatus === "corrected"
+    && completion && (!samePreReviewState(current, completion) || task.session.sentenceResults?.[key] === "mastered");
+  if (!completion || newReview) {
+    if (current?.reviewStatus !== "needs_review" || current.translationStatus !== "corrected") {
+      return { ok: false, error: "原句已不在待掌握状态，请刷新后重试" };
+    }
+    completion = {
+      version: 1, taskKey,
+      sourceRef: { resourceId: task.resourceId, passageId: task.passageId, sentenceKey: key },
+      sourceSnapshot: { text: item.sentenceText, paragraphNumber: item.paragraphNumber, sentenceIndex: item.sentenceIndex },
+      beforeReviewStatus: "needs_review",
+      before: { reviewedAt: current.reviewedAt ?? null, correctedAt: current.correctedAt ?? null,
+        translationFingerprint: current.translationFingerprint ?? null },
+      learnedAt: now,
+    };
+    const intent = updateReviewSession(taskKey, {
+      sentenceCompletions: { [key]: completion }, sentenceResults: { [key]: null },
+    }, now, username);
+    if (!intent.ok) return { ok: false, error: intent.error || "复习凭据保存失败" };
+    task = intent.task;
+  }
+  if (username !== getCurrentUsername()) return { ok: false, error: "账号已切换，请重新打开复习", accountChanged: true };
+  if (task.session.sentenceResults?.[key] === "mastered" && matchesCompletedReview(current, completion)) {
+    return { ok: true, task, progress, alreadyDone: true };
+  }
+  let savedProgress = progress;
+  if (samePreReviewState(current, completion)) {
+    savedProgress = setReviewStatus(progress, key, "mastered", completion.learnedAt);
+    if (savedProgress === progress || !saveOwnedTranslationProgress(savedProgress, username)) {
+      return { ok: false, task, error: "原句状态保存失败，复习凭据已保留" };
+    }
+  } else if (!matchesCompletedReview(current, completion)) {
+    return { ok: false, error: "原句状态已变化，不会覆盖；请重新进入原句复习" };
+  }
+  if (username !== getCurrentUsername()) return { ok: false, sourceSaved: true, error: "账号已切换，请重新打开复习", accountChanged: true };
+  const result = updateReviewSession(taskKey, { sentenceResults: { [key]: "mastered" } }, completion.learnedAt, username);
+  if (!result.ok) return { ok: false, task, sourceSaved: true, progress: savedProgress,
+    error: "原句已保存，复习记录待补全，请重试" };
+  return { ok: true, sourceSaved: true, progress: savedProgress, task: result.task };
+}
+
+export function listLearnedSourceEntries(username = getCurrentUsername()) {
+  const progressCache = new Map();
+  const entries = [];
+  for (const task of listReviewTasks(username)) {
+    const key = `${task.resourceId}\u0000${task.passageId}`;
+    if (!progressCache.has(key)) progressCache.set(key, ownedTranslationProgress(task.resourceId, task.passageId, username));
+    const progress = progressCache.get(key);
+    for (const [sentenceKey, completion] of Object.entries(task.session.sentenceCompletions || {})) {
+      if (task.session.sentenceResults?.[sentenceKey] !== "mastered") continue;
+      if (!matchesCompletedReview(progress.sentences?.[sentenceKey], completion)) continue;
+      entries.push({ sourceRef: completion.sourceRef, sourceSnapshot: completion.sourceSnapshot,
+        learnedAt: completion.learnedAt, taskKey: task.taskKey });
+    }
+  }
+  return entries;
+}
+
+export function reconcileOriginalSentenceCompletions(taskKey, username = getCurrentUsername()) {
+  if (username !== getCurrentUsername()) return { ok: false, error: "账号已切换，请重新打开复习", accountChanged: true };
+  const task = loadReviewTask(taskKey, username);
+  if (!task) return { ok: false, error: "原句复习任务不存在" };
+  const progress = ownedTranslationProgress(task.resourceId, task.passageId, username);
+  let latest = task;
+  for (const [key, completion] of Object.entries(task.session.sentenceCompletions || {})) {
+    if (latest.session.sentenceResults?.[key] === "mastered") {
+      if (progress.sentences?.[key]?.reviewStatus === "needs_review" && task.completedAt == null && task.skippedAt == null) {
+        const result = updateReviewSession(taskKey, { sentenceResults: { [key]: null } }, Date.now(), username);
+        if (!result.ok) return { ok: false, error: result.error, task: latest };
+        latest = result.task;
+      }
+      continue;
+    }
+    if (!matchesCompletedReview(progress.sentences?.[key], completion)) continue;
+    const result = updateReviewSession(taskKey, { sentenceResults: { [key]: "mastered" } }, completion.learnedAt, username);
+    if (!result.ok) return { ok: false, error: result.error, task: latest };
+    latest = result.task;
+  }
+  return { ok: true, task: latest };
+}
+
+export function completeReviewSession(taskKey, summary = {}, now = Date.now(), username = getCurrentUsername()) {
+  if (username !== getCurrentUsername()) return { ok: false, error: "账号已切换，请重新打开复习", accountChanged: true };
+  const task = loadReviewTask(taskKey, username);
   if (!task) return { ok: false, error: "复读任务不存在" };
   if (task.completedAt != null) return { ok: true, task };
   accumulateActiveDuration(task, now);
@@ -394,7 +560,7 @@ export function completeReviewSession(taskKey, summary = {}, now = Date.now()) {
     ...(task.session.summary || {}),
     ...(summary || {}),
   };
-  const result = saveReviewTask(task);
+  const result = saveReviewTask(task, username);
   return { ...result, task };
 }
 
@@ -414,11 +580,13 @@ export function ensureSentenceRecheckTask({
   sentenceKeys = [],
   now = Date.now(),
   excludeTaskKey = "",
+  username = getCurrentUsername(),
 } = {}) {
+  if (username !== getCurrentUsername()) return { ok: false, error: "账号已切换，请重新打开复习", accountChanged: true };
   if (!resourceId || !passageId) return { ok: false, error: "缺少文章标识" };
   const keys = [...new Set((Array.isArray(sentenceKeys) ? sentenceKeys : []).map(String).filter(Boolean))];
   if (!keys.length) return { ok: false, error: "没有需要复查的句子" };
-  const tasks = listReviewTasks();
+  const tasks = listReviewTasks(username);
   const open = tasks.find((task) => (
     task.type === TASK_TYPE_SENTENCE_RECHECK
     && task.resourceId === String(resourceId)
@@ -430,18 +598,23 @@ export function ensureSentenceRecheckTask({
   if (open) {
     open.sentenceKeys = [...new Set([...open.sentenceKeys, ...keys])];
     open.session.updatedAt = now;
-    const result = saveReviewTask(open);
+    const progress = ownedTranslationProgress(resourceId, passageId, username);
+    for (const key of keys) {
+      if (progress.sentences?.[key]?.reviewStatus === "needs_review") delete open.session.sentenceResults[key];
+    }
+    open.session.currentStep = "difficult_sentences";
+    open.session.checkUnlocked = false;
+    const result = saveReviewTask(open, username);
     return { ...result, task: open };
   }
   const sourceDate = localDateKey(now);
+  const baseTaskKey = reviewTaskKey({ type: TASK_TYPE_SENTENCE_RECHECK, resourceId, passageId, sourceDate });
+  let nextTaskKey = baseTaskKey;
+  let sequence = 1;
+  while (tasks.some((entry) => entry.taskKey === nextTaskKey)) nextTaskKey = `${baseTaskKey}:recheck:${sequence++}`;
   const task = {
     schemaVersion: REVIEW_SCHEMA_VERSION,
-    taskKey: reviewTaskKey({
-      type: TASK_TYPE_SENTENCE_RECHECK,
-      resourceId,
-      passageId,
-      sourceDate,
-    }),
+    taskKey: nextTaskKey,
     type: TASK_TYPE_SENTENCE_RECHECK,
     resourceId: String(resourceId),
     passageId: String(passageId),
@@ -454,7 +627,7 @@ export function ensureSentenceRecheckTask({
     sentenceKeys: keys,
     session: emptySession(TASK_TYPE_SENTENCE_RECHECK, now),
   };
-  const result = saveReviewTask(task);
+  const result = saveReviewTask(task, username);
   return { ...result, task: result.ok ? task : null };
 }
 

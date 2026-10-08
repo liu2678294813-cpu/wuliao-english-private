@@ -87,8 +87,6 @@ test("cloze ink 使用 userData（账号 scope / 备份枚举），不触碰 Exa
   const clozeSurface = read("src/ink/ClozeInkSurface.jsx");
   assert.match(clozeSurface, /clozeInk/);
   assert.doesNotMatch(clozeSurface, /examInkSnapshot|exam-ink/);
-  const examSurface = read("src/exam/ExamInkSurface.jsx");
-  assert.doesNotMatch(examSurface, /clozeInk|CLOZE_INK/);
 });
 
 test("D+1 / D+7 长期复习不加载普通完形历史笔迹", () => {

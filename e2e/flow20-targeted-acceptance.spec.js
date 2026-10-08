@@ -100,38 +100,3 @@ test("词汇：3/3 单词答错后严格回到 0/3，并保留历史日期元数
   }));
   expect(portraitGeometry.scrollWidth).toBeLessThanOrEqual(portraitGeometry.clientWidth + 1);
 });
-
-test("Exam：832×544 三行头部紧凑且计时、交卷、工具栏均无重叠溢出", async ({ page }) => {
-  await page.setViewportSize({ width: 832, height: 544 });
-  await createAccount(page, uniqueUsername("exam-832"));
-  await navTo(page, "模拟");
-  await page.getByRole("button", { name: /^2007 / }).click();
-  const start = page.getByRole("button", { name: "开始计时" });
-  await expect(start).toBeEnabled({ timeout: 120000 });
-  await start.click();
-  await expect(page.locator(".exam-session")).toBeVisible({ timeout: 30000 });
-  await expect(page.getByLabel("剩余时间")).toBeVisible();
-  await expect(page.getByRole("button", { name: "交卷" })).toBeVisible();
-  await expect(page.locator(".exam-session > .annotation-toolbar")).toBeVisible();
-
-  const geometry = await page.evaluate(() => {
-    const rect = (selector) => {
-      const box = document.querySelector(selector)?.getBoundingClientRect();
-      return box ? { top: box.top, bottom: box.bottom, left: box.left, right: box.right, width: box.width, height: box.height } : null;
-    };
-    return {
-      scrollWidth: document.documentElement.scrollWidth,
-      clientWidth: document.documentElement.clientWidth,
-      header: rect(".exam-session-header"),
-      status: rect(".exam-status-bar"),
-      toolbar: rect(".exam-session > .annotation-toolbar"),
-      navigator: rect(".exam-navigator"),
-    };
-  });
-  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
-  for (const key of ["header", "status", "toolbar", "navigator"]) expect(geometry[key]).toBeTruthy();
-  expect(geometry.header.bottom).toBeLessThanOrEqual(geometry.status.top + 1);
-  expect(geometry.status.bottom).toBeLessThanOrEqual(geometry.toolbar.top + 1);
-  expect(geometry.toolbar.bottom).toBeLessThanOrEqual(geometry.navigator.top + 1);
-  expect(geometry.toolbar.height).toBeLessThan(150);
-});

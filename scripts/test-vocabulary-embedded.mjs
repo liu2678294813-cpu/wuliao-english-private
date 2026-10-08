@@ -219,7 +219,7 @@ test("正式页面标题不再展示需求说明式副标题，必要状态与�
   assert.doesNotMatch(unknownWords, /精读与完形共用同一份陌生词库/);
   assert.doesNotMatch(writingLibrary, /从范文拆解到独立改写/);
   assert.doesNotMatch(writingLibrary, /按年份选择作文；题干与原卷图画来自本地 PDF/);
-  assert.match(memorize, /当前位置自动保存/);
+  assert.doesNotMatch(memorize, /当前位置自动保存/);
   assert.match(review, /id="answerHint"/);
   assert.match(imported, /Excel\/CSV 第一列填英文/);
   assert.match(imported, /id="statusText"/);
@@ -232,10 +232,9 @@ test("保存失败回滚读取当前记录，清除不删除历史", () => {
   assert.doesNotMatch(js, /objectStore\(MEMORY_STORE\).delete/);
 });
 
-test("复习答错严格回到 0/3，并保留原记录元数据", () => {
+test("复习答错调用统一进度转换并保留原记录元数据", () => {
   const js = read("public/vocabulary/review.js");
-  assert.match(js, /store\.put\(\{\s*\.\.\.record/);
-  assert.match(js, /clickCount:\s*0/);
+  assert.match(js, /withMemoryProgress\(record, record\.wordId, 0/);
   assert.match(js, /maskedAt:\s*record\.maskedAt/);
   assert.match(js, /maskedDates:\s*dates/);
   assert.match(js, /lastReviewDate:\s*state\.selectedDate/);
