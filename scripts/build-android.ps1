@@ -58,6 +58,8 @@ try {
   & $gradle --project-dir (Join-Path $projectRoot "android") assembleDebug
   if ($LASTEXITCODE -ne 0) { throw "Android APK build failed." }
 
+  & (Join-Path $PSScriptRoot "verify-android-apk.ps1") -ApkPath $apkSource
+
   New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
   Copy-Item -LiteralPath $apkSource -Destination $apkTarget -Force
   $writingCatalog = Get-Content -LiteralPath (Join-Path $projectRoot "src\writing\generatedWritingSampleCatalog.js") -Raw

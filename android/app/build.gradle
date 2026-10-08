@@ -17,6 +17,15 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        debug {
+            // Keep the existing key so installed learning data can be upgraded.
+            // Include JAR certificates for installers that inspect the v1 scheme.
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
