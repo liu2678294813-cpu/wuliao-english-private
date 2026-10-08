@@ -17,6 +17,7 @@
 
 import { openHandwritingDatabase, HANDWRITING_DB } from "./vocabulary/handwritingStorage.js";
 import { getTelemetry } from "./telemetry/telemetry";
+import { FORMAL_IMPORT_STORES } from "./import/contracts.js";
 import { openWuliaoEnglishDatabase } from "./storage";
 import { flushDurableInk, inkStorageReady, isDurableInkKey, listDurableInk, writeDurableInk } from "./durableInkStorage.js";
 
@@ -64,6 +65,7 @@ export const IDB_INCLUDED = {
   WuliaoVocabHandwritingDB: { answers: {}, sessions: {} },
   "wuliao-english": {
     "custom-pdfs": { includeBlob: true },
+    ...Object.fromEntries(FORMAL_IMPORT_STORES.map((name) => [name, name === "import-files" ? { includeBlob: true } : {}])),
     "unknown-words": {},
     "exam-ink": { mergeByFingerprint: true },
     "writing-ink": { mergeByFingerprint: true },
@@ -90,7 +92,7 @@ export const IDB_INCLUDED = {
 };
 
 export const IDB_EXCLUDED_STORES = {
-  "wuliao-english": ["pdf-parse-cache", "device-private-writing-samples"],
+  "wuliao-english": ["pdf-parse-cache", "device-private-writing-samples", "import-batches", "import-cache"],
   KaoyanVocabDB: ["users"],
 };
 
@@ -570,13 +572,15 @@ export async function restoreBackup({
               message: "Existing fingerprinted ink snapshot differs; local data was preserved",
             });
           }
-        } else if (write.db === "wuliao-english" && write.store.startsWith("long-sentence-")) {
+        } else if (write.db === "wuliao-english" && (write.store.startsWith("long-sentence-") || FORMAL_IMPORT_STORES.includes(write.store) || write.store === "custom-pdfs" && write.value.importVersion)) {
           const existing = await idb.get?.(write.db, write.store, write.key);
           const stable = (value) => JSON.stringify(value, function (_key, item) {
             if (!item || typeof item !== "object" || Array.isArray(item)) return item;
             return Object.fromEntries(Object.keys(item).sort().map((key) => [key, item[key]]));
           });
-          if (!existing || stable(existing) !== stable(write.value)) {
+          const incoming = { ...write.value }, actual = existing ? { ...existing } : null;
+          if (write.store === "import-files" && incoming.file?.__backupAttachment) { incoming.file = { size: manifest.attachments[incoming.file.__backupAttachment]?.size }; if (actual) actual.file = { size: existing.file?.size }; }
+          if (!existing || stable(actual) !== stable(incoming)) {
             errors.push({
               storage: "indexedDB", db: write.db, store: write.store, key: write.key,
               code: "conflict", message: "Existing long sentence record differs; local data was preserved",
@@ -595,6 +599,19 @@ export async function restoreBackup({
       writtenIdb += 1;
     } catch (error) {
       errors.push({ storage: "indexedDB", db: write.db, store: write.store, key: write.key, message: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  // Imported materials require their sources and answers to survive restore together.
+  if (idb?.get) {
+    for (const write of plan.idbWrites.filter((w) => w.db === "wuliao-english" && (FORMAL_IMPORT_STORES.includes(w.store) || w.store === "custom-pdfs"))) {
+      const value = write.value;
+      const fileRefs = [value.sourceFileId, ...(value.content?.assets || []).map((a) => a.fileId)].filter(Boolean);
+      for (const ref of fileRefs) if (!(await idb.get("wuliao-english", "import-files", ref))) errors.push({ storage: "indexedDB", code: "missing-import-reference", message: "导入资料缺少来源附件", key: ref });
+      if (value.materialId && ["material-answers", "material-explanations", "answer-evaluations"].includes(write.store)) {
+        const material = await idb.get("wuliao-english", "custom-pdfs", value.materialId) || await idb.get("wuliao-english", "writing-materials", value.materialId);
+        if (!material || material.username !== username) errors.push({ storage: "indexedDB", code: "missing-import-material", message: "答案或评分缺少对应资料", key: value.materialId });
+      }
     }
   }
 

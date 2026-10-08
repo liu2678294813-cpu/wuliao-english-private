@@ -1,3 +1,4 @@
+import MaterialAnswers from "./import/MaterialAnswers.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSaveBoundary } from "./useSaveBoundary.js";
 import { backgroundSave } from "./saveCoordinator.js";
@@ -853,6 +854,7 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
 
   return (
     <div ref={readerPageRef} className={`cloze-reader-page ${inkCollapsed ? "top-area-collapsed" : ""}`}>
+      {cloze && <MaterialAnswers resource={resource} content={cloze} attempts={Object.fromEntries(Object.entries(progress?.attempts || {}).map(([n, a]) => [n, a.reviewAnswer || a.firstAnswer || ""]))} label="复查作答" reveal={canSeeOfficialAnswers(stageId)} />}
       <ReaderHeader
         resource={resource}
         onClose={closeReader}
@@ -923,7 +925,7 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
                 {isCorrectionStage(stageId) && (
                   <div className="cloze-timer-bar">
                     <span>统一订正 · 两次作答已冻结，整体核对后进入逐空精析</span>
-                    <span>{officialAnswers && Object.keys(officialAnswers).length ? "官方答案对照" : "自定义资料无官方答案"}</span>
+                    <span>{officialAnswers && Object.keys(officialAnswers).length ? "官方答案对照" : resource.importVersion ? "参考答案独立评分" : "自定义资料无官方答案"}</span>
                   </div>
                 )}
                 {isAnalysisStage(stageId) && (

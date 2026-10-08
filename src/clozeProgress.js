@@ -141,9 +141,10 @@ export function normalizeBlankAttempt(attempt, number, now = Date.now()) {
 
 export function normalizeClozeProgress(progress, blankNumbers = []) {
   if (!progress || typeof progress !== "object") return null;
+  const storedNumbers = Object.keys(progress.attempts || {}).map(Number).filter((n) => Number.isInteger(n) && n > 0).sort((a, b) => a - b);
   const numbers = Array.isArray(blankNumbers) && blankNumbers.length
     ? blankNumbers
-    : Array.from({ length: 20 }, (_, index) => index + 1);
+    : storedNumbers.length ? storedNumbers : Array.from({ length: 20 }, (_, index) => index + 1);
   const attempts = {};
   for (const number of numbers) {
     attempts[number] = normalizeBlankAttempt(progress.attempts?.[number], number);

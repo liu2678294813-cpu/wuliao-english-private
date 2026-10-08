@@ -54,7 +54,7 @@ async function extractTextPages(pdfDocument, onProgress, signal) {
   return pages;
 }
 
-function ocrAssetOptions(onProgress, state) {
+export function ocrAssetOptions(onProgress, state) {
   const base = new URL(`${import.meta.env.BASE_URL}tesseract/`, window.location.href).href;
   return {
     workerPath: `${base}worker.min.js`,
@@ -71,7 +71,9 @@ function ocrAssetOptions(onProgress, state) {
         onProgress?.({
           phase: PDF_IMPORT_PHASES.ocr,
           page: state.currentPage,
-          total: state.totalPages,
+          total: state.documentPages || state.totalPages,
+          ocrTotal: state.totalPages,
+          processed: state.done,
           percent: 34 + Math.round(overall * 54),
           pagePercent: Math.round(message.progress * 100),
         });
@@ -110,15 +112,16 @@ async function renderOcrPage({ pdfDocument, pageNumber, worker, signal }) {
   }
 }
 
-async function ocrPages(pdfDocument, pageNumbers, onProgress, signal) {
+async function ocrPages(pdfDocument, pageNumbers, onProgress, signal, languages = "eng") {
   return runOcrPages(pdfDocument, pageNumbers, {
     onProgress,
     signal,
     createWorker: async ({ state, signal }) => {
+      state.documentPages = pdfDocument.numPages;
       abortCheck(signal);
       const { createWorker } = await import("tesseract.js");
       abortCheck(signal);
-      return createWorker("eng", 1, ocrAssetOptions(onProgress, state));
+      return createWorker(languages, 1, ocrAssetOptions(onProgress, state));
     },
     processPage: renderOcrPage,
   });
@@ -175,6 +178,9 @@ export async function parsePdfFile(file, onProgress, {
   signal,
   parserVersion = PDF_PARSER_VERSION,
   ocrPolicy = "auto",
+  extractionOnly = false,
+  ocrLanguages = "eng",
+  includeImages = false,
 } = {}) {
   if (ocrPolicy !== "auto" && ocrPolicy !== "disabled") {
     throw new PdfImportError("invalid-ocr-policy", `不支持的 OCR 策略：${ocrPolicy}`);
@@ -211,16 +217,43 @@ export async function parsePdfFile(file, onProgress, {
     const quality = pageQuality(pages);
     let method = "text";
     const warnings = buildPageWarnings(quality, allowOcr);
-    const ocrNeeded = ocrPageNumbers(quality, ocrPolicy);
+    const ocrNeeded = ocrPageNumbers(quality, ocrPolicy).filter((number) => {
+      if (!extractionOnly) return true;
+      const text = pages.find((p) => p.pageNumber === number)?.text || "";
+      const clean = !/[\uFFFD\u0000]/.test(text) && (text.match(/[\p{L}\p{N}\s\p{P}]/gu)?.length || 0) / Math.max(1, text.length) > 0.95;
+      return !(clean && ((text.match(/\b[A-Za-z]{2,}\b/g)?.length || 0) >= 3 || (text.match(/[\u4e00-\u9fff]/g)?.length || 0) >= 8 || (text.match(/\d+\s*[.、:：]?\s*[A-D]\b/g)?.length || 0) >= 2));
+    });
 
     const attemptedOcrPages = new Set();
     if (ocrNeeded.length) {
-      const ocrResults = await ocrPages(pdfDocument, ocrNeeded, onProgress, signal);
+      const ocrResults = await ocrPages(pdfDocument, ocrNeeded, onProgress, signal, ocrLanguages);
       ocrNeeded.forEach((pageNumber) => attemptedOcrPages.add(pageNumber));
       pages = pages.map((page) => (Object.prototype.hasOwnProperty.call(ocrResults, page.pageNumber)
         ? { ...page, text: ocrResults[page.pageNumber], textSource: "ocr" }
         : page));
       method = "ocr";
+    }
+
+    if (extractionOnly) {
+      const assets = [];
+      if (includeImages) {
+        const { OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        for (const record of pages) {
+          abortCheck(signal);
+          const page = await pdfDocument.getPage(record.pageNumber);
+          let canvas;
+          try {
+            const ops = await page.getOperatorList();
+            if (!ops.fnArray.some((op) => [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject].includes(op))) continue;
+            const viewport = page.getViewport({ scale: Math.min(1.5, 1400 / page.getViewport({ scale: 1 }).width) });
+            canvas = document.createElement("canvas"); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+            await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+            if (blob) assets.push({ pageNumber: record.pageNumber, file: blob, name: `page-${record.pageNumber}.png` });
+          } finally { page.cleanup(); if (canvas) { canvas.width = 0; canvas.height = 0; } }
+        }
+      }
+      return { pages, fingerprint, assets, warnings, method };
     }
 
     onProgress?.({ phase: PDF_IMPORT_PHASES.structure, page: 0, total: pages.length, percent: 92 });

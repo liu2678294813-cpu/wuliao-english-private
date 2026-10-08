@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ImportedWritingLibrary from "./ImportedWritingLibrary.jsx";
 import { onAppEvent } from "../../events/appEvents.js";
 import { AppEvent } from "../../events/eventTypes.js";
 import { WRITING_STAGE_SHORT, WRITING_STAGE_TITLES } from "./WritingStageShell.jsx";
@@ -185,6 +186,7 @@ export default function WritingLibrary({ services, username, onOpenSession, onCr
       </header>
 
       <QuestionBank services={services} onOpenSession={onOpenSession} onConfigureTextAi={onConfigureTextAi} />
+      <ImportedWritingLibrary services={services} username={username} onOpenSession={onOpenSession} />
 
       {state.status === "loading" ? <section className="writing-library-state"><span className="writing-loader" />正在核对本账号的写作记录…</section> : null}
       {state.status === "failed" ? <section className="writing-library-state is-error"><strong>{state.error}</strong><button type="button" onClick={load}>重新载入</button></section> : null}

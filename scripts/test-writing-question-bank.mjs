@@ -17,7 +17,7 @@ import { createWritingQuestionSessionService, WritingQuestionSessionError } from
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 const questions = listWritingQuestions();
-const audit = JSON.parse(await readFile(path.join(repositoryRoot, "scripts/output/writing-question-bank-audit.json"), "utf8"));
+const audit = JSON.parse(await readFile(path.join(repositoryRoot, "scripts/fixtures/writing-question-bank-coverage.json"), "utf8"));
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 function walkKeys(value, result = []) {

@@ -1,3 +1,5 @@
+import MaterialAnswers from "./import/MaterialAnswers.jsx";
+import { configureQuestionlessFlow } from "./readingFlow.js";
 import { createInkUndoPatch } from "./ink/inkUndo.js";
 import {
   createContext,
@@ -67,7 +69,7 @@ import { createDeepInkChangeSource, createDeepInkStageCache, createDeepInkTileIn
 import { createInkTileBitmapCache, createInkTileRenderer } from "./ink/inkTileRenderer.js";
 import { deepInkDigest, mergeDeepInkStrokes, partitionDeepInkByStage } from "./deepStageInk";
 import { getTelemetry } from "./telemetry/telemetry";
-import { getOfficialAnswerKey } from "./answerKeys";
+import { verifiedOfficialAnswers } from "./import/answers.js";
 import { hasReliableOfficialAnswer, questionCapabilities } from "./questionCapabilities";
 import { listLearningRecords, updateTagStatus } from "./aiLearningRecords";
 import {
@@ -1045,7 +1047,7 @@ function PassageWorkbook({
         <p className="eyebrow">READING DEEP-DIVE WORKBOOK</p>
         <span className="deep-cover-label">{passage.label}</span>
         <h1>{resource.title}</h1>
-        <p className="deep-cover-subtitle">精读全流程：审题、读文、作答、逐句笔译、订正、重做与复读</p>
+        <p className="deep-cover-subtitle">{passage.questions.length ? "精读全流程：审题、读文、作答、逐句笔译、订正、重做与复读" : "纯文章精读：读文、逐句笔译、核对与复读；习题阶段不适用"}</p>
         <div className="deep-cover-stats">
           <div><strong>{passage.paragraphs.length}</strong><span>文章段落</span></div>
           <div><strong>{totalSentences}</strong><span>逐句笔译</span></div>
@@ -1053,9 +1055,9 @@ function PassageWorkbook({
           <div><strong>{analysis.method === "ocr" ? "OCR" : "PDF"}</strong><span>本地识别</span></div>
         </div>
         <dl className="deep-guide-table">
-          <div><dt>限时阶段</dt><dd>先看全部题干，不看选项；读文时不查词。</dd></div>
+          <div><dt>读文阶段</dt><dd>{passage.questions.length ? "先看全部题干，不看选项；读文时不查词。" : "连续阅读原文，再进入逐句精读与翻译。"}</dd></div>
           <div><dt>笔译阶段</dt><dd>按段、按句输出自己的译文，再回原文订正。</dd></div>
-          <div><dt>重做阶段</dt><dd>全文核对完成后，再统一完成全部题目。</dd></div>
+          <div><dt>{passage.questions.length ? "重做阶段" : "习题阶段"}</dt><dd>{passage.questions.length ? "全文核对完成后，再统一完成全部题目。" : "本文没有习题，审题、初做与重做均不适用。"}</dd></div>
           <div><dt>第二天</dt><dd>遮住笔译重读，压缩段落功能并复查错因。</dd></div>
         </dl>
         {analysis.warnings?.map((warning) => <p className="deep-warning" key={warning}>{warning}</p>)}
@@ -1553,9 +1555,9 @@ function SimplifiedExportDocument({
         </header>
         <span className="simplified-export-source">{sourceLabel}</span>
         <dl className="simplified-export-guide">
-          <div><dt>限时阶段</dt><dd>先看全部题干，不看选项；读文时不查词。</dd></div>
+          <div><dt>读文阶段</dt><dd>{passage.questions.length ? "先看全部题干，不看选项；读文时不查词。" : "连续阅读原文，再进入逐句精读与翻译。"}</dd></div>
           <div><dt>笔译阶段</dt><dd>按段、按句输出自己的译文，再回原文订正。</dd></div>
-          <div><dt>重做阶段</dt><dd>全文核对完成后，再统一完成全部题目。</dd></div>
+          <div><dt>{passage.questions.length ? "重做阶段" : "习题阶段"}</dt><dd>{passage.questions.length ? "全文核对完成后，再统一完成全部题目。" : "本文没有习题，审题、初做与重做均不适用。"}</dd></div>
           <div><dt>第二天</dt><dd>遮住笔译重读，复查错因。</dd></div>
         </dl>
         <h2 className="simplified-export-section-title">阅读题题干</h2>
@@ -1861,7 +1863,7 @@ export default function CustomDeepReader({
   const timedReadingActive = ["deep-clean-text", "deep-first-quiz"].includes(flowCurrentStage)
     && (timedReadingState.phase === "running" || timedReadingState.phase === "paused");
   const correctAnswers = useMemo(
-    () => resource.kind === "official" ? getOfficialAnswerKey(resource) : {},
+    () => verifiedOfficialAnswers(resource, "reading"),
     [resource],
   );
   function capabilitiesForScope(scope, questionNumber) {
@@ -2106,7 +2108,10 @@ export default function CustomDeepReader({
   useEffect(() => { evidenceRef.current = evidenceStore; }, [evidenceStore]);
   useEffect(() => { timedReadingActiveRef.current = timedReadingActive; }, [timedReadingActive]);
   useEffect(() => {
-    setFlow(getReadingFlow(resource.id, passage.id));
+    const restoredFlow = getReadingFlow(resource.id, passage.id);
+    const nextFlow = passage.questions.length ? restoredFlow : configureQuestionlessFlow(restoredFlow);
+    setFlow(nextFlow);
+    if (!passage.questions.length) saveReadingFlow(nextFlow);
   }, [resource.id, passage.id]);
   useEffect(() => {
     setTranslationProgress(loadTranslationProgress(resource.id, passage.id));
@@ -4385,7 +4390,7 @@ export default function CustomDeepReader({
               }}
             >
               <ReaderStageMarker index={index}>{completed ? "✓" : isCurrent ? "●" : locked ? "🔒" : index + 1}</ReaderStageMarker>
-              {label}{skipped ? " · 已跳过" : ""}
+              {label}{skipped ? flow.questionless ? " · 不适用" : " · 已跳过" : ""}
             </button>
           );
         })}
@@ -4490,6 +4495,7 @@ export default function CustomDeepReader({
             if (androidApp && noteMode && isTextEntryTarget(event.target)) event.target.blur();
           }}
         >
+        {<MaterialAnswers resource={resource} content={passage} attempts={reviewActive ? reviewTask?.session?.reviewAnswers || {} : flowCurrentStage === "deep-redo" || flowCurrentStage === "deep-review" ? redoAnswers : answers} label={reviewActive ? "复习作答" : flowCurrentStage === "deep-redo" || flowCurrentStage === "deep-review" ? "重做" : "初做"} reveal={reviewActive ? reviewCheckUnlocked : Boolean(correctionVisibility.first || correctionVisibility.redo || flowCurrentStage === "deep-review")} />}
         {reviewActive ? (
           reviewError && !reviewTask ? (
             <div className="review-error-panel">

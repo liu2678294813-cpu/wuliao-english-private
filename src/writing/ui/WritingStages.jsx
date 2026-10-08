@@ -1,3 +1,4 @@
+import { ImportedAsset } from "./ImportedWritingLibrary.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   WritingInputMethod,
@@ -182,6 +183,7 @@ function PromptCard({ prompt, compact = false }) {
     <section className={`writing-prompt-card ${compact ? "is-compact" : ""}`}>
       <small>作文题</small>
       <h2>{prompt.promptText}</h2>
+      {(prompt.assets || []).map((asset) => <ImportedAsset key={asset.assetId} asset={asset} />)}
       {prompt.directions ? <p>{prompt.directions}</p> : null}
       {prompt.targetWordRange ? <span>建议 {prompt.targetWordRange.min}–{prompt.targetWordRange.max} 词</span> : null}
     </section>

@@ -1,0 +1,3 @@
+# Preserve the exact bytes of synthetic import fixtures, including ASCII PDFs.
+e2e/fixtures/unified-import/* binary
+src/writing/generatedWritingSampleCatalog.js text eol=lf

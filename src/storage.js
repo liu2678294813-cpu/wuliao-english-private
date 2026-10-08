@@ -3,9 +3,10 @@ import { computeFileFingerprint, stablePdfResourceId } from "./fingerprint.js";
 import { AppEvent } from "./events/eventTypes.js";
 import { emitAppEvent } from "./events/appEvents.js";
 import { normalizeUnknownTerm } from "./unknownWords.js";
+import { IMPORT_STORES } from "./import/contracts.js";
 
 export const WULIAO_ENGLISH_DB_NAME = "wuliao-english";
-export const WULIAO_ENGLISH_DB_VERSION = 8;
+export const WULIAO_ENGLISH_DB_VERSION = 9;
 const STORE = "custom-pdfs";
 const UNKNOWN_STORE = "unknown-words";
 const CACHE_STORE = "pdf-parse-cache";
@@ -117,6 +118,12 @@ export function openWuliaoEnglishDatabase(indexedDb = globalThis.indexedDB) {
         if (name === "long-sentence-skills") store.createIndex("usernameDue", ["username", "nextDueAt"], { unique: false });
         if (name === "long-sentence-ink") store.createIndex("ownerRecordId", "ownerRecordId", { unique: false });
       }
+      for (const name of IMPORT_STORES) {
+        if (request.result.objectStoreNames.contains(name)) continue;
+        const store = request.result.createObjectStore(name, { keyPath: "id" });
+        store.createIndex("username", "username", { unique: false });
+        store.createIndex("materialId", "materialId", { unique: false });
+      }
     };
     request.onsuccess = () => { longSentenceStorageAvailable = true; resolve(request.result); };
     request.onerror = () => {
@@ -224,12 +231,17 @@ export async function listCustomPdfs() {
   const username = getCurrentUsername();
   if (!username) return [];
   const records = await runTransaction("readonly", (store) => store.index("username").getAll(username));
-  return records.sort((a, b) => b.addedAt - a.addedAt);
+  const files = records.some((r) => r.sourceFileId) ? await runTransaction("readonly", (store) => store.index("username").getAll(username), "import-files") : [];
+  return records.filter((r) => !r.deletedAt).map((r) => r.sourceFileId ? { ...r, file: files.find((f) => f.id === r.sourceFileId)?.file || null } : r).sort((a, b) => b.addedAt - a.addedAt);
 }
 
 export async function deleteCustomPdf(id) {
   const current = await runTransaction("readonly", (store) => store.get(id));
   if (!current || current.username !== getCurrentUsername()) throw new Error("自定义 PDF 不存在");
+  if (current.importVersion) {
+    await runTransaction("readwrite", (store) => store.put({ ...current, deletedAt: Date.now() }));
+    return;
+  }
   await runTransaction("readwrite", (store) => store.delete(id));
   if (current.fingerprint) await clearParseCache(current.fingerprint);
 }

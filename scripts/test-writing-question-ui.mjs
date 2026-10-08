@@ -65,7 +65,7 @@ test("library mirrors Reading/Cloze year groups and cards without AI or sample l
   assert.equal(container.querySelectorAll(".writing-question-card").length, 42);
   assert.match(container.querySelector(".writing-question-years .year-heading").textContent, /2023.*2 篇/);
   assert.equal(container.querySelectorAll(".writing-question-preview").length, 0, "cards should be the initial selection surface");
-  assert.doesNotMatch(container.textContent, /Sample Essay|范文正文|参考范文/);
+  assert.doesNotMatch(container.querySelector("#writing-question-bank").textContent, /Sample Essay|范文正文|参考范文/);
   assert.equal(starts, 0, "mounting and browsing must not start AI");
   await click(button(container, "查看 2023 年小作文"));
   assert.match(container.textContent, /2023 · QUESTION 51/);

@@ -120,16 +120,16 @@ test("官方答案隔离：订正前拿不到，订正后才能获得", () => {
   assert.equal(canSeeOfficialAnswers("cloze-correction"), true);
   assert.equal(canSeeOfficialAnswers("cloze-analysis"), true);
   assert.equal(canSeeOfficialAnswers("cloze-final-read"), true);
-  const keys = officialAnswerFor("cloze-correction", { id: "postgraduate-2007-cloze", year: 2007 }, "cloze-2007", true);
+  const keys = officialAnswerFor("cloze-correction", { id: "postgraduate-2007-cloze", kind: "official-cloze", year: 2007 }, "cloze-2007", true);
   assert.ok(keys && keys[1], "订正阶段应返回官方答案");
-  assert.equal(officialAnswerFor("cloze-self-review", { id: "postgraduate-2007-cloze", year: 2007 }, "cloze-2007", true), null);
+  assert.equal(officialAnswerFor("cloze-self-review", { id: "postgraduate-2007-cloze", kind: "official-cloze", year: 2007 }, "cloze-2007", true), null);
   assert.equal(officialAnswerFor("cloze-correction", { id: "custom-abc" }, "custom-abc", false), null, "自定义完形没有官方答案");
 });
 
 test("pre-correction 不调用答案 resolver，三个 post-correction 阶段才调用", () => {
   let calls = 0;
   const resolver = () => { calls += 1; return { 1: "A" }; };
-  const resource = { id: "postgraduate-2007-cloze", year: 2007 };
+  const resource = { id: "postgraduate-2007-cloze", kind: "official-cloze", year: 2007 };
   for (const stage of ["cloze-cover", "cloze-first-attempt", "cloze-self-review"]) {
     assert.equal(officialAnswerFor(stage, resource, "cloze-2007", true, resolver), null);
   }

@@ -46,6 +46,7 @@ import {
   readProgress,
 } from "./library";
 import { selectCustomLibraryResources } from "./libraryView";
+import AnswerRegrading from "./import/AnswerRegrading.jsx";
 
 const loadCustomDeepReader = () => import("./CustomDeepReader");
 const loadClozeReader = () => import("./ClozeReader");
@@ -57,13 +58,13 @@ const DeveloperLab = lazy(() => import("./ui/DeveloperLab"));
 const WritingLibrary = lazy(() => import("./writing/ui/WritingLibrary.jsx"));
 const WritingWorkspace = lazy(() => import("./writing/ui/WritingWorkspace.jsx"));
 const LongSentencePage = lazy(() => import("./longSentence/LongSentencePage.jsx"));
+const UnifiedImport = lazy(() => import("./import/UnifiedImport.jsx"));
 const ExamImportEditor = lazy(() => import("./ExamImportEditor"));
 
 function RouteLoading({ label = "正在打开…" }) {
   return <div className="route-loading" role="status" aria-live="polite"><span aria-hidden="true" />{label}</div>;
 }
 import {
-  addCustomPdf,
   claimLegacyCustomPdfs,
   deleteCustomPdf,
   getParseCache,
@@ -231,6 +232,7 @@ function AccountGate({ children }) {
   if (mode === "ready" && username) {
     return (
       <>
+        <AnswerRegrading username={username} />
         {children(username, () => {
           setWorkspaceReady(false);
           setCurrentUsername("");
@@ -428,7 +430,7 @@ function HomeOverview({ summary, todayState, onShowRanks, completedCloze = null 
   );
 }
 
-function Home({ onRead, onOpenClozeLibrary, onOpenResource, onOpenCloze, username, onStartReview, onStartClozeReview, onOpenVocabularyReview, onReady }) {
+function Home({ onRead, onOpenWritingLibrary, onOpenClozeLibrary, onOpenResource, onOpenCloze, username, onStartReview, onStartClozeReview, onOpenVocabularyReview, onReady }) {
   const [customPdfs, setCustomPdfs] = useState([]);
   const [todayState, setTodayState] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -492,6 +494,8 @@ function Home({ onRead, onOpenClozeLibrary, onOpenResource, onOpenCloze, usernam
           onBrowseLibrary={onRead}
           onOpenVocabularyReview={onOpenVocabularyReview}
         />
+
+        <Suspense fallback={null}><UnifiedImport username={username} onOpenLibrary={(target) => target === "writing" ? onOpenWritingLibrary() : target === "cloze" ? onOpenClozeLibrary() : onRead()} /></Suspense>
 
         <HomeOverview summary={summary} todayState={todayState} onShowRanks={() => setRankModalOpen(true)} completedCloze={completedCloze} />
 
@@ -601,7 +605,7 @@ function ResourceCard({ resource, onOpen, onDelete, cardStatus = null, onOpenSum
 
 function EmptyLibrary({ type }) {
   const copy = type === "custom"
-    ? { mark: "PDF", title: "这里还没有你的资料", text: "上传 PDF 后会自动进入自定义库，原文件不会离开本机。" }
+    ? { mark: "资料", title: "这里还没有你的资料", text: "请从首页选择类型并导入资料。原文件保留在本机。" }
     : { mark: "—", title: `${type}题库本轮保持不变`, text: "按当前需求，本次只接入考研精读库，没有改动这一题库。" };
   return (
     <div className="empty-library">
@@ -652,19 +656,17 @@ function Library({ onBack, onOpen, onOpenCloze, onOpenClozeSummary = null, onUnk
   const [notice, setNotice] = useState("");
   const [converting, setConverting] = useState(false);
   const [importSession, setImportSession] = useState(null);
-  const inputRef = useRef(null);
-  const importQueueRef = useRef([]);
   const editorResolveRef = useRef(null);
   const aliveRef = useRef(true);
   const batchResultRef = useRef({ completed: 0, failed: 0, cancelled: 0, errors: [] });
 
   useEffect(() => {
     // StrictMode 会在开发态执行一次 setup → cleanup → setup；每次 setup 必须恢复 alive，
-    // 否则导入队列会在 fingerprint 后误判组件已卸载并永久停在“正在识别”。
+    // 已有资料的修复转换需要这一保护。
     aliveRef.current = true;
     return () => {
-      // 组件卸载（用户离开资料库）时终止导入队列：resolve 等待中的编辑器
-      // promise 并标记死亡，避免 processImportQueue 永久挂起（R4 修复）。
+      // 组件卸载（用户离开资料库）时终止修复转换：resolve 等待中的编辑器
+      // promise 并标记死亡，避免修复任务永久挂起。
       aliveRef.current = false;
       editorResolveRef.current?.();
       editorResolveRef.current = null;
@@ -825,70 +827,6 @@ function Library({ onBack, onOpen, onOpenCloze, onOpenClozeSummary = null, onUnk
     }
   }
 
-  async function finishImportBatch() {
-    if (!aliveRef.current) return;
-    const { completed, failed, cancelled } = batchResultRef.current;
-    setConverting(false);
-    const parts = [];
-    if (completed) parts.push(`已保存 ${completed} 份`);
-    if (cancelled) parts.push(`${cancelled} 份已取消`);
-    if (failed) parts.push(`${failed} 份识别失败，可点击资料重试`);
-    if (batchResultRef.current.errors?.[0]) parts.push(batchResultRef.current.errors[0]);
-    setNotice(parts.length ? parts.join("，") : "未保存新的资料");
-    window.setTimeout(() => setNotice(""), 5200);
-  }
-
-  async function processImportQueue() {
-    while (importQueueRef.current.length) {
-      if (!aliveRef.current) return;
-      const file = importQueueRef.current.shift();
-      try {
-        const fingerprint = await computeFileFingerprint(file);
-        if (!aliveRef.current) return;
-        const cached = await getParseCache(fingerprint, PDF_PARSER_VERSION);
-        const record = await addCustomPdf(file, fingerprint);
-        if (!aliveRef.current) return;
-        setCustomPdfs((current) => current.some((item) => item.id === record.id) ? current : [record, ...current]);
-        if (cached) {
-          const ready = await updateCustomPdf(record.id, {
-            analysis: cached,
-            fingerprint,
-            conversionStatus: "ready",
-            convertedAt: Date.now(),
-            conversionError: "",
-          });
-          setCustomPdfs((current) => current.map((item) => item.id === ready.id ? ready : item));
-          batchResultRef.current.completed += 1;
-          continue;
-        }
-        setImportSession({
-          record,
-          previousRecord: record,
-          file,
-          fingerprint,
-          cachedAnalysis: null,
-          temporary: record.conversionStatus !== "ready",
-        });
-        await new Promise((resolve) => { editorResolveRef.current = resolve; });
-      } catch (error) {
-        batchResultRef.current.failed += 1;
-        batchResultRef.current.errors.push(importFailureMessage(error));
-      }
-    }
-    await finishImportBatch();
-  }
-
-  async function handleUpload(event) {
-    const files = [...event.target.files].filter((file) => file.type === "application/pdf" || /\.pdf$/i.test(file.name));
-    if (!files.length) return;
-    event.target.value = "";
-    setTab("custom");
-    setConverting(true);
-    batchResultRef.current = { completed: 0, failed: 0, cancelled: 0, errors: [] };
-    importQueueRef.current = [...importQueueRef.current, ...files];
-    await processImportQueue();
-  }
-
   async function handleOpen(resource) {
     if (resource.kind !== "custom" || (resource.conversionStatus === "ready" && resource.analysis?.passages?.length)) {
       onOpen(resource);
@@ -998,9 +936,9 @@ function Library({ onBack, onOpen, onOpenCloze, onOpenClozeSummary = null, onUnk
       <div className="library-action-strip">
         <div className="library-header-actions">
           <button className="unknown-library-button" onClick={onUnknownWords}><Icon name="vocabulary" size={17} />陌生词库</button>
-          <button className="upload-button" disabled={converting} onClick={() => inputRef.current?.click()}><Icon name="upload" size={17} />{converting ? "正在识别…" : "上传 PDF"}</button>
+
         </div>
-        <input ref={inputRef} className="visually-hidden" type="file" accept="application/pdf,.pdf" multiple onChange={handleUpload} />
+
       </div>
 
       <main className="library-main">
@@ -1117,7 +1055,7 @@ function Library({ onBack, onOpen, onOpenCloze, onOpenClozeSummary = null, onUnk
                   onOpenSummary={
                     mode === "reading" && resource.conversionStatus === "ready" && resource.analysis?.passages?.length
                       ? () => handleOpenSummary(resource)
-                      : mode === "cloze" && cardStatus?.completed && onOpenClozeSummary
+                      : mode === "cloze" && clozeStatusMap.get(resource.id)?.completed && onOpenClozeSummary
                         ? () => onOpenClozeSummary(resource)
                         : null
                   }
@@ -1125,13 +1063,7 @@ function Library({ onBack, onOpen, onOpenCloze, onOpenClozeSummary = null, onUnk
               ))}
             </div>
             ) : (
-            <button
-              type="button"
-              className="empty-library-trigger"
-              onClick={() => inputRef.current?.click()}
-            >
-              <EmptyLibrary type="custom" />
-            </button>
+            <EmptyLibrary type="custom" />
             )
           )}
       </main>
@@ -2102,6 +2034,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       <Home
         onReady={markHomeReady}
         onRead={() => navigateFromShell("library")}
+        onOpenWritingLibrary={() => navigateFromShell("writing-library")}
         onOpenClozeLibrary={() => navigateFromShell("cloze-library")}
         onOpenResource={openResource}
         onOpenCloze={openCloze}

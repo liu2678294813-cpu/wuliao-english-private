@@ -111,7 +111,7 @@ const NOW_MS = new Date(2026, 7, 7, 12, 0, 0).getTime();
 const NEXT_DAY_MS = NOW_MS + 86400000;
 const TODAY = "2026-08-08";
 
-const RESOURCE = { id: "r1", kind: "official", year: 2021, text: 1, title: "2021 Text 1" };
+const RESOURCE = { id: "postgraduate-2021-text-1", kind: "official", year: 2021, text: 1, title: "2021 Text 1" };
 
 function makePassage() {
   return {

@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "scope": {
+    "years": {
+      "min": 2001,
+      "max": 2023
+    },
+    "sourcePolicy": "local_pdf_only",
+    "answerMaterialImported": false
+  },
+  "summary": {
+    "yearsCovered": 23,
+    "officialQuestionCount": 42,
+    "writingACount": 19,
+    "writingBCount": 23,
+    "visualAssetCount": 23,
+    "unmappedCount": 0,
+    "missingCount": 0
+  },
+  "coverage": [
+    {
+      "year": 2001,
+      "sourceFileName": "2001年真题及答案速查.pdf",
+      "sourcePage": 16,
+      "sourceFingerprint": "6a7ce48de4db5100520a73ea99633654debc49dde01cff310331e6c464d44892",
+      "presentParts": [
+        "B"
+      ],
+      "absentParts": [
+        {
+          "part": "A",
+          "reason": "NOT_PRESENT_IN_SOURCE"
+        }
+      ],
+      "officialQuestionCount": 1,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2002,
+      "sourceFileName": "2002年真题及答案速查.pdf",
+      "sourcePage": 14,
+      "sourceFingerprint": "daadfa9ba2fc439b7b8d0314b76f1f279cbd97c53716ec1324ba01ba631854cb",
+      "presentParts": [
+        "B"
+      ],
+      "absentParts": [
+        {
+          "part": "A",
+          "reason": "NOT_PRESENT_IN_SOURCE"
+        }
+      ],
+      "officialQuestionCount": 1,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2003,
+      "sourceFileName": "2003年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "7f91d59c3e0985748472ec0c38a0c53b016df13c20e74ab7b4c8d161d27666b5",
+      "presentParts": [
+        "B"
+      ],
+      "absentParts": [
+        {
+          "part": "A",
+          "reason": "NOT_PRESENT_IN_SOURCE"
+        }
+      ],
+      "officialQuestionCount": 1,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2004,
+      "sourceFileName": "2004年真题及答案速查.pdf",
+      "sourcePage": 14,
+      "sourceFingerprint": "36010d0225fabc9c0fa43c2a2c623d39440faef05ddf993e58e87c7dcab1f901",
+      "presentParts": [
+        "B"
+      ],
+      "absentParts": [
+        {
+          "part": "A",
+          "reason": "NOT_PRESENT_IN_SOURCE"
+        }
+      ],
+      "officialQuestionCount": 1,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2005,
+      "sourceFileName": "2005年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "d5f1078e6349f7a704118e835967fca1419559737cf4c3ae138ac5f6560305ad",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2006,
+      "sourceFileName": "2006年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "fa6ca5315c526d0c15ad35afb504b7dbc30a0ba8150be4d8fde23529886dc1dd",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2007,
+      "sourceFileName": "2007年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "3fad387e58419f379bed9f6d501c213c3f05cef762b1d1777e3e1dda346414a1",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2008,
+      "sourceFileName": "2008年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "bb1690e939c18790fee13883337f24e34df793ae4b9e5579ae0f4b4a2a242cf9",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2009,
+      "sourceFileName": "2009年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "6a4003eb037362e5fff38612ff5b258459479ae32b1a666b881a6e0f2025eef0",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2010,
+      "sourceFileName": "2010年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "e69a149ff7cb2d6303521dfcf68a6d5bedef5cc6056df9b92836ea2352a19bc1",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2011,
+      "sourceFileName": "2011年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "020f91d3db7ba5b489674b2615b56e58daa1f42762a4267a7369a67e8580af70",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2012,
+      "sourceFileName": "2012年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "8ba9d02a72a143b538a52487065b05d82cfabd13e170f9f6d432fa96272a52e8",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2013,
+      "sourceFileName": "2013年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "35528e5ac06998f252296b29bffbfd1dc6575f1c8e494f2fd1f5b460a9bef501",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2014,
+      "sourceFileName": "2014年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "3d576ac3c9128eb7952cea9ec128f61447b15c04fecdb36c766ebe99b23bddab",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2015,
+      "sourceFileName": "2015年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "a93cd343694ab930e49c0eadb28e685c1b2efc7f1c6f57b50826ba23c2876dce",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2016,
+      "sourceFileName": "2016年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "f8d18488cba195df79abcb7cd4e4aab89486746fe641d9c0e6d74f24cc6261ee",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2017,
+      "sourceFileName": "2017年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "1cb61f5f3c978d7541d322efbc7294aefa8a7a3863452e3867b48077469ea78f",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2018,
+      "sourceFileName": "2018年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "30c5770f98ad41069a359692b1b9cb6bedb814f01ce60aaaec7c2629e055e27f",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2019,
+      "sourceFileName": "2019年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "8f1589a4e2423615c04ef967866c5a87604024546be56bdafa5791abb28ecf61",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2020,
+      "sourceFileName": "2020年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "c555a320e417b3276c8e561463ef24ec8698bf52de58629462c9a13b3f87b31b",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2021,
+      "sourceFileName": "2021年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "219b5815423f67b91f4ca743c52a271d13ce12f32b9198e3ca828e95f14887c9",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2022,
+      "sourceFileName": "2022年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "2376a5402f0ebb41310edfe23ed1a89237b93c48f2125987bd3aa1b41fd538ea",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    },
+    {
+      "year": 2023,
+      "sourceFileName": "2023年真题及答案速查.pdf",
+      "sourcePage": 15,
+      "sourceFingerprint": "cea9ac7ffb2e6681c96aebb77f59404b4080989ab5d8a3cfa83b33d164c46a84",
+      "presentParts": [
+        "A",
+        "B"
+      ],
+      "absentParts": [],
+      "officialQuestionCount": 2,
+      "visualAssetCount": 1
+    }
+  ]
+}

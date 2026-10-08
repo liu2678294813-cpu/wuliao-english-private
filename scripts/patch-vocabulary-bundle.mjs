@@ -87,6 +87,8 @@ if (bundle.split(startToken).length !== 2 || bundle.split(endToken).length !== 2
 const end = hasScreeningModule ? bundle.indexOf('/* wuliao-screening-module:end */', start) + '/* wuliao-screening-module:end */'.length : bundle.indexOf('function So({english:e})', start);
 if (start < 0 || end <= start) throw new Error('未找到完整筛查控制器边界，已停止构建');
 bundle = bundle.slice(0, start) + hook + bundle.slice(end);
-if (!bundle.includes(moduleImport)) bundle = moduleImport + bundle;
+// Git on Windows may check this bundle out with CRLF. The declaration, rather
+// than its trailing newline, is the idempotency marker.
+if (!bundle.includes(moduleImport.trimEnd())) bundle = moduleImport + bundle;
 bundle = bundle.replace('text-center animate-fade-in select-none','text-center select-none');
 await writeFile(bundlePath, bundle, "utf8");

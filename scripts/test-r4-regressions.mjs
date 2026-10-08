@@ -118,11 +118,13 @@ test("storage.js：删除自定义 PDF 同时清理解析缓存", async () => {
 
 // ---------------- 导入队列 / 构建链路 ----------------
 
-test("App.jsx：Library 卸载时终止导入队列并 resolve 编辑器等待", async () => {
+test("资料库卸载会 resolve 修复编辑器；统一导入以会话令牌拒绝迟到任务", async () => {
   const source = await readFile(resolve("src/App.jsx"), "utf8");
   assert.match(source, /aliveRef\.current = false/);
   assert.match(source, /editorResolveRef\.current\?\.\(\)/);
-  assert.match(source, /if \(!aliveRef\.current\) return;/);
+  const controller = await readFile(new URL("../src/import/controller.js", import.meta.url), "utf8");
+  assert.match(controller, /const token = this\.token/);
+  assert.match(controller, /assertAccount\(token\)/);
 });
 
 test("package.json：build 包含 vocabulary import integration patch", async () => {

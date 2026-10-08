@@ -106,9 +106,12 @@ test('deletion serialization never revisits unchanged points, and retains exact 
 test('both bundle patches compose idempotently, remain valid JS, and reject an unknown bundle', () => {
   mkdirSync('output/interaction-unit', {recursive:true});
   const dir=mkdtempSync(resolve('output/interaction-unit/patch-')), file=resolve(dir,'bundle.mjs');
-  writeFileSync(file,readFileSync('public/vocabulary/assets/index-DSvnOTE0.js'));
   const patch=()=>{for(const script of ['patch-vocabulary-bundle.mjs','patch-vocabulary-import-integration.mjs'])execFileSync(process.execPath,[`scripts/${script}`,file],{windowsHide:true});};
-  patch();const first=readFileSync(file,'utf8');patch();assert.equal(readFileSync(file,'utf8'),first);
-  execFileSync(process.execPath,['--check',file],{windowsHide:true});
+  const source=readFileSync('public/vocabulary/assets/index-DSvnOTE0.js','utf8').replace(/\r\n/g,'\n');
+  for (const newline of ['\n','\r\n']) {
+    writeFileSync(file,source.replace(/\n/g,newline));
+    patch();const first=readFileSync(file,'utf8');patch();assert.equal(readFileSync(file,'utf8'),first);
+    execFileSync(process.execPath,['--check',file],{windowsHide:true});
+  }
   writeFileSync(file,'unknown bundle');assert.throws(patch);assert.equal(readFileSync(file,'utf8'),'unknown bundle');
 });

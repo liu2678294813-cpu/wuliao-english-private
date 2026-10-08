@@ -160,7 +160,7 @@ function joinParagraph(block) {
   return cleanClozeLine(lines.join(" "));
 }
 
-function buildSegments(paragraphText, expectedStart) {
+function buildSegments(paragraphText, expectedStart, dynamicNumbers = null) {
   const tokens = paragraphText.split(/\s+/).filter((token) => token.length > 0);
   const segments = [];
   let textBuffer = "";
@@ -179,6 +179,12 @@ function buildSegments(paragraphText, expectedStart) {
       const digits = blankMatch[1];
       const number = Number(digits);
       const hasUnderscores = /^_|_$/.test(token);
+      if (dynamicNumbers && dynamicNumbers.includes(number)) {
+        flushText(); segments.push({ type: "blank", number });
+        expected = dynamicNumbers[dynamicNumbers.indexOf(number) + 1] || number + 1;
+        continue;
+      }
+
       if (number === expected) {
         flushText();
         segments.push({ type: "blank", number });
@@ -212,10 +218,10 @@ function buildSegments(paragraphText, expectedStart) {
   return { segments, nextExpected: expected, missedAt: nextMissed };
 }
 
-function parsePassage(passageText) {
+function parsePassage(passageText, dynamicNumbers = null) {
   const blocks = passageText.split(/\n\s*\n+/).map((block) => block).filter(Boolean);
   const paragraphs = [];
-  let expected = 1;
+  let expected = dynamicNumbers?.[0] || 1;
   let missedAt = null;
 
   for (let index = 0; index < blocks.length; index += 1) {
@@ -229,7 +235,7 @@ function parsePassage(passageText) {
       }
       continue;
     }
-    const { segments, nextExpected, missedAt: blockMissed } = buildSegments(joined, expected);
+    const { segments, nextExpected, missedAt: blockMissed } = buildSegments(joined, expected, dynamicNumbers);
     if (segments.length) {
       paragraphs.push({ number: paragraphs.length + 1, text: joined, segments });
       expected = nextExpected;
@@ -240,7 +246,7 @@ function parsePassage(passageText) {
   return { paragraphs, nextExpected: expected, missedAt };
 }
 
-function parseOptions(optionsText) {
+function parseOptions(optionsText, dynamic = false) {
   const lines = optionsText.split(/\r?\n/).map(normalizeOptionOcrLine).filter(Boolean);
   const blanks = [];
   let current = null;
@@ -282,8 +288,9 @@ function parseOptions(optionsText) {
   finalize();
 
   const result = [];
-  for (let number = 1; number <= BLANK_COUNT; number += 1) {
-    const found = blanks.find((blank) => blank.number === number);
+  const items = dynamic ? blanks : Array.from({ length: BLANK_COUNT }, (_, i) => blanks.find((b) => b.number === i + 1) || { number: i + 1 });
+  for (const found of items) {
+    const number = found.number;
     const options = ["A", "B", "C", "D"].map((key) => ({
       key,
       text: cleanOptionText(found?.options?.[key] || ""),
@@ -298,7 +305,7 @@ function parseOptions(optionsText) {
   return result;
 }
 
-export function parseClozeSection(rawSectionText, sourceLabel = "cloze") {
+export function parseClozeSection(rawSectionText, sourceLabel = "cloze", { dynamic = false } = {}) {
   const warnings = [];
   if (!rawSectionText || !rawSectionText.trim()) return null;
 
@@ -310,11 +317,12 @@ export function parseClozeSection(rawSectionText, sourceLabel = "cloze") {
   const passageAndOptions = stripDirections(sectionText);
   const { passageText, optionsText } = splitOptionsBoundary(passageAndOptions);
 
-  const { paragraphs, nextExpected, missedAt } = parsePassage(passageText);
+  const blanks = parseOptions(optionsText, dynamic);
+  const dynamicNumbers = dynamic ? blanks.map((b) => b.number) : null;
+  const { paragraphs, nextExpected, missedAt } = parsePassage(passageText, dynamicNumbers);
   if (missedAt) warnings.push(`正文空位 ${missedAt} 可能被 OCR 漏掉，已插入占位空`);
   if (nextExpected <= BLANK_COUNT) warnings.push(`正文仅识别到 ${nextExpected - 1} 个空位（期望 ${BLANK_COUNT}）`);
 
-  const blanks = parseOptions(optionsText);
   const completeCount = blanks.filter((blank) => blank.complete).length;
   if (completeCount < BLANK_COUNT) {
     warnings.push(`选项完整题数 ${completeCount}/${BLANK_COUNT}`);
@@ -327,6 +335,7 @@ export function parseClozeSection(rawSectionText, sourceLabel = "cloze") {
   return {
     schemaVersion: CLOZE_SCHEMA_VERSION,
     type: "cloze",
+    dynamicBlankNumbers: dynamic,
     label: "Section I · Use of English",
     sourceLabel,
     paragraphs,
@@ -372,8 +381,8 @@ export function normalizeCloze(cloze) {
     }))
     : [];
 
-  const blanks = Array.from({ length: BLANK_COUNT }, (_, index) => {
-    const number = index + 1;
+  const normalizedNumbers = cloze.dynamicBlankNumbers ? (cloze.blanks || []).map((b) => Number(b.number)) : Array.from({ length: BLANK_COUNT }, (_, index) => index + 1);
+  const blanks = normalizedNumbers.map((number) => {
     const existing = (Array.isArray(cloze.blanks) ? cloze.blanks : []).find(
       (blank) => Number(blank?.number) === number,
     );
@@ -387,6 +396,7 @@ export function normalizeCloze(cloze) {
   return {
     schemaVersion: CLOZE_SCHEMA_VERSION,
     type: "cloze",
+    dynamicBlankNumbers: Boolean(cloze.dynamicBlankNumbers),
     label: cloze.label || "Section I · Use of English",
     sourceLabel: cloze.sourceLabel || "",
     sourcePages: Array.isArray(cloze.sourcePages) ? cloze.sourcePages : [],

@@ -376,8 +376,8 @@ test("v7 upgrade retains old data and includes all long sentence stores in backu
   const indexedDb = new FakeIndexedDb(db);
   const opened = await openWuliaoEnglishDatabase(indexedDb);
   opened.close();
-  assert.equal(WULIAO_ENGLISH_DB_VERSION, 8);
-  assert.equal(db.version, 8);
+  assert.equal(WULIAO_ENGLISH_DB_VERSION, 9);
+  assert.equal(db.version, WULIAO_ENGLISH_DB_VERSION);
   assert.equal(db.stores.get("unknown-words").records.get("keep").word, "keep");
   for (const name of Object.values(S)) {
     assert.equal(db.stores.has(name), true, `${name} created`);
@@ -391,7 +391,7 @@ test("failed upgrade falls back to validated v7 and blocks training writes", asy
     open(_name, version) {
       const request = { result: db, error: null };
       queueMicrotask(() => {
-        if (version === 8) { request.error = new Error("simulated upgrade abort"); request.onerror?.(); }
+        if (version === WULIAO_ENGLISH_DB_VERSION) { request.error = new Error("simulated upgrade abort"); request.onerror?.(); }
         else request.onsuccess?.();
       });
       return request;
@@ -412,7 +412,7 @@ test("fallback rejects a v7 database with a missing required index", async () =>
   const indexedDb = { open(_name, version) {
     const request = { result: db, error: null };
     queueMicrotask(() => {
-      if (version === 8) { request.error = new Error("simulated upgrade abort"); request.onerror?.(); }
+      if (version === WULIAO_ENGLISH_DB_VERSION) { request.error = new Error("simulated upgrade abort"); request.onerror?.(); }
       else request.onsuccess?.();
     });
     return request;
