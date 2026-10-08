@@ -37,6 +37,13 @@
         </provider>
     </application>
 
+    <!-- Android 11+ package visibility: discover installed speech engines. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

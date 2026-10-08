@@ -16,7 +16,7 @@ function viewportSafeInsets() {
 
 function RangeTrackSlider({ value, onChange, min = 1, max = 10, step = 0.5, ariaLabel = "画笔粗细" }) {
   const trackRef = useRef(null);
-  const draggingRef = useRef(false);
+  const draggingRef = useRef(null);
 
   const clamp = (v) => Math.min(max, Math.max(min, v));
   const snap = (v) => Math.round(clamp(v) / step) * step;
@@ -32,18 +32,22 @@ function RangeTrackSlider({ value, onChange, min = 1, max = 10, step = 0.5, aria
   const handlePointerDown = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    draggingRef.current = true;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    draggingRef.current = event.pointerId;
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* optional on older WebViews */ }
     onChange(valueFromClientX(event.clientX));
   };
 
   const handlePointerMove = (event) => {
     event.stopPropagation();
-    if (draggingRef.current) onChange(valueFromClientX(event.clientX));
+    if (draggingRef.current === event.pointerId) onChange(valueFromClientX(event.clientX));
   };
 
   const handlePointerEnd = (event) => {
     event.stopPropagation();
-    draggingRef.current = false;
+    if (draggingRef.current !== event.pointerId) return;
+    draggingRef.current = null;
+    try { event.currentTarget.releasePointerCapture?.(event.pointerId); } catch { /* capture may already be lost */ }
   };
 
   const handleKeyDown = (event) => {
@@ -76,6 +80,10 @@ function RangeTrackSlider({ value, onChange, min = 1, max = 10, step = 0.5, aria
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
       onPointerCancel={handlePointerEnd}
+      onLostPointerCapture={handlePointerEnd}
+      onPointerLeave={(event) => {
+        if (!event.currentTarget.hasPointerCapture?.(event.pointerId)) handlePointerEnd(event);
+      }}
       onClick={(event) => onChange(valueFromClientX(event.clientX))}
       onKeyDown={handleKeyDown}
     >
@@ -123,6 +131,39 @@ export function AnnotationToolbar({
   const collapsed = collapsible && (collapsedProp !== undefined ? collapsedProp : internalCollapsed);
   const pillCollapsed = collapsed && collapseMode !== "chrome-only";
   const toolbarRef = useRef(null);
+  useLayoutEffect(() => {
+    if (!pillCollapsed) return;
+    let frame = 0;
+    const constrain = () => {
+      frame = 0;
+      const button = toolbarRef.current?.querySelector(".toolbar-collapse-toggle");
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const insets = viewportSafeInsets();
+      const minX = 12 + insets.left, minY = 12 + insets.top;
+      const maxX = Math.max(minX, window.innerWidth - insets.right - rect.width - 12);
+      const maxY = Math.max(minY, window.innerHeight - insets.bottom - rect.height - 12);
+      const dx = Math.min(maxX, Math.max(minX, rect.left)) - rect.left;
+      const dy = Math.min(maxY, Math.max(minY, rect.top)) - rect.top;
+      if (Math.abs(dx) > .5 || Math.abs(dy) > .5) {
+        setPillOffset((current) => ({ x: current.x + dx, y: current.y + dy }));
+      }
+    };
+    const schedule = () => {
+      if (!frame) frame = window.requestAnimationFrame(constrain);
+    };
+    const viewport = window.visualViewport;
+    constrain();
+    window.addEventListener("resize", schedule);
+    viewport?.addEventListener("resize", schedule);
+    viewport?.addEventListener("scroll", schedule);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", schedule);
+      viewport?.removeEventListener("resize", schedule);
+      viewport?.removeEventListener("scroll", schedule);
+    };
+  }, [pillCollapsed]);
   useLayoutEffect(() => {
     if (collapseMode !== "chrome-only") return;
     const toolbar = toolbarRef.current, page = toolbar?.parentElement;

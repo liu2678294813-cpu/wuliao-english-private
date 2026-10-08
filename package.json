@@ -90,6 +90,7 @@
     "test:app-shell": "node --import ./scripts/test-hooks.mjs --test scripts/test-app-shell-restore.mjs",
     "validate:writing-private-samples": "node --import ./scripts/test-hooks.mjs scripts/validate-writing-private-samples.mjs",
     "test:e2e": "playwright test",
+    "test:android-compat": "playwright test --config e2e/android-compat.config.mjs",
     "test:writing-e2e": "playwright test e2e/writing-slice10.spec.js",
     "test:pdf-export-smoke": "node scripts/generate-simplified-export-smoke.mjs",
     "fixture:scanned-pdf": "node scripts/make-scanned-exam-fixture-pdf.mjs",

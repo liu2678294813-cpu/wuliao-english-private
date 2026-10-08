@@ -22,7 +22,9 @@ export default defineConfig({
     // Vite 8 dev transforms for the very large App module can block navigation
     // for several minutes. E2E should exercise the current production bundle,
     // which also makes startup deterministic and catches build-only failures.
-    command: "corepack pnpm build && corepack pnpm exec vite preview --config vite.app.config.js --host 127.0.0.1 --port 5199 --strictPort",
+    command: process.env.COMPAT_ISOLATED_PREVIEW === "1"
+      ? "corepack pnpm build && node scripts/compat-preview.mjs"
+      : "corepack pnpm build && corepack pnpm exec vite preview --config vite.app.config.js --host 127.0.0.1 --port 5199 --strictPort",
     url: "http://127.0.0.1:5199",
     reuseExistingServer: false,
     timeout: 120000,

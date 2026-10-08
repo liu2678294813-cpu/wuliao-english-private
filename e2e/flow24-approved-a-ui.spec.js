@@ -5,7 +5,13 @@ test("approved home keeps budget, archive, rank and all navigation actions", asy
   await createAccount(page);
   await expect(page.getByRole("heading", { name: "今日学习", exact: true })).toBeVisible();
   await expect(page.locator(".overview-metrics article")).toHaveCount(6);
-  await expect(page.locator(".ds-nav > button")).toHaveCount(10);
+  // Current product baseline has retired the exam entry; assert every retained
+  // route explicitly so an accidentally missing button cannot pass by count.
+  const navigation = page.locator(".ds-nav > button");
+  await expect(navigation).toHaveCount(9);
+  for (const label of ["首页", "精读", "完形", "长难句", "写作", "词库", "筛查", "背诵", "复习"]) {
+    await expect(page.locator(".ds-nav").getByRole("button", { name: label, exact: true })).toBeVisible();
+  }
   const archiveBox = await page.getByRole("button", { name: "学习档案", exact: true }).boundingBox();
   const homeBox = await page.locator(".home-main").boundingBox();
   const greetingBox = await page.locator(".home-greeting").boundingBox();
