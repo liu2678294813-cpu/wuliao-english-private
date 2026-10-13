@@ -1,7 +1,8 @@
 import { getCurrentUsername, getUserItem, removeUserItem, setUserItem } from "./userData";
-import { classifyAiError } from "./aiError";
+import { aiProviderResultIdentity } from "./aiProvider.js";
 import { getTelemetry } from "./telemetry/telemetry";
 import { fingerprintAiInput } from "./aiTasks";
+import { withDynamicAiContext } from "./aiPromptContext.js";
 import { runCachedAiResult, readAiResult } from "./aiReviewCache";
 import { lookupUnknownWordMeaning } from "./unknownWords";
 import {
@@ -9,7 +10,7 @@ import {
   bindCredential as bindV2Credential,
   getCredential as getV2Credential,
   getProviderProfile as getV2ProviderProfile,
-  normalizeUsage as normalizeProviderUsage,
+  callAi as callProviderAi,
   normalizeProviderEndpoint as normalizeV2ProviderEndpoint,
   saveProviderProfile as saveV2ProviderProfile,
 } from "./aiProvider.js";
@@ -182,7 +183,12 @@ export function getAiModelOptions() {
 
 export function getAiApiCacheScope() {
   const profile = getV2ProviderProfile("text");
-  return JSON.stringify([profile.providerId, profile.baseUrl, profile.transportKind, profile.credentialScopeId]);
+  return JSON.stringify([...aiProviderResultIdentity(profile), getUserItem("wuliao:ai:legacy-cache-binding") || "legacy"]);
+}
+
+export function getAiCacheContext(taskType, model = resolveAiModel(taskType)) {
+  const profile = getV2ProviderProfile("text");
+  return { providerId: profile.providerId, model, transportKind: aiProviderResultIdentity(profile, model)[2], taskType };
 }
 
 function getAiApiUrl(path, baseUrl = getAiApiConfig().baseUrl) {
@@ -372,10 +378,12 @@ export async function setAiApiKey(value) {
       }
     } else await secureStore.remove?.(key);
     removeUserItem("wuliao:ai:apikey");
+    setUserItem("wuliao:ai:legacy-cache-binding", globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
     return;
   }
   if (trimmed) setUserItem("wuliao:ai:apikey", trimmed);
   else removeUserItem("wuliao:ai:apikey");
+  setUserItem("wuliao:ai:legacy-cache-binding", globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
 }
 
 export async function testAiApiKey(apiKey, baseUrl = getAiApiConfig().baseUrl) {
@@ -399,77 +407,7 @@ export async function callDeepSeek({
 }) {
   if (!apiKey) throw new Error("请先在 AI API 设置中填写 API Key");
   const resolvedModel = normalizeAiModelId(model) || resolveAiModel(taskType);
-  const { baseUrl } = getAiApiConfig();
-  const telemetry = getTelemetry();
-  const startedAt = performance.now();
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-  const externalSignal = signal && typeof signal.aborted === "boolean" ? signal : null;
-  const onExternalAbort = externalSignal
-    ? () => {
-      if (externalSignal.aborted) controller.abort();
-    }
-    : null;
-  if (externalSignal && onExternalAbort) {
-    if (externalSignal.aborted) controller.abort();
-    else externalSignal.addEventListener("abort", onExternalAbort, { once: true });
-  }
-  try {
-    const response = await fetch(getAiApiUrl("chat/completions", baseUrl), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ model: resolvedModel, messages, temperature, stream: false }),
-      signal: controller.signal,
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      const message = data?.error?.message || `AI API 请求失败（${response.status}）`;
-      const failure = new Error(message);
-      failure.name = "AiProviderHttpError";
-      failure.status = response.status;
-      failure.providerCode = data?.error?.code || null;
-      throw failure;
-    }
-    const choice = data?.choices?.[0];
-    if (!choice?.message) throw new Error("AI API 返回为空，请重试");
-    const usage = normalizeProviderUsage(data?.usage);
-    telemetry.recordApiRequest({
-      taskType,
-      model: resolvedModel,
-      status: "success",
-      durationMs: performance.now() - startedAt,
-      usage,
-    });
-    return {
-      content: String(choice.message.content || ""),
-      reasoning: String(choice.message.reasoning_content || choice.message.reasoning || ""),
-      ...(usage ? { usage } : {}),
-    };
-  } catch (reason) {
-    const classified = classifyAiError(reason);
-    telemetry.recordApiRequest({
-      taskType,
-      model: resolvedModel,
-      status: "error",
-      category: classified.category,
-      durationMs: performance.now() - startedAt,
-    });
-    telemetry.recordError({
-      taskType,
-      category: classified.category,
-      message: classified.message,
-      metadata: { model: resolvedModel },
-    });
-    throw reason;
-  } finally {
-    window.clearTimeout(timeout);
-    if (externalSignal && onExternalAbort) {
-      externalSignal.removeEventListener("abort", onExternalAbort);
-    }
-  }
+  return callProviderAi({ apiKey, model: resolvedModel, messages, temperature, timeoutMs, taskType, signal });
 }
 
 export function buildExplainMessages({ sentence, paragraph, chapter, userInput }) {
@@ -477,11 +415,10 @@ export function buildExplainMessages({ sentence, paragraph, chapter, userInput }
   if (chapter) contextParts.push(`【文章】${chapter}`);
   if (paragraph) contextParts.push(`【所在段落】\n${paragraph}`);
   const context = contextParts.join("\n");
-  const user = [
-    context ? `${context}\n` : "",
+  const user = withDynamicAiContext(context, [
     `【句子】\n${sentence}`,
     userInput ? `\n【我的分析/问题】\n${userInput}` : "",
-  ].join("");
+  ].join(""));
   return [
     { role: "system", content: EXPLAIN_SYSTEM_PROMPT },
     { role: "user", content: user },
@@ -504,38 +441,45 @@ export function buildWordMeaningMessages({ word, sentence }) {
       role: "system",
       content: "你是英语词汇老师。只输出该词或短语在当前完整句子中最合适的简短中文释义，不解释、不罗列无关义项，不要输出任何其它内容。",
     },
-    { role: "user", content: `词或短语：${word}\n所在句子：${sentence || "（无上下文）"}` },
+    { role: "user", content: withDynamicAiContext(`所在句子：${sentence || "（无上下文）"}`, `词或短语：${word}`) },
   ];
 }
 
-export const QUICK_TRANSLATE_PROMPT_VERSION = 2;
+export const QUICK_TRANSLATE_PROMPT_VERSION = 3;
 export function normalizeQuickTranslationInput(text, kind = "sentence") {
   let value = String(text || "").normalize("NFKC").replace(/\r\n?/g, "\n").trim().replace(/[ \t\n]+/g, " ");
   if (kind === "word" && /^[A-Z]?[a-z]+(?:['’-][a-z]+)*$/.test(value)) value = value.toLowerCase();
   return value;
 }
-export function quickTranslationIdentity({ text, kind = "sentence", contextSentence = "", model, promptVersion = QUICK_TRANSLATE_PROMPT_VERSION }) {
+export function quickTranslationIdentity({ text, kind = "sentence", contextSentence = "", model, apiKey, promptVersion = QUICK_TRANSLATE_PROMPT_VERSION }) {
   const normalizedInput = normalizeQuickTranslationInput(text, kind);
   const namespace = contextSentence ? "context-word" : `quick-${kind}`;
-  const input = { taskType: namespace, text: normalizedInput, promptVersion, schemaVersion: 1 };
+  const input = { taskType: namespace, text: normalizedInput, promptVersion, schemaVersion: 1, identityVersion: 2 };
   if (contextSentence) input.sentence = normalizeQuickTranslationInput(contextSentence);
-  if (namespace !== "quick-word") { input.model = model || resolveAiModel("quick-translate"); input.provider = getAiApiCacheScope(); }
+  input.model = model || resolveAiModel("quick-translate"); input.provider = getAiApiCacheScope();
+  if (apiKey) input.binding = fingerprintAiInput(String(apiKey));
   const fingerprint = fingerprintAiInput(input);
-  return { namespace, fingerprint, identity: fingerprint, normalizedInput };
+  const profile = getV2ProviderProfile("text");
+  return { namespace, fingerprint, identity: fingerprint, normalizedInput,
+    cacheContext: { providerId: profile.providerId, model: input.model, transportKind: aiProviderResultIdentity(profile, input.model)[2], taskType: namespace } };
 }
 export function readQuickTranslationCache(options) {
   const key = quickTranslationIdentity(options);
-  return readAiResult(key.namespace, key.fingerprint, key.identity);
+  return readAiResult(key.namespace, key.fingerprint, key.identity, getCurrentUsername(), { record: false });
 }
 export async function runQuickTranslation({ text, kind = "sentence", contextSentence = "", model,
   apiKey, signal, isCurrent, force = false, onNetworkStart, dictionary = lookupUnknownWordMeaning }) {
-  const username = getCurrentUsername(), key = quickTranslationIdentity({ text, kind, contextSentence, model });
+  const username = getCurrentUsername(), key = quickTranslationIdentity({ text, kind, contextSentence, model, apiKey });
+  const profile = getV2ProviderProfile("text");
   const current = () => !signal?.aborted && username === getCurrentUsername() && (!isCurrent || isCurrent());
   if (!current()) throw new DOMException("Stale quick translation", "AbortError");
   if (!force && kind === "word" && !contextSentence && /^[a-z]+(?:['’-][a-z]+)*$/.test(key.normalizedInput)) {
     const meaning = await dictionary(key.normalizedInput).catch(() => "");
     if (!current()) throw new DOMException("Stale quick translation", "AbortError");
-    if (meaning) return { result: { translation: meaning }, cached: true, source: "dictionary" };
+    if (meaning) {
+      getTelemetry().recordAiCacheEvent({ source: "dictionary_hit", namespace: key.namespace, username, ...key.cacheContext });
+      return { result: { translation: meaning }, cached: true, source: "dictionary" };
+    }
   }
   const response = await runCachedAiResult({ ...key, username, signal, isCurrent: current, force,
     request: async ({ signal }) => {
@@ -544,7 +488,7 @@ export async function runQuickTranslation({ text, kind = "sentence", contextSent
       const messages = contextSentence ? buildWordMeaningMessages({ word: key.normalizedInput, sentence: normalizeQuickTranslationInput(contextSentence) })
         : kind === "word" ? [{ role: "system", content: "你是英语词汇老师。请给出该词的简短、准确的常规中文释义（一到两个义项）。保留缩写和大小写的含义差别。只输出释义，不要解释或添加其它内容。" }, { role: "user", content: key.normalizedInput }]
           : buildQuickTranslateMessages(key.normalizedInput);
-      const response = await callAi({ apiKey, model: model || resolveAiModel("quick-translate"), messages, temperature: 0.3, taskType: key.namespace, signal });
+      const response = await callAi({ profile, apiKey, model: key.cacheContext.model, messages, temperature: 0.3, taskType: key.namespace, signal });
       return { translation: String(response.content || "").trim() };
     }, validate: result => Boolean(result?.translation?.trim()) });
   return response;
@@ -559,6 +503,7 @@ export async function lookupWordMeaningWithAi({ apiKey, word, sentence, model = 
     temperature: 0.2,
     timeoutMs: 30000,
     taskType: "word-meaning",
+    promptVersion: 2,
     signal, isCurrent,
   });
   return result.content.trim();

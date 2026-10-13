@@ -39,6 +39,7 @@ import {
   callAi,
   createAiHistoryRecord,
   getAiApiCacheScope,
+  getAiCacheContext,
   listAiHistory,
   resolveAiModel,
 } from "./ai";
@@ -281,7 +282,11 @@ async function executerunQuestionHint({
     const telemetry = getTelemetry();
     const taskMeta = { taskType, model, promptVersion: QUESTION_HINT_PROMPT_VERSION };
     if (useCache) {
-      const cached = readQuestionHintCache(fingerprint);
+      const cached = readQuestionHintCache(fingerprint, getAiCacheContext(taskType, model), value => {
+        const raw = JSON.stringify(value);
+        const keys = level === 3 ? (detail.options || []).map(option => option?.key).filter(Boolean) : null;
+        return Boolean(parseQuestionHintResult(raw, level, keys)) && validateHintNoAnswerLeak(raw, level).ok;
+      });
       if (cached) {
         if (!isCurrent() || signal?.aborted) throw new DOMException("Stale AI request", "AbortError");
         const assistant = makeAssistant({
@@ -332,6 +337,7 @@ async function executerunQuestionHint({
     onNetworkStart?.();
     let response = await fetcher({
       apiKey,
+      taskType,
       model,
       messages: baseMessages,
       temperature: 0.3,
@@ -346,6 +352,7 @@ async function executerunQuestionHint({
     if (result && level < 3 && !validateHintNoAnswerLeak(raw, level).ok) {
       const strictResponse = await fetcher({
         apiKey,
+        taskType,
         model,
         messages: buildQuestionHintStrictMessages(taskType, baseMessages),
         temperature: 0.2,
@@ -397,7 +404,7 @@ async function executerunQuestionHint({
     }
 
     if (!isCurrent() || signal?.aborted) throw new DOMException("Stale AI request", "AbortError");
-    writeQuestionHintCache(fingerprint, result, level);
+    writeQuestionHintCache(fingerprint, result, getAiCacheContext(taskType, model));
     const assistant = makeAssistant({
       status: "ok",
       taskType,
@@ -460,6 +467,7 @@ export async function runQuestionHint(options) {
     messages: buildMessagesFor(options.taskType, options.detail || {}) });
   try {
     const response = await runCachedAiResult({ namespace: options.taskType || "question-hint", fingerprint,
+      cacheContext: getAiCacheContext(options.taskType || "question-hint", model),
       signal, isCurrent, force: options.useCache === false, networkOnly: true,
       request: ({ signal: networkSignal, isCurrent: active }) => executerunQuestionHint({ ...options, signal: networkSignal, isCurrent: active }) });
     return response.result;

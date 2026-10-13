@@ -16,6 +16,7 @@ const AI_RANGES = [
 const TABS = [
   { id: "overview", label: "概览" },
   { id: "ai", label: "AI 指标" },
+  { id: "cache", label: "AI 缓存" },
   { id: "ink", label: "笔迹性能" },
   { id: "eval", label: "Eval" },
 ];
@@ -71,6 +72,7 @@ export default function DeveloperLab({ onClose }) {
         "30d": telemetry.getAiMetrics({ range: "30d" }),
         all: telemetry.getAiMetrics({ range: "all" }),
       },
+      cache: Object.fromEntries(AI_RANGES.map(item => [item.id, telemetry.getAiCacheMetrics({ range: item.id })])),
       ink: telemetry.getInkMetrics({ range: "all" }),
       eval: telemetry.getLatestEvalSummary(),
       evalVisible: telemetry.isEvalVisible(),
@@ -84,6 +86,7 @@ export default function DeveloperLab({ onClose }) {
 
   const telemetrySummary = snapshot?.summary;
   const ai = snapshot?.ai?.[aiRange];
+  const cache = snapshot?.cache?.[aiRange];
   const ink = snapshot?.ink;
   const bundled = bundledEvalJson || {};
   const offlineSummary = snapshot?.eval?.offline || (snapshot?.evalVisible ? bundled.offline : null);
@@ -205,6 +208,37 @@ export default function DeveloperLab({ onClose }) {
               <MetricRow label="Stroke Count" value={ink?.strokeCount} />
               <MetricRow label="Finalize P95" value={millis(ink?.finalize?.p95)} />
               <MetricRow label="Commit P95" value={millis(ink?.commit?.p95)} />
+            </section>
+          ) : null}
+
+          {tab === "cache" ? (
+            <section className="dev-section" aria-label="AI 缓存分析">
+              <div className="dev-range-tabs">
+                {AI_RANGES.map(item => <button key={item.id} type="button" className={aiRange === item.id ? "is-active" : ""} onClick={() => setAiRange(item.id)}>{item.label}</button>)}
+              </div>
+              <p className="dev-empty">当前账号 · 最近 {cache?.eventWindow || 300} 条遥测事件内的所选时间范围。Provider 命中率按已返回缓存读写用量的输入 Token 加权；缺失用量为 Unknown。</p>
+              <button type="button" className="dev-soft-action" onClick={refresh}>刷新缓存分析</button>
+              {!cache?.rows?.length ? <p className="dev-empty">暂无缓存数据（Unknown）。开始一次 AI 任务后刷新。</p> : null}
+              {cache?.rows?.map(row => (
+                <div key={JSON.stringify([row.providerId, row.model, row.transportKind, row.taskType])}>
+                  <h3>{row.providerId} / {row.model}</h3>
+                  <MetricRow label="AI Task / Transport" value={`${row.taskType} / ${row.transportKind}`} />
+                  <MetricRow label="本地结果缓存命中率" value={row.localHitRatio == null ? "Unknown" : percent(row.localHitRatio)} />
+                  <MetricRow label="内存 / 持久化命中" value={`${row.memoryHits} / ${row.persistentHits}`} />
+                  <MetricRow label="业务结果 / 词典复用" value={`${row.repositoryHits} / ${row.dictionaryHits}`} />
+                  <MetricRow label="并发合并 / 强制刷新" value={`${row.coalesced} / ${row.forceRefreshes}`} />
+                  <MetricRow label="实际网络请求 / 取消" value={`${row.networkRequests} / ${row.cancelled}`} />
+                  <MetricRow label="Provider 输入缓存 Token 命中率" value={row.providerHitRatio == null ? "Unknown" : `${percent(row.providerHitRatio)}${row.providerUsageComplete ? "" : "（仅已报告样本）"}`} />
+                  <MetricRow label="缓存读 / 未命中 Token" value={`${row.hitTokens ?? "Unknown"} / ${row.missTokens ?? "Unknown"}`} />
+                  <MetricRow label="缓存写入 Token" value={row.writeTokens ?? "Unknown"} />
+                  <MetricRow label="Usage / 缓存 Usage / 完成请求" value={`${row.usageRequests} / ${row.cacheUsageRequests} / ${row.completedRequests}`} />
+                  <MetricRow label="平均网络请求延迟" value={row.averageLatencyMs == null ? "Unknown" : millis(row.averageLatencyMs)} />
+                  <MetricRow label="Provider 报告费用（USD）" value={row.reportedCost == null ? "Unknown" : `${row.reportedCost.toFixed(6)}${row.costComplete ? "" : "（仅已报告请求）"}`} />
+                  <MetricRow label="普通输入 / 缓存读取 / 缓存写入 / 输出费用" value={[row.normalInputCost, row.cacheReadCost, row.cacheWriteCost, row.outputCost].map(n => n == null ? "Unknown" : n.toFixed(6)).join(" / ")} />
+                  <MetricRow label="缓存折扣估算" value={row.inputSavings == null ? "Unknown（无完整可靠价格与计费信息）" : row.inputSavings.toFixed(6)} />
+                  <p className="dev-empty">{row.reasons.join(" · ") || "未记录额外原因"}</p>
+                </div>
+              ))}
             </section>
           ) : null}
 

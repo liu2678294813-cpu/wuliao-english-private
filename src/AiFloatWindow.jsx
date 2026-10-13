@@ -750,7 +750,7 @@ export default function AiFloatWindow({
         userInput: text,
       });
       const model = resolveAiModel("sentence-explain");
-      if (!readTextAiCache({ model, messages: messagesForAi, taskType: "sentence-explain" })) setBusy(true);
+      if (!readTextAiCache({ apiKey, model, messages: messagesForAi, taskType: "sentence-explain", promptVersion: 2 })) setBusy(true);
       let recordId = recordIdRef.current;
       if (!recordId) {
         const record = createAiHistoryRecord({
@@ -778,6 +778,7 @@ export default function AiFloatWindow({
           model,
           messages: messagesForAi,
           taskType: "sentence-explain",
+          promptVersion: 2,
           signal: controller.signal,
         });
         if (lifecycle.isContextStale(requestId)) return;
@@ -811,7 +812,7 @@ export default function AiFloatWindow({
       role: message.role,
       content: String(message.content || ""),
     }));
-    if (!readTextAiCache({ model, messages: conversationForApi, taskType: "chat" })) setBusy(true);
+    if (!readTextAiCache({ apiKey, model, messages: conversationForApi, taskType: "chat" })) setBusy(true);
     setMessages((current) => [...current, userMessage]);
     appendAiHistoryMessage(recordId, userMessage);
     const controller = new AbortController();

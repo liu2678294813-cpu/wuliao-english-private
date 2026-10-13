@@ -3,6 +3,7 @@ import { builtinModelRows, modelCatalogRequest, modelCatalogPage, nextModelCatal
 import { getTelemetry } from "./telemetry/telemetry";
 import { fingerprintAiInput } from "./aiTasks";
 import { readAiResult, runCachedAiResult } from "./aiReviewCache";
+import { providerCacheRequestFields, noteRejectedCacheParameter } from "./aiCachePolicy.js";
 
 export const AI_PROVIDER_PROFILE_KEY = "wuliao:ai:provider-profile:v2";
 export const AI_PROVIDER_CATALOG_KEY = "wuliao:ai:provider-catalog:v2";
@@ -362,7 +363,20 @@ export async function bindCredential(profile, value, {
     removeUserItem(fallbackKey, username);
   } else if (credential) setUserItem(fallbackKey, credential, username);
   else removeUserItem(fallbackKey, username);
+  setUserItem(`wuliao:ai:cache-binding:${scopeId}`, globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`, username);
   return { status: credential ? "bound" : "missing", scopeId };
+}
+
+export function aiProviderResultIdentity(profile = getProviderProfile("text"), model) {
+  const normalized = normalizeProviderProfile(profile);
+  const modelId = safeModelId(model) || normalized.modelId;
+  let binding = "legacy-binding";
+  let accountScope = "unavailable";
+  try {
+    accountScope = fingerprintAiInput(["ai-cache-account-v1", getCurrentUsername()]);
+    binding = getUserItem(`wuliao:ai:cache-binding:${normalized.credentialScopeId}`) || binding;
+  } catch { /* cache storage is optional */ }
+  return [normalized.providerId, normalized.baseUrl, modelTransport(normalized, modelId) || "unknown", normalized.credentialScopeId, binding, accountScope];
 }
 
 export async function rebindCredential(fromProfile, toProfile, options = {}) {
@@ -525,15 +539,25 @@ export function resolveModelTransport(model, profile = getProviderProfile("text"
 
 export function normalizeUsage(usage) {
   if (!usage || typeof usage !== "object") return null;
-  const number = (value) => value != null && Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : null;
-  const prompt = number(usage.prompt_tokens ?? usage.input_tokens);
-  const hit = number(usage.prompt_cache_hit_tokens ?? usage.input_tokens_details?.cached_tokens ?? usage.prompt_tokens_details?.cached_tokens);
-  const miss = number(usage.prompt_cache_miss_tokens) ?? (hit != null && prompt != null ? Math.max(0, prompt - hit) : null);
+  const number = (value) => value != null && value !== "" && typeof value !== "boolean" && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null;
+  const write = number(usage.cache_creation_input_tokens ?? usage.input_tokens_details?.cache_write_tokens ?? usage.prompt_tokens_details?.cache_write_tokens ?? usage.prompt_tokens_details?.cache_creation_input_tokens);
+  let prompt = number(usage.prompt_tokens ?? usage.total_input_tokens ?? usage.promptTokenCount ?? usage.input_tokens);
+  let hit = number(usage.prompt_cache_hit_tokens ?? usage.input_tokens_details?.cached_tokens ?? usage.prompt_tokens_details?.cached_tokens ?? usage.cached_tokens ?? usage.cache_read_input_tokens ?? usage.cachedContentTokenCount ?? usage.total_cached_tokens);
+  // Native Anthropic separates uncached input from reads/writes; OpenAI does not.
+  if (usage.input_tokens != null && (usage.cache_read_input_tokens != null || usage.cache_creation_input_tokens != null) && prompt != null) prompt += (hit || 0) + (write || 0);
+  const explicitMiss = number(usage.prompt_cache_miss_tokens);
+  if (prompt == null && hit != null && explicitMiss != null) prompt = hit + explicitMiss;
+  if (hit != null && prompt != null && (hit > prompt || (explicitMiss != null && hit + explicitMiss !== prompt))) hit = null;
+  const miss = hit != null && prompt != null ? prompt - hit : null;
   return {
     prompt_tokens: prompt,
-    completion_tokens: number(usage.completion_tokens ?? usage.output_tokens),
-    total_tokens: number(usage.total_tokens),
+    completion_tokens: number(usage.completion_tokens ?? usage.output_tokens ?? usage.candidatesTokenCount ?? usage.total_output_tokens),
+    total_tokens: number(usage.total_tokens ?? usage.totalTokenCount),
     cacheUsage: { hitTokens: hit, missTokens: miss, hitRatio: hit != null && miss != null && hit + miss > 0 ? hit / (hit + miss) : null },
+    cache_write_tokens: write != null && (prompt == null || write <= prompt - (hit || 0)) ? write : null,
+    reasoning_tokens: number(usage.completion_tokens_details?.reasoning_tokens ?? usage.output_tokens_details?.reasoning_tokens ?? usage.thoughtsTokenCount),
+    reported_cost: number(usage.cost),
+    cacheUnknownReason: hit == null ? "cache_usage_missing_or_inconsistent" : prompt == null ? "input_usage_missing" : null,
   };
 }
 
@@ -595,6 +619,7 @@ export async function callAi({
   const transportKind = resolveModelTransport(modelId, normalized);
   const credential = String(apiKey || "").trim() || (await getCredential(normalized)).value;
   if (!credential) throw providerError("credential_unbound", "当前端点尚未绑定 API Key");
+  if (signal?.aborted || username !== getCurrentUsername()) throw new DOMException("AI request cancelled", "AbortError");
   const controller = new AbortController();
   let timedOut = false;
   const timeout = globalThis.setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
@@ -609,23 +634,43 @@ export async function callAi({
   // Explicit null lets callers use the provider default, including models
   // that reject temperature. Existing callers retain the default 0.6.
   if (temperature !== null) body.temperature = temperature;
+  const cache = providerCacheRequestFields({ profile: normalized, model: modelId, transport: transportKind, messages, username });
+  Object.assign(body, cache.fields);
+  const telemetry = getTelemetry();
+  const cacheContext = { providerId: normalized.providerId, transportKind, policyReason: cache.policy.reason,
+    endpointIdentity: fingerprintAiInput([normalized.providerId, normalized.baseUrl]) };
+  const accountScope = fingerprintAiInput(["ai-cache-account-v1", username]);
   try {
-    const response = await fetch(`${normalized.baseUrl}/${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${credential}` },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    getTelemetry().recordTiming({ metric: "ai.request.ttfb", tags: { taskType, model: modelId, kind: "response-headers" }, durationMs: performance.now() - startedAt });
-    const data = await response.json().catch(() => null);
-    if (signal?.aborted || username !== getCurrentUsername()) throw new DOMException("AI request cancelled", "AbortError");
+    let response, data;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (timedOut) throw providerError("timeout", "AI 请求超时");
+      if (controller.signal.aborted || username !== getCurrentUsername()) throw new DOMException("AI request cancelled", "AbortError");
+      const attemptStarted = performance.now();
+      telemetry.recordEvent({ eventType: "ai.api_request_started", taskType, model: modelId, metadata: { ...cacheContext, accountScope } });
+      response = await fetch(`${normalized.baseUrl}/${path}`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${credential}` },
+        body: JSON.stringify(body), signal: controller.signal,
+      });
+      telemetry.recordTiming({ metric: "ai.request.ttfb", tags: { taskType, model: modelId, kind: "response-headers" }, durationMs: performance.now() - attemptStarted });
+      data = await response.json().catch(() => null);
+      if (timedOut || controller.signal.aborted || username !== getCurrentUsername()) break;
+      if (attempt === 0 && !response.ok && noteRejectedCacheParameter({ profile: normalized, model: modelId, transport: transportKind, fields: cache.fields, status: response.status, data })) {
+        telemetry.recordApiRequest({ taskType, model: modelId, status: "error", category: "cache_parameter_rejected", durationMs: performance.now() - attemptStarted, usage: normalizeUsage(data?.usage), ...cacheContext, accountScope });
+        for (const field of Object.keys(cache.fields)) delete body[field];
+        cacheContext.policyReason = "cache_parameter_rejected_plain_request";
+        continue;
+      }
+      break;
+    }
+    if (timedOut) throw providerError("timeout", "AI 请求超时");
+    if (controller.signal.aborted || username !== getCurrentUsername()) throw new DOMException("AI request cancelled", "AbortError");
     if (!response.ok) throw httpError(response.status, data);
     const parsed = parseProviderResponse(data, transportKind);
     const usage = normalizeUsage(data?.usage);
     if (usage?.cacheUsage) {
       getTelemetry().recordEvent({ eventType: "ai.cache.provider_usage", taskType, model: modelId, metadata: usage.cacheUsage });
     }
-    getTelemetry().recordApiRequest({ taskType, model: modelId, durationMs: performance.now() - startedAt, usage });
+    telemetry.recordApiRequest({ taskType, model: modelId, durationMs: performance.now() - startedAt, usage, ...cacheContext, accountScope });
     getTelemetry().recordTiming({ metric: "ai.request.total_latency", tags: { taskType, model: modelId }, durationMs: performance.now() - startedAt });
     recordRuntimeEvidence(normalized, modelId, RUNTIME_STATUS.VERIFIED, { appVersion });
     return {
@@ -638,13 +683,16 @@ export async function callAi({
       requestId,
     };
   } catch (reason) {
-    if (!timedOut && (signal?.aborted || reason?.name === "AbortError" || username !== getCurrentUsername())) throw new DOMException("AI request cancelled", "AbortError");
+    if (!timedOut && (signal?.aborted || reason?.name === "AbortError" || username !== getCurrentUsername())) {
+      telemetry.recordApiRequest({ taskType, model: modelId, status: "cancelled", category: "cancelled", durationMs: performance.now() - startedAt, ...cacheContext, accountScope });
+      throw new DOMException("AI request cancelled", "AbortError");
+    }
     let category = reason?.code || "provider_error";
     if (timedOut) category = "timeout";
     else if (reason instanceof TypeError) category = "runtime_network_compatibility";
     const status = category === "runtime_network_compatibility" ? RUNTIME_STATUS.RUNTIME_BLOCKED : RUNTIME_STATUS.FAILED;
     recordRuntimeEvidence(normalized, modelId, status, { appVersion, failureCategory: category });
-    getTelemetry().recordApiRequest({ taskType, model: modelId, status: "error", category, durationMs: performance.now() - startedAt });
+    telemetry.recordApiRequest({ taskType, model: modelId, status: "error", category, durationMs: performance.now() - startedAt, ...cacheContext, accountScope });
     if (category === "timeout") throw providerError("timeout", "AI 请求超时", { cause: reason });
     if (category === "runtime_network_compatibility") {
       throw providerError(category, "当前运行时未取得 HTTP 响应；可能是 CORS、DNS、TLS 或网络策略问题", { cause: reason });
@@ -674,19 +722,21 @@ export function textAiCacheIdentity(options) {
   const model = safeModelId(options.model) || profile.modelId;
   const namespace = options.cacheNamespace || options.taskType || "chat";
   const input = { task: namespace, promptVersion: options.promptVersion || 1, schemaVersion: 1,
-    model, provider: [profile.providerId, profile.baseUrl, resolveModelTransport(model, profile), profile.credentialScopeId],
+    identityVersion: 2, model, provider: aiProviderResultIdentity(profile, model),
+    ...(options.apiKey ? { binding: fingerprintAiInput(String(options.apiKey)) } : {}),
     messages: options.messages, temperature: options.temperature === null ? "omitted" : options.temperature ?? 0.6 };
   const fingerprint = fingerprintAiInput(input);
-  return { namespace, fingerprint, identity: fingerprint };
+  return { namespace, fingerprint, identity: fingerprint, cacheContext: { providerId: profile.providerId, model, transportKind: resolveModelTransport(model, profile), taskType: options.taskType || namespace } };
 }
 export function readTextAiCache(options) {
   const key = textAiCacheIdentity(options);
-  return readAiResult(key.namespace, key.fingerprint, key.identity);
+  return readAiResult(key.namespace, key.fingerprint, key.identity, getCurrentUsername(), { maxAgeMs: options.maxAgeMs, record: false });
 }
 export async function callCachedTextAi(options) {
-  const key = textAiCacheIdentity(options);
+  const profile = normalizeProviderProfile(options.profile || getProviderProfile("text"));
+  const key = textAiCacheIdentity({ ...options, profile });
   const response = await runCachedAiResult({ ...key, signal: options.signal, isCurrent: options.isCurrent,
-    force: Boolean(options.force), request: ({ signal }) => callAi({ ...options, signal }),
+    maxAgeMs: options.maxAgeMs, force: Boolean(options.force), request: ({ signal }) => callAi({ ...options, profile, signal }),
     validate: result => Boolean(result?.content?.trim()) });
   return { ...response.result, cached: response.cached, cacheSource: response.source };
 }

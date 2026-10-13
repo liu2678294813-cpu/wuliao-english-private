@@ -1,5 +1,7 @@
 import { callAi, getAiApiKey, resolveAiModel } from "./ai";
 import { validateExamAnalysis } from "./examImport";
+import { getProviderProfile, textAiCacheIdentity } from "./aiProvider.js";
+import { runCachedAiResult } from "./aiReviewCache.js";
 
 export const TASK_PDF_STRUCTURE = "pdf-structure-fallback";
 
@@ -48,12 +50,13 @@ function stripAnswerFields(value) {
     .map(([key, child]) => [key, stripAnswerFields(child)]));
 }
 
-export async function runPdfStructureFallback({ sourcePages, title, signal = null }) {
+export async function runPdfStructureFallback({ sourcePages, title, signal = null, force = false }) {
   if (!Array.isArray(sourcePages) || !sourcePages.length) throw new Error("本地 OCR 尚未获得稳定页面文本，不能启动 AI 结构识别");
   const apiKey = await getAiApiKey();
   if (!apiKey) throw new Error("请先在 AI API 设置中填写 DeepSeek API Key");
   const sourceText = sourcePages.map((page) => `--- PAGE ${page.pageNumber} ---\n${page.text}`).join("\n\n");
-  const response = await callAi({
+  const options = {
+    profile: getProviderProfile("text"),
     apiKey,
     model: resolveAiModel(TASK_PDF_STRUCTURE),
     taskType: TASK_PDF_STRUCTURE,
@@ -64,8 +67,17 @@ export async function runPdfStructureFallback({ sourcePages, title, signal = nul
       { role: "system", content: "你只整理用户提供的 OCR 文本结构。只返回 JSON，不得补写原文、选项、题号或答案，不得输出官方答案。输出 {clozes:[],passages:[]}。" },
       { role: "user", content: `资料标题：${title || "自定义 PDF"}\n请按 Section I 与 Reading Part A Text 1-4 整理以下 OCR 文本。正文、题干和选项必须逐字来自输入；Part B/C/Writing/答案页不要纳入。\n\n${sourceText}` },
     ],
-  });
-  const parsed = stripAnswerFields(parseJsonObject(response.content));
+  };
+  const response = await runCachedAiResult({ ...textAiCacheIdentity({ ...options, promptVersion: 1 }), signal, force,
+    request: async ({ signal }) => {
+      const response = await callAi({ ...options, signal });
+      const parsed = stripAnswerFields(parseJsonObject(response.content));
+      const validation = validateAiPdfStructure({ version: 1, title, clozes: parsed.clozes || [], passages: parsed.passages || [] }, sourcePages);
+      if (validation.issues.errors.length) throw new Error(`AI 结构未通过本地校验：${validation.issues.errors[0]}`);
+      return parsed;
+    }, validate: parsed => !validateAiPdfStructure({ version: 1, title, clozes: parsed?.clozes || [], passages: parsed?.passages || [] }, sourcePages).issues.errors.length,
+    cacheable: parsed => !validateAiPdfStructure(parsed, sourcePages).unmatched.length });
+  const parsed = response.result;
   const analysis = { version: 1, title, createdAt: Date.now(), clozes: parsed.clozes || [], passages: parsed.passages || [] };
   const validation = validateAiPdfStructure(analysis, sourcePages);
   if (validation.issues.errors.length) throw new Error(`AI 结构未通过本地校验：${validation.issues.errors[0]}`);
@@ -73,6 +85,6 @@ export async function runPdfStructureFallback({ sourcePages, title, signal = nul
     "结构由用户主动允许的 AI fallback 生成，保存前必须人工核对",
     ...(validation.unmatched.length ? [`有 ${validation.unmatched.length} 项无法在 OCR 原文中逐字对应，请重点检查`] : []),
   ];
-  analysis.aiStructure = { model: resolveAiModel(TASK_PDF_STRUCTURE), unmatchedCount: validation.unmatched.length };
+  analysis.aiStructure = { model: options.model, unmatchedCount: validation.unmatched.length };
   return analysis;
 }

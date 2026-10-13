@@ -79,7 +79,10 @@ test("词汇：3/3 单词答错后严格回到 0/3，并保留历史日期元数
   const frame = page.frameLocator(".vocabulary-frame");
   await expect(frame.locator("#wordButton")).toContainText("remote", { timeout: 30000 });
   await frame.locator("#skipButton").click();
-  await expect(frame.locator("#answerHint")).toContainText(/正确答案|remote/);
+  // Shared-progress refresh can replace the iframe after its durable write.
+  // The short-lived answer hint is not a persistence acknowledgement.
+  await expect.poll(async () => (await readVocabularyRecord(page, username))?.lastReviewResult,
+    { timeout: 30000 }).toBe("wrong");
 
   const downgraded = await readVocabularyRecord(page, username);
   expect(downgraded.clickCount).toBe(0);

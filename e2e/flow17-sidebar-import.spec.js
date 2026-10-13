@@ -71,6 +71,13 @@ async function seedImportedList(page, username, name, listId = "import:flow17-li
 }
 
 async function openVocabularyLists(page, frame) {
+  // A classification refresh preserves the current library route. Fresh
+  // dashboard entry still has to use the real library button below.
+  if (await frame.evaluate(() => location.hash) === "#/lists") {
+    await expect.poll(() => page.evaluate(() => location.hash), { timeout: 30000 }).toBe("#/vocabulary/lists");
+    await expect(frame.getByRole("heading", { name: "词库管理", exact: true })).toBeVisible();
+    return;
+  }
   await expect.poll(() => page.evaluate(() => location.hash), { timeout: 30000 }).toBe("#/vocabulary/dashboard");
   const libraryButton = frame.locator("#embeddedDashboardLibrary");
   await expect(libraryButton).toBeVisible({ timeout: 30000 });
@@ -359,8 +366,8 @@ test("Flow C：导入词库全部设熟知真实生效、原词库保留、重�
     return current.evaluate(() => window.__flow17Gen === undefined).catch(() => false);
   }, { timeout: 20000 }).toBe(true);
   const frameAfter = await waitForFrameByUrl(page, "index.html");
-  // Embedded reload restores the host dashboard route. Re-enter the library
-  // through its real button before inspecting the persisted classification.
+  // Refresh keeps the library route; use its real controls if a fresh
+  // dashboard was entered before inspecting the persisted classification.
   await openVocabularyLists(page, frameAfter);
   await frameAfter.getByText("熟知词库_Flow17 List").waitFor({ timeout: 30000 });
   await expect(frameAfter.locator(

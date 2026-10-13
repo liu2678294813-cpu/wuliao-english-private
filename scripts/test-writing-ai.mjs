@@ -25,7 +25,7 @@ function serviceWithReplies(replies, setup = fixtures()) { const calls = []; con
 test("Task ids stay fixed and formal payloads fence model-visible facts", () => {
   const data = fixtures(); const scorePayload = buildScorePayload({ promptSnapshot: prompt, sourceAttempt: data.parent, rubricVersion: "postgrad-en1-writing-a-v1" }); assert.deepEqual(Object.keys(scorePayload).sort(), ["promptSnapshot", "rubricVersion", "verifiedText"]);
   const comparePayload = buildCompareDiagnosisPayload({ sampleEssaySnapshot: data.session.sampleEssaySnapshot, translationSnapshot: data.translation, sourceAttempt: data.w3 }); assert.equal("text" in comparePayload.sampleEssaySnapshot, false); assert.deepEqual(Object.keys(comparePayload.sampleEssaySnapshot).sort(), ["essayId", "fingerprint", "segments"]);
-  assert.equal(WritingAiTask.SCORE, "writing.score.v1"); assert.equal(WRITING_AI_PROMPT_VERSIONS.score, "writing-score-v1");
+  assert.equal(WritingAiTask.SCORE, "writing.score.v1"); assert.equal(WRITING_AI_PROMPT_VERSIONS.score, "writing-score-v2");
 });
 
 test("Sample generator and repair prompts state the exact root JSON contract without blank identity placeholders", () => {

@@ -5,6 +5,9 @@ import { createTelemetryStorage, TELEMETRY_KEY } from "./telemetryStorage";
 import { createEvalSummaryStore } from "./evalSummaryStore";
 import { sanitizeErrorText, sanitizeMetadata, findSensitiveKeys } from "./telemetryPrivacy";
 import { computeStatsFromSamples, countEvents, pushSample, sampleInRange } from "./telemetryMetrics";
+import { getCurrentUsername } from "../userData.js";
+import { fingerprintAiInput } from "../aiTasks.js";
+import { computeAiCacheMetrics } from "./aiCacheMetrics.js";
 
 const EVENT_CAP = 300;
 const ERROR_CAP = 300;
@@ -189,7 +192,21 @@ export function createTelemetry({
     });
   }
 
-  function recordApiRequest({ taskType = "", model = "", status = "success", category = "", durationMs = null, usage = null }) {
+  const cacheAccountScope = username => fingerprintAiInput(["ai-cache-account-v1", username || ""]);
+  const cacheUsername = () => { try { return getCurrentUsername(); } catch { return ""; } };
+  function recordAiCacheEvent({ source, namespace, taskType = namespace, model = "", providerId = "unknown", transportKind = "unknown", username = cacheUsername() }) {
+    recordEvent({ eventType: `ai.result_cache.${source}`, taskType, model,
+      metadata: { namespace, providerId, transportKind, accountScope: cacheAccountScope(username) } });
+  }
+  function getAiCacheMetrics({ range = "all", at = now(), rateCards } = {}) {
+    const events = doc.events.filter(event => sampleInRange(event, range, doc.activeSessionId, at));
+    return { range, eventWindow: EVENT_CAP, accountScoped: true,
+      rows: computeAiCacheMetrics(events, { accountScope: cacheAccountScope(cacheUsername()), rateCards }) };
+  }
+
+  function recordApiRequest({ taskType = "", model = "", status = "success", category = "", durationMs = null, usage = null,
+    providerId = "unknown", transportKind = "unknown", policyReason = "", endpointIdentity = "", accountScope = cacheAccountScope(cacheUsername()) }) {
+    const tokenNumber = value => value != null && value !== "" && typeof value !== "boolean" && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null;
     recordEvent({
       eventType: "ai.api_request",
       taskType,
@@ -197,12 +214,16 @@ export function createTelemetry({
       durationMs,
       model,
       metadata: {
+        providerId, transportKind, policyReason, endpointIdentity, accountScope,
         category: AI_ERROR_CATEGORIES.includes(category) ? category : (category || "unknown"),
         usage: usage && typeof usage === "object" ? {
-          promptTokens: Number.isFinite(Number(usage.prompt_tokens)) ? Number(usage.prompt_tokens) : Number.isFinite(Number(usage.promptTokens)) ? Number(usage.promptTokens) : null,
-          completionTokens: Number.isFinite(Number(usage.completion_tokens)) ? Number(usage.completion_tokens) : Number.isFinite(Number(usage.completionTokens)) ? Number(usage.completionTokens) : null,
-          totalTokens: Number.isFinite(Number(usage.total_tokens)) ? Number(usage.total_tokens) : Number.isFinite(Number(usage.totalTokens)) ? Number(usage.totalTokens) : null,
+          promptTokens: tokenNumber(usage.prompt_tokens ?? usage.promptTokens),
+          completionTokens: tokenNumber(usage.completion_tokens ?? usage.completionTokens),
+          totalTokens: tokenNumber(usage.total_tokens ?? usage.totalTokens),
           cacheUsage: usage.cacheUsage || null,
+          writeTokens: tokenNumber(usage.cache_write_tokens),
+          reasoningTokens: tokenNumber(usage.reasoning_tokens),
+          reportedCost: tokenNumber(usage.reported_cost),
         } : null,
       },
     });
@@ -232,17 +253,17 @@ export function createTelemetry({
     const apiFailure = countEvents(apiEvents, (event) => event.status === "error");
     const categoryOf = (category) => countEvents(apiEvents, (event) => event.metadata?.category === category);
 
-    let promptTokens = 0;
-    let completionTokens = 0;
-    let totalTokens = 0;
+    let promptTokens = null;
+    let completionTokens = null;
+    let totalTokens = null;
     let hasUsage = false;
     for (const event of apiEvents) {
       const usage = event.metadata?.usage;
       if (!usage) continue;
       hasUsage = true;
-      promptTokens += Number(usage.promptTokens) || 0;
-      completionTokens += Number(usage.completionTokens) || 0;
-      totalTokens += Number(usage.totalTokens) || 0;
+      if (usage.promptTokens != null) promptTokens = (promptTokens || 0) + usage.promptTokens;
+      if (usage.completionTokens != null) completionTokens = (completionTokens || 0) + usage.completionTokens;
+      if (usage.totalTokens != null) totalTokens = (totalTokens || 0) + usage.totalTokens;
     }
 
     const byTaskType = {};
@@ -273,7 +294,7 @@ export function createTelemetry({
     const byModel = {};
     for (const event of apiEvents) {
       const key = event.model || "unknown";
-      byModel[key] ||= { apiRequests: 0, apiSuccess: 0, apiFailure: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, hasUsage: false };
+      byModel[key] ||= { apiRequests: 0, apiSuccess: 0, apiFailure: 0, promptTokens: null, completionTokens: null, totalTokens: null, hasUsage: false };
       const item = byModel[key];
       item.apiRequests += 1;
       if (event.status === "success") item.apiSuccess += 1;
@@ -281,9 +302,9 @@ export function createTelemetry({
       const usage = event.metadata?.usage;
       if (usage) {
         item.hasUsage = true;
-        item.promptTokens += Number(usage.promptTokens) || 0;
-        item.completionTokens += Number(usage.completionTokens) || 0;
-        item.totalTokens += Number(usage.totalTokens) || 0;
+        if (usage.promptTokens != null) item.promptTokens = (item.promptTokens || 0) + usage.promptTokens;
+        if (usage.completionTokens != null) item.completionTokens = (item.completionTokens || 0) + usage.completionTokens;
+        if (usage.totalTokens != null) item.totalTokens = (item.totalTokens || 0) + usage.totalTokens;
       }
     }
 
@@ -397,6 +418,7 @@ export function createTelemetry({
         "30d": getAiMetrics({ range: "30d" }),
         all: getAiMetrics({ range: "all" }),
       },
+      aiCacheMetrics: getAiCacheMetrics({ range: "all" }),
       inkMetrics: getInkMetrics({ range: "all" }),
       recentSanitizedErrors: doc.errors.slice(-50).map((error) => ({
         timestamp: error.timestamp,
@@ -462,6 +484,8 @@ export function createTelemetry({
     recordError,
     recordAiTask,
     recordApiRequest,
+    recordAiCacheEvent,
+    getAiCacheMetrics,
     getAiMetrics,
     getInkMetrics,
     getTelemetrySummary,

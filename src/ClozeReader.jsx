@@ -786,6 +786,7 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
   function requestClozeAi(taskType) {
     if (!activeSentence) return;
     const allSentences = sentenceModel.paragraphs.flatMap((paragraph) => paragraph.sentences || []);
+    const articleSources = allSentences.map(sentence => ({ sentenceId: sentence.sentenceKey, source: sentence.stableText }));
     const activeIndex = allSentences.findIndex((sentence) => sentence.sentenceKey === activeSentence.sentenceKey);
     const contextSources = allSentences
       .slice(Math.max(0, activeIndex - 1), activeIndex + 2)
@@ -805,6 +806,7 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
         chapter: resource.title,
         currentSentence,
         contextSources,
+        articleSources,
       });
     } else {
       const allowed = taskType === TASK_CLOZE_EXPLANATION
@@ -826,6 +828,7 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
         chapter: resource.title,
         currentSentence,
         evidenceSources: contextSources,
+        articleSources,
         options: blank?.options || [],
         officialAnswer: activeOfficial,
         firstAnswer: activeAttempt.firstAnswer,

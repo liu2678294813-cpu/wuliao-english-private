@@ -1,7 +1,7 @@
 import { getCurrentUsername } from "./userData";
 import { runCachedAiResult } from "./aiReviewCache";
 import { fingerprintAiInput } from "./aiTasks";
-import { callAi, getAiApiCacheScope, resolveAiModel } from "./ai";
+import { callAi, getAiApiCacheScope, getAiCacheContext, resolveAiModel } from "./ai";
 import {
   TASK_TRANSLATION_REVIEW,
   TRANSLATION_REVIEW_PROMPT_VERSION,
@@ -77,7 +77,7 @@ async function executerunTranslationReview({ detail, apiKey, useCache = true, si
       promptVersion: TRANSLATION_REVIEW_PROMPT_VERSION,
     };
     if (useCache) {
-      const cachedEntry = readReviewCacheEntry(fingerprint);
+      const cachedEntry = readReviewCacheEntry(fingerprint, getAiCacheContext(TASK_TRANSLATION_REVIEW, model), value => Boolean(parseTranslationReviewResult(JSON.stringify(value))));
       if (cachedEntry) {
         if (!isCurrent() || signal?.aborted) throw new DOMException("Stale AI request", "AbortError");
         const itemId = String(detail.sentenceId || detail.itemId || "");
@@ -153,7 +153,7 @@ async function executerunTranslationReview({ detail, apiKey, useCache = true, si
     }
 
     if (!isCurrent() || signal?.aborted) throw new DOMException("Stale AI request", "AbortError");
-    writeReviewCache(fingerprint, result);
+    writeReviewCache(fingerprint, result, getAiCacheContext(TASK_TRANSLATION_REVIEW, model));
     upsertTranslationReviewRecord({
       resourceId: detail.resourceId,
       chapter: detail.chapter,
@@ -204,6 +204,7 @@ export async function runTranslationReview(options) {
     messages: buildTranslationReviewMessages(options.detail) });
   try {
     const response = await runCachedAiResult({ namespace: "translation-review", fingerprint,
+      cacheContext: getAiCacheContext(TASK_TRANSLATION_REVIEW, model),
       signal, isCurrent, force: options.useCache === false, networkOnly: true,
       request: ({ signal: networkSignal, isCurrent: active }) => executerunTranslationReview({ ...options, signal: networkSignal, isCurrent: active }) });
     return response.result;

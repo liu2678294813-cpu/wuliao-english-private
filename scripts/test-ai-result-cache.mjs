@@ -405,9 +405,10 @@ test("sentence normalization preserves punctuation, negation, and sentence order
   assert.notEqual(identity("A. B."), identity("B. A."));
 });
 
-test("word identity shares compatible models while contextual and sentence results stay model isolated", () => {
+test("all AI result identities are model isolated; only the static dictionary is model independent", () => {
   const word = { text: "bank", kind: "word" };
-  assert.equal(quickTranslationIdentity({ ...word, model: "model-a" }).fingerprint, quickTranslationIdentity({ ...word, model: "model-b" }).fingerprint);
+  // The 2026-10-13 cache contract explicitly requires isolation for AI outputs.
+  assert.notEqual(quickTranslationIdentity({ ...word, model: "model-a" }).fingerprint, quickTranslationIdentity({ ...word, model: "model-b" }).fingerprint);
   const context = { ...word, contextSentence: "He sat on the bank of the river." };
   assert.notEqual(quickTranslationIdentity({ ...context, model: "model-a" }).fingerprint, quickTranslationIdentity({ ...context, model: "model-b" }).fingerprint);
   assert.notEqual(quickTranslationIdentity({ text: "He left.", model: "model-a" }).fingerprint, quickTranslationIdentity({ text: "He left.", model: "model-b" }).fingerprint);

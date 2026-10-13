@@ -1,7 +1,7 @@
 import { countWritingWords, writingRubricFor } from "./writingRubrics.js";
 
 export const WritingAiTask = Object.freeze({ SAMPLE_GENERATE: "writing.sample.generate.v1", SAMPLE_CRITIC: "writing.sample.critic.v1", COMPARE_DIAGNOSIS: "writing.compare.diagnosis.v1", SCORE: "writing.score.v1", REFERENCE_REWRITE: "writing.reference-rewrite.v1", VISION_TRANSCRIBE: "writing.vision.transcribe.v1" });
-export const WRITING_AI_PROMPT_VERSIONS = Object.freeze({ sampleGenerator: "writing-sample-generator-v1", sampleCritic: "writing-sample-critic-v1", sampleQualityGate: "writing-sample-quality-gate-v1", compareDiagnosis: "writing-compare-diagnosis-v1", score: "writing-score-v1", referenceRewrite: "writing-reference-rewrite-v1", transcription: "writing-transcription-v1", visionOpenAi: "writing-vision-openai-v1", visionRender: "writing-vision-render-v1" });
+export const WRITING_AI_PROMPT_VERSIONS = Object.freeze({ sampleGenerator: "writing-sample-generator-v2", sampleCritic: "writing-sample-critic-v2", sampleQualityGate: "writing-sample-quality-gate-v1", compareDiagnosis: "writing-compare-diagnosis-v1", score: "writing-score-v2", referenceRewrite: "writing-reference-rewrite-v1", transcription: "writing-transcription-v1", visionOpenAi: "writing-vision-openai-v1", visionRender: "writing-vision-render-v1" });
 export const WRITING_AI_TASK_IDS = Object.freeze(Object.values(WritingAiTask));
 export function isWritingAiTask(value) { return WRITING_AI_TASK_IDS.includes(value); }
 function plain(value) { return value && typeof value === "object" && !Array.isArray(value); }
@@ -21,7 +21,7 @@ export function buildCompareDiagnosisPayload({ sampleEssaySnapshot, translationS
 
 export function buildScorePayload({ promptSnapshot, sourceAttempt, rubricVersion } = {}) {
   const prompt = promptFields(promptSnapshot); const verifiedText = verified(sourceAttempt, "Formal score"); const rubric = writingRubricFor(prompt.taskType); if (rubricVersion !== rubric.rubricVersion) throw new TypeError("rubricVersion does not match prompt taskType");
-  return { promptSnapshot: prompt, verifiedText, rubricVersion };
+  return { rubricVersion, promptSnapshot: prompt, verifiedText };
 }
 
 export function buildReferenceRewritePayload({ promptSnapshot, revisionAttempt, scoreReport } = {}) {
@@ -48,12 +48,13 @@ export function buildWritingAiMessages(task, payload) {
     const source = payload?.formatRepair ? payload.originalPayload : payload;
     const outputContract = { taskType: source.taskType, promptFingerprint: source.promptFingerprint, essayText: "complete essay text", segments: [{ unitId: "unit-1", text: "non-empty essay segment" }] };
     const contract = "Return a root JSON object with top-level keys exactly taskType, promptFingerprint, essayText, and segments. Echo taskType and promptFingerprint exactly. Do not wrap the object in response, result, data, output, or Markdown. segments must be a non-empty array of {unitId,text} objects that divide the complete essay into meaningful ordered units.";
-    return [{ role: "system", content: `You write a high-quality postgraduate English sample essay. ${contract} ${jsonOnly}` }, { role: "user", content: JSON.stringify({ ...payload, outputContract }) }];
+    return [{ role: "system", content: `You write a high-quality postgraduate English sample essay. ${contract} ${jsonOnly}` }, { role: "user", content: JSON.stringify({ outputContract, ...payload }) }];
   }
   if (task === WritingAiTask.SAMPLE_CRITIC) {
+    const { candidate, ...context } = payload;
     const outputContract = { pass: "boolean", predictedBand: "integer 0..5", predictedScoreRange: { min: "integer within rubric", max: "integer within rubric and >= min" }, fatalIssues: ["string"], defects: [{ code: "string", severity: "fatal | major | minor", evidence: "string", repairInstruction: "string" }], checks: { taskFulfillment: "pass | fail | not_applicable", formatRegister: "pass | fail | not_applicable", coherence: "pass | fail | not_applicable", languageAccuracy: "pass | fail | not_applicable", languageRange: "pass | fail | not_applicable", naturalness: "pass | fail | not_applicable" } };
     const contract = "Return a root JSON object with top-level keys exactly pass, predictedBand, predictedScoreRange, fatalIssues, defects, and checks. Do not return band or feedback. Do not wrap the object in response, result, data, output, or Markdown. Use integer scores, arrays for fatalIssues/defects, and all six check keys. Assess every value independently; the outputContract contains type descriptions, not suggested scores.";
-    return [{ role: "system", content: `Independently assess the candidate. A pass requires band 5, no fatal issue, and the task's band-five score range. ${contract} ${jsonOnly}` }, { role: "user", content: JSON.stringify({ ...payload, outputContract }) }];
+    return [{ role: "system", content: `Independently assess the candidate. A pass requires band 5, no fatal issue, and the task's band-five score range. ${contract} ${jsonOnly}` }, { role: "user", content: JSON.stringify({ outputContract, ...context, candidate }) }];
   }
   if (task === WritingAiTask.SCORE) return [{ role: "system", content: `Score only the supplied verified essay under the supplied rubric. Diagnostics do not mechanically determine the final score. ${jsonOnly}` }, { role: "user", content: JSON.stringify(payload) }];
   return [{ role: "system", content: jsonOnly }, { role: "user", content: JSON.stringify(payload) }];

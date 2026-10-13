@@ -56,6 +56,7 @@ import {
   callAi,
   createAiHistoryRecord,
   getAiApiCacheScope,
+  getAiCacheContext,
   listAiHistory,
   resolveAiModel,
 } from "./ai";
@@ -285,7 +286,12 @@ async function executerunQuestionDiagnosis({
       promptVersion: QUESTION_DIAGNOSIS_PROMPT_VERSION,
     };
     if (useCache) {
-      const cachedEntry = readQuestionDiagnosisCacheEntry(fingerprint);
+      const cachedEntry = readQuestionDiagnosisCacheEntry(fingerprint, getAiCacheContext(TASK_QUESTION_DIAGNOSIS, model), value => {
+        const parsed = parseQuestionDiagnosisResult(JSON.stringify(value), {
+          optionKeys: (detail.options || []).map(option => option?.key).filter(Boolean), firstAnswer, redoAnswer, hasUserReasoning: Boolean(userReasoning),
+        });
+        return Boolean(parsed) && value.evidenceValidated !== false && validateEvidenceAgainstContext(parsed.evidence, articleText).ok;
+      });
       if (cachedEntry) {
         if (!isCurrent() || signal?.aborted) throw new DOMException("Stale AI request", "AbortError");
         const cached = cachedEntry.result;
@@ -378,6 +384,7 @@ async function executerunQuestionDiagnosis({
     onNetworkStart?.();
     let response = await fetcher({
       apiKey,
+      taskType: TASK_QUESTION_DIAGNOSIS,
       model,
       messages: baseMessages,
       temperature: 0.3,
@@ -395,6 +402,7 @@ async function executerunQuestionDiagnosis({
         evidenceInvalid = true;
         const strictResponse = await fetcher({
           apiKey,
+          taskType: TASK_QUESTION_DIAGNOSIS,
           model,
           messages: buildQuestionDiagnosisStrictMessages(baseMessages),
           temperature: 0.2,
@@ -474,7 +482,7 @@ async function executerunQuestionDiagnosis({
     }
 
     if (!isCurrent() || signal?.aborted) throw new DOMException("Stale AI request", "AbortError");
-    writeQuestionDiagnosisCache(fingerprint, cleanedResult);
+    writeQuestionDiagnosisCache(fingerprint, cleanedResult, getAiCacheContext(TASK_QUESTION_DIAGNOSIS, model));
     const assistant = makeDiagnosisAssistant({
       status: "ok",
       result: cleanedResult,
@@ -545,6 +553,7 @@ export async function runQuestionDiagnosis(options) {
     messages: buildQuestionDiagnosisMessages(options.detail || {}) });
   try {
     const response = await runCachedAiResult({ namespace: "question-diagnosis", fingerprint,
+      cacheContext: getAiCacheContext(TASK_QUESTION_DIAGNOSIS, model),
       signal, isCurrent, force: options.useCache === false, networkOnly: true,
       request: ({ signal: networkSignal, isCurrent: active }) => executerunQuestionDiagnosis({ ...options, signal: networkSignal, isCurrent: active }) });
     return response.result;

@@ -1,5 +1,7 @@
+import { buildArticlePromptContext, withDynamicAiContext } from "./aiPromptContext.js";
+
 export const TASK_TRANSLATION_REVIEW = "translation-review";
-export const TRANSLATION_REVIEW_PROMPT_VERSION = 2;
+export const TRANSLATION_REVIEW_PROMPT_VERSION = 3;
 
 // Stable, synchronous SHA-256 keeps existing fingerprint builder interfaces.
 const SHA_K = [], SHA_H = [];
@@ -104,11 +106,10 @@ export function buildTranslationReviewMessages({ sentence, paragraph, chapter, u
   if (chapter) contextParts.push(`【文章】${chapter}`);
   if (paragraph) contextParts.push(`【所在段落】\n${paragraph}`);
   const context = contextParts.join("\n");
-  const user = [
-    context ? `${context}\n` : "",
+  const user = withDynamicAiContext(context, [
     `【当前句（英文）】\n${sentence}`,
     `\n【我的译文】\n${userTranslation}`,
-  ].join("");
+  ].join(""));
   return [
     { role: "system", content: TRANSLATION_REVIEW_SYSTEM_PROMPT },
     { role: "user", content: user },
@@ -136,7 +137,7 @@ export function buildTranslationReviewFingerprint({ sentence, paragraph, chapter
 export const TASK_QUESTION_HINT_1 = "question-hint-1";
 export const TASK_QUESTION_HINT_2 = "question-hint-2";
 export const TASK_QUESTION_EXPLANATION = "question-explanation";
-export const QUESTION_HINT_PROMPT_VERSION = 2;
+export const QUESTION_HINT_PROMPT_VERSION = 3;
 
 export const QUESTION_TYPES = [
   "细节题",
@@ -285,13 +286,7 @@ function joinQuestionHintUserParts(parts) {
 }
 
 export function buildQuestionHintLevel1Messages({ questionText, articleText, chapter, resourceId }) {
-  const user = joinQuestionHintUserParts([
-    articleText ? `【当前文章】\n${String(articleText).trim()}` : "",
-    `【当前题干】\n${String(questionText || "").trim()}`,
-    chapter || resourceId
-      ? `【资料】${String(chapter || "").trim()}${resourceId ? `（ID: ${String(resourceId).trim()}）` : ""}`
-      : "",
-  ]);
+  const user = withDynamicAiContext(buildArticlePromptContext({ articleText, chapter, resourceId }), `【当前题干】\n${String(questionText || "").trim()}`);
   return [
     { role: "system", content: QUESTION_HINT_LEVEL1_SYSTEM_PROMPT },
     { role: "user", content: user },
@@ -299,13 +294,7 @@ export function buildQuestionHintLevel1Messages({ questionText, articleText, cha
 }
 
 export function buildQuestionHintLevel2Messages({ questionText, articleText, chapter, resourceId }) {
-  const user = joinQuestionHintUserParts([
-    articleText ? `【当前文章】\n${String(articleText).trim()}` : "",
-    `【当前题干】\n${String(questionText || "").trim()}`,
-    chapter || resourceId
-      ? `【资料】${String(chapter || "").trim()}${resourceId ? `（ID: ${String(resourceId).trim()}）` : ""}`
-      : "",
-  ]);
+  const user = withDynamicAiContext(buildArticlePromptContext({ articleText, chapter, resourceId }), `【当前题干】\n${String(questionText || "").trim()}`);
   return [
     { role: "system", content: QUESTION_HINT_LEVEL2_SYSTEM_PROMPT },
     { role: "user", content: user },
@@ -331,16 +320,12 @@ export function buildQuestionExplanationMessages({
   if (firstAnswer) userAnswers.push(`用户首次答案：${firstAnswer}`);
   if (redoAnswer) userAnswers.push(`用户重做答案：${redoAnswer}`);
   if (drawerAnswer) userAnswers.push(`用户悬浮题窗答案：${drawerAnswer}`);
-  const user = joinQuestionHintUserParts([
-    articleText ? `【当前文章】\n${String(articleText).trim()}` : "",
+  const user = withDynamicAiContext(buildArticlePromptContext({ articleText, chapter, resourceId }), joinQuestionHintUserParts([
     `【当前题干】\n${String(questionText || "").trim()}`,
     `【四个选项】\n${optionLines || "（未提供）"}`,
     `【官方答案】${String(officialAnswer || "").trim()}`,
-    chapter || resourceId
-      ? `【资料】${String(chapter || "").trim()}${resourceId ? `（ID: ${String(resourceId).trim()}）` : ""}`
-      : "",
     userAnswers.length ? `【用户作答情况】\n${userAnswers.join("\n")}` : "",
-  ]);
+  ]));
   return [
     { role: "system", content: QUESTION_HINT_LEVEL3_SYSTEM_PROMPT },
     { role: "user", content: user },
@@ -388,7 +373,7 @@ export function buildQuestionHintFingerprint({
 // ============================================================================
 
 export const TASK_QUESTION_DIAGNOSIS = "question-diagnosis";
-export const QUESTION_DIAGNOSIS_PROMPT_VERSION = 2;
+export const QUESTION_DIAGNOSIS_PROMPT_VERSION = 3;
 
 // 用户错因标签白名单。与 B 阶段 TRAP_TYPES 同名的标签使用完全相同的字符串，
 // 避免出现“范围扩大 / 扩大范围”这类重复标签。
@@ -519,18 +504,14 @@ export function buildQuestionDiagnosisMessages({
   const answerLines = [];
   if (firstAnswer) answerLines.push(`用户首次答案：${firstAnswer}`);
   if (redoAnswer) answerLines.push(`用户重做答案：${redoAnswer}`);
-  const user = joinQuestionDiagnosisParts([
-    articleText ? `【当前文章】\n${String(articleText).trim()}` : "",
+  const user = withDynamicAiContext(buildArticlePromptContext({ articleText, chapter, resourceId }), joinQuestionDiagnosisParts([
     `【当前题干】\n${String(questionText || "").trim()}`,
     `【当前选项】\n${optionLines || "（未提供）"}`,
     `【官方答案】${String(officialAnswer || "").trim()}`,
     answerLines.length ? `【用户作答】\n${answerLines.join("\n")}` : "",
     userReasoning ? `【我当时是怎么想的】\n${String(userReasoning).trim()}` : "",
     userEvidence ? `【用户自己标记的原文证据】\n${String(userEvidence).trim()}` : "",
-    chapter || resourceId
-      ? `【资料】${String(chapter || "").trim()}${resourceId ? `（ID: ${String(resourceId).trim()}）` : ""}`
-      : "",
-  ]);
+  ]));
   return [
     { role: "system", content: QUESTION_DIAGNOSIS_SYSTEM_PROMPT },
     { role: "user", content: user },

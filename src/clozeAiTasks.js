@@ -1,4 +1,6 @@
 import { getAiApiCacheScope, resolveAiModel } from "./ai";
+import { fingerprintAiInput } from "./aiTasks.js";
+import { withDynamicAiContext } from "./aiPromptContext.js";
 
 export const TASK_CLOZE_HINT_1 = "cloze-hint-1";
 export const TASK_CLOZE_HINT_2 = "cloze-hint-2";
@@ -14,7 +16,7 @@ export const CLOZE_AI_TASKS = [
   TASK_CLOZE_CONTEXT_REVIEW,
 ];
 
-export const CLOZE_AI_PROMPT_VERSION = 1;
+export const CLOZE_AI_PROMPT_VERSION = 2;
 
 const TASK_LABELS = {
   [TASK_CLOZE_HINT_1]: "完形提示 1",
@@ -129,7 +131,7 @@ export function clozeAiTaskLabel(taskType) {
   return TASK_LABELS[taskType] || "完形 AI";
 }
 
-export function buildClozeHintDetail({ taskType, resourceId, clozeId, blankNumber, chapter, currentSentence, contextSources }) {
+export function buildClozeHintDetail({ taskType, resourceId, clozeId, blankNumber, chapter, currentSentence, contextSources, articleSources }) {
   if (![TASK_CLOZE_HINT_1, TASK_CLOZE_HINT_2].includes(taskType)) return null;
   const sentenceId = String(currentSentence?.sentenceId || "").trim();
   const sentence = normalizeText(currentSentence?.source);
@@ -142,6 +144,7 @@ export function buildClozeHintDetail({ taskType, resourceId, clozeId, blankNumbe
     chapter: normalizeText(chapter, 240),
     currentSentence: { sentenceId, source: sentence },
     evidenceSources: normalizeSources([{ sentenceId, source: sentence }, ...(contextSources || [])]),
+    articleSources: projectArticleSources(articleSources),
   };
 }
 
@@ -158,6 +161,7 @@ export function buildClozeAnalysisDetail({
   firstAnswer,
   reviewAnswer,
   manualAnalysis,
+  articleSources,
 }) {
   if (![TASK_CLOZE_EXPLANATION, TASK_CLOZE_DIAGNOSIS, TASK_CLOZE_CONTEXT_REVIEW].includes(taskType)) return null;
   const sentenceId = String(currentSentence?.sentenceId || "").trim();
@@ -182,6 +186,7 @@ export function buildClozeAnalysisDetail({
     chapter: normalizeText(chapter, 240),
     currentSentence: { sentenceId, source: sentence },
     evidenceSources: normalizeSources([{ sentenceId, source: sentence }, ...(evidenceSources || []), ...manual.references]),
+    articleSources: projectArticleSources(articleSources),
     ...(taskType === TASK_CLOZE_CONTEXT_REVIEW ? {} : { options: optionList, officialAnswer: official }),
     ...(taskType === TASK_CLOZE_DIAGNOSIS ? {
       localAttempts: {
@@ -197,6 +202,17 @@ function sourceBlock(detail) {
   return (detail.evidenceSources || [])
     .map((item) => `- sentenceId: ${item.sentenceId}\n  source: ${item.source}`)
     .join("\n");
+}
+
+function projectArticleSources(sources) {
+  return (Array.isArray(sources) ? sources : []).filter(row => row?.sentenceId && typeof row.source === "string")
+    .map(({ sentenceId, source }) => ({ sentenceId: String(sentenceId), source }));
+}
+
+function articlePrefix(detail) {
+  const article = projectArticleSources(detail.articleSources);
+  return [`【资料】${detail.chapter || ""}（ID: ${detail.resourceId || ""}/${detail.clozeId || ""}）`,
+    article.length ? `【遮空全文】\n${article.map(row => `${row.sentenceId}: ${row.source}`).join("\n")}` : ""].filter(Boolean).join("\n");
 }
 
 function manualBlock(detail) {
@@ -223,12 +239,12 @@ export function buildClozeAiMessages(taskType, detail, { strict = false } = {}) 
       },
       {
         role: "user",
-        content: `【第 ${detail.blankNumber} 空；空位以 __CLOZE_BLANK_${detail.blankNumber}__ 表示】\n${detail.currentSentence.source}\n\n【可信原文】\n${sourceBlock(detail)}`,
+        content: withDynamicAiContext(articlePrefix(detail), `【第 ${detail.blankNumber} 空；空位以 __CLOZE_BLANK_${detail.blankNumber}__ 表示】\n${detail.currentSentence.source}\n\n【可信原文】\n${sourceBlock(detail)}`),
       },
     ];
   }
 
-  const common = `【第 ${detail.blankNumber} 空所在句】\n${detail.currentSentence.source}\n\n【可信原文】\n${sourceBlock(detail)}\n\n【C 阶段人工数据】\n${manualBlock(detail)}`;
+  const common = withDynamicAiContext(articlePrefix(detail), `【第 ${detail.blankNumber} 空所在句】\n${detail.currentSentence.source}\n\n【可信原文】\n${sourceBlock(detail)}\n\n【C 阶段人工数据】\n${manualBlock(detail)}`);
   if (taskType === TASK_CLOZE_CONTEXT_REVIEW) {
     return [
       { role: "system", content: `${BASE_SYSTEM}\n资料没有官方答案。只能做语境复盘，严禁判断或暗示正确答案，也不要评价用户作答是否正确。${strictNote}\n输出结构：${CONTEXT_SCHEMA}` },
@@ -261,17 +277,13 @@ export function buildClozeAiFingerprint(taskType, detail, model = resolveAiModel
     blankNumber: detail?.blankNumber || 0,
     currentSentence: detail?.currentSentence || null,
     evidenceSources: detail?.evidenceSources || [],
+    articleSources: detail?.articleSources || [],
     options: detail?.options || [],
     officialAnswer: detail?.officialAnswer || "",
     localAttempts: detail?.localAttempts || null,
     manualAnalysis: detail?.manualAnalysis || null,
   });
-  let hash = 2166136261;
-  for (let index = 0; index < payload.length; index += 1) {
-    hash ^= payload.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return `cai${(hash >>> 0).toString(36)}`;
+  return `cai2:${fingerprintAiInput(payload)}`;
 }
 
 export function buildClozeAiUserMessage(taskType, detail) {

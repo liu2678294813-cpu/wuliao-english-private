@@ -589,7 +589,10 @@ test("Flow18 全局 UI：Home 档案、Settings 小高滚动/PIN、Library stick
     const rect = button.getBoundingClientRect();
     return { top: rect.top, height: rect.height };
   }));
-  expect(actionBoxes).toHaveLength(2);
+  // Import moved to the Home import flow; this strip now has one actionable
+  // unknown-word entry. Check its identity as well as geometry.
+  await expect(strip.getByRole("button", { name: "陌生词库", exact: true })).toBeVisible();
+  expect(actionBoxes).toHaveLength(1);
   expect(actionBoxes.every((box) => box.height >= 40 && Math.abs(box.top - actionBoxes[0].top) <= 1)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, 900));
   await page.waitForTimeout(150);
