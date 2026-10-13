@@ -1,6 +1,47 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readUpdateBackupSources, createBackup, parseBackup } from "../src/backup.js";
+import { UpdateBackupHash, hashUpdateAttachment, writeStreamedUpdateBackup } from "../src/updateBackupStream.js";
+import { createHash } from "node:crypto";
+
+test("streamed SHA-256 matches independent vectors at padding and chunk boundaries", () => {
+  for (const length of [0, 1, 55, 56, 63, 64, 65, 127, 128, 65537]) {
+    const bytes = Uint8Array.from({ length }, (_, i) => i % 251), hash = new UpdateBackupHash();
+    for (let offset = 0; offset < length; offset += 17) hash.update(bytes.subarray(offset, offset + 17));
+    assert.equal(hash.hex(), createHash('sha256').update(bytes).digest('hex'), String(length));
+  }
+});
+
+test("update backup streams a real attachment with bounded reads, valid Backup v1 checksum and native readback hash", async () => {
+  const data = Uint8Array.from({ length: 1024 * 1024 + 5 }, (_, i) => i % 251);
+  const original = new Blob([data], { type: 'application/pdf' });
+  let maxRead = 0;
+  const blob = { size: original.size, type: original.type, arrayBuffer() { throw Error('whole attachment read'); },
+    slice(start, end) { maxRead = Math.max(maxRead, end - start); return original.slice(start, end); } };
+  const sources = { entries: [], databases: [{ name: 'wuliao-english', stores: [{ name: 'custom-pdfs', records: [{ key: 'pdf', value: { id: 'pdf', username: 'alice', file: blob } }] }] }] };
+  const blobs = new Map();
+  const built = await createBackup({ sources, username: 'alice', encodeAttachment: async value => { blobs.set('att-1', value); return hashUpdateAttachment(value, () => {}); } });
+  const metadata = await parseBackup(built.fileText), chunks = [];
+  let offset = 0, completed = false;
+  const plugin = {
+    async writeBackupChunk(part) { const bytes = Buffer.from(part.data, 'base64'); assert.equal(part.offset, offset); assert.ok(bytes.length <= 192 * 1024); chunks.push(bytes); offset += bytes.length; },
+    async finishBackupAccount(part) { assert.equal(part.sha256, createHash('sha256').update(Buffer.concat(chunks)).digest('hex')); completed = true; return { verified: true }; },
+  };
+  await writeStreamedUpdateBackup({ manifest: metadata, blobs, plugin, backupId: 'test', accountIndex: 0, active() {} });
+  const parsed = await parseBackup(Buffer.concat(chunks).toString('utf8'));
+  assert.deepEqual(Buffer.from(parsed.attachments['att-1'].data, 'base64'), Buffer.from(data));
+  assert.equal(parsed.attachments['att-1'].sha256, createHash('sha256').update(data).digest('hex'));
+  assert.equal(parsed.attachments['att-1'].size, data.length);
+  assert.equal(parsed.sections.indexedDB['wuliao-english']['custom-pdfs'][0].value.file.__backupAttachment, 'att-1');
+  assert.ok(maxRead <= 96 * 1024); assert.ok(completed);
+});
+
+test("streamed backup stops when cancelled or native readback verification fails", async () => {
+  const manifest = (await createBackup({ sources: { entries: [], databases: [] }, username: 'alice' })).manifest;
+  const options = { manifest, blobs: new Map(), backupId: 'test', accountIndex: 0 };
+  await assert.rejects(writeStreamedUpdateBackup({ ...options, plugin: { writeBackupChunk() { throw Error('should not write'); } }, active() { throw Error('cancelled'); } }), /cancelled/);
+  await assert.rejects(writeStreamedUpdateBackup({ ...options, plugin: { async writeBackupChunk() {}, async finishBackupAccount() { return { verified: false }; } }, active() {} }), /校验/);
+});
 
 function storage(entries) {
   return { length: entries.length, key: (i) => entries[i][0], getItem: (key) => entries.find((e) => e[0] === key)?.[1] ?? null };
