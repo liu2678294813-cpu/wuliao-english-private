@@ -43,6 +43,28 @@ test("streamed backup stops when cancelled or native readback verification fails
   await assert.rejects(writeStreamedUpdateBackup({ ...options, plugin: { async writeBackupChunk() {}, async finishBackupAccount() { return { verified: false }; } }, active() {} }), /校验/);
 });
 
+test("large durable ink is escaped in bounded pieces without serializing the whole account, including Unicode boundaries", async () => {
+  const ink = 'a'.repeat(8191) + '😀\\\"\n' + '笔迹\\\"\n'.repeat(300000) + '\ud800';
+  const sources = { entries: [{ key: 'wuliao:user:alice:wuliao:deep-ink:v2:fixture', value: ink }], databases: [] };
+  const stringify = JSON.stringify, chunks = [];
+  let built;
+  JSON.stringify = function(value, ...args) {
+    if (typeof value === 'string') assert.ok(value.length <= 8192, 'large string encoded in one call');
+    if (value?.format === 'wuliao-backup') throw Error('whole account serialization');
+    return stringify.call(this, value, ...args);
+  };
+  try {
+    built = await createBackup({ sources, username: 'alice', serialize: false });
+    assert.equal(built.fileText, undefined);
+    await writeStreamedUpdateBackup({ manifest: built.manifest, blobs: new Map(), backupId: 'test', accountIndex: 0, active() {}, plugin: {
+      async writeBackupChunk(part) { const bytes = Buffer.from(part.data, 'base64'); assert.ok(bytes.length <= 192 * 1024); chunks.push(bytes); },
+      async finishBackupAccount(part) { assert.equal(part.sha256, createHash('sha256').update(Buffer.concat(chunks)).digest('hex')); return { verified: true }; },
+    } });
+  } finally { JSON.stringify = stringify; }
+  const parsed = await parseBackup(Buffer.concat(chunks).toString('utf8'));
+  assert.equal(parsed.sections.localStorage.user[0].value, ink);
+});
+
 function storage(entries) {
   return { length: entries.length, key: (i) => entries[i][0], getItem: (key) => entries.find((e) => e[0] === key)?.[1] ?? null };
 }

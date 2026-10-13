@@ -50,6 +50,11 @@ export class UpdateBackupHash {
     for (let offset = 0; offset < tail.length; offset += 64) this.compress(tail, offset);
     return this.h.map(v => (v >>> 0).toString(16).padStart(8, '0')).join('');
   }
+  copy() {
+    const result = new UpdateBackupHash();
+    result.h = [...this.h]; result.block.set(this.block); result.used = this.used; result.length = this.length;
+    return result;
+  }
 }
 
 const BLOB_CHUNK = 96 * 1024; // Multiple of 3: concatenated base64 stays valid.
@@ -76,6 +81,19 @@ async function* jsonPieces(value, blobs, active, path = []) {
       yield updateBackupBase64(new Uint8Array(await blob.slice(offset, offset + BLOB_CHUNK).arrayBuffer()));
     }
     yield '"';
+  } else if (typeof value === 'string') {
+    yield '"';
+    for (let start = 0; start < value.length;) {
+      active();
+      let end = Math.min(start + 8192, value.length);
+      const last = value.charCodeAt(end - 1), next = value.charCodeAt(end);
+      if (end < value.length && last >= 0xd800 && last <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) end--;
+      yield JSON.stringify(value.slice(start, end)).slice(1, -1);
+      start = end;
+    }
+    yield '"';
+  } else if (value && typeof value.toJSON === 'function') {
+    yield* jsonPieces(value.toJSON(path[path.length - 1] ?? ''), blobs, active, path);
   } else if (Array.isArray(value)) {
     yield '[';
     for (let i = 0; i < value.length; i++) { if (i) yield ','; yield* jsonPieces(value[i] ?? null, blobs, active, [...path, i]); }
@@ -94,7 +112,7 @@ async function* jsonPieces(value, blobs, active, path = []) {
 
 export async function writeStreamedUpdateBackup({ manifest, blobs, plugin, backupId, accountIndex, active }) {
   const { checksum: _unused, ...canonical } = manifest;
-  const encoder = new TextEncoder(), fileHash = new UpdateBackupHash(), canonicalHash = new UpdateBackupHash();
+  const encoder = new TextEncoder(), fileHash = new UpdateBackupHash();
   const buffer = new Uint8Array(WRITE_CHUNK);
   let used = 0, offset = 0;
   const flush = async () => {
@@ -103,9 +121,9 @@ export async function writeStreamedUpdateBackup({ manifest, blobs, plugin, backu
     await plugin.writeBackupChunk({ backupId, accountIndex, offset, data: updateBackupBase64(buffer.subarray(0, used)) });
     offset += used; used = 0;
   };
-  const write = async (text, includeCanonical = true) => {
+  const write = async text => {
     const bytes = encoder.encode(text);
-    fileHash.update(bytes); if (includeCanonical) canonicalHash.update(bytes);
+    fileHash.update(bytes);
     for (let position = 0; position < bytes.length;) {
       const take = Math.min(buffer.length - used, bytes.length - position);
       buffer.set(bytes.subarray(position, position + take), used); used += take; position += take;
@@ -117,8 +135,8 @@ export async function writeStreamedUpdateBackup({ manifest, blobs, plugin, backu
   let previous;
   for await (const piece of jsonPieces(canonical, blobs, active)) { if (previous !== undefined) await write(previous); previous = piece; }
   if (previous !== '}') throw new Error('更新备份结构无效');
-  canonicalHash.update(encoder.encode('}'));
-  await write(',"checksum":' + JSON.stringify(canonicalHash.hex()) + '}', false);
+  const canonicalHash = fileHash.copy().update(encoder.encode('}'));
+  await write(',"checksum":' + JSON.stringify(canonicalHash.hex()) + '}');
   await flush(); active();
   const result = await plugin.finishBackupAccount({ backupId, accountIndex, sha256: fileHash.hex() });
   if (!result?.verified) throw new Error('本机备份未通过校验，已停止安装');

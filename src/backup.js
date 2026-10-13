@@ -272,6 +272,7 @@ export async function createBackup({
   now = Date.now(),
   onProgress = null,
   encodeAttachment = null,
+  serialize = true,
 } = {}) {
   if (!username) throw new BackupError("no-account", "请先登录账号再导出备份");
   const legacyOwner = (sources.entries || []).find((item) => item.key === LEGACY_OWNER_KEY)?.value || "";
@@ -349,6 +350,10 @@ export async function createBackup({
     checksum: "",
   };
 
+  // The native update writer streams canonical JSON and its checksum itself.
+  // A full account can contain hundreds of MB of durable ink; constructing one
+  // giant string here exhausts the 32-bit Huawei WebView before installation.
+  if (!serialize) return { manifest, counts: summarizeBackup(manifest) };
   const { checksum, ...canonical } = manifest;
   const canonicalText = JSON.stringify(canonical);
   manifest.checksum = await sha256Hex(canonicalText);
