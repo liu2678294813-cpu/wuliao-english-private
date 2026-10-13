@@ -10,7 +10,7 @@
 
 </div>
 
-> **Android 最新下载：[1.0.94 含文章统一版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 平板与 GitHub 使用同一份 APK。修复覆盖更新、安装状态恢复和更新文件清理，更新完成后不累计保留 APK，安全备份长期仅保留最近一份。旧更新器用户首次直接打开新版 APK 覆盖升级；后续设置 → 关于 → 检查更新。保留全部账号学习数据，不要卸载或清除数据。
+> **Android 最新下载：[1.0.95 含文章统一版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 平板与 GitHub 使用同一份 APK。本版改善 AI 结果复用与请求前缀，并新增开发者缓存诊断；保留覆盖更新、安装状态恢复和更新文件清理，更新完成后不累计保留 APK，安全备份长期仅保留最近一份。旧更新器用户首次直接打开新版 APK 覆盖升级；后续设置 → 关于 → 检查更新。保留全部账号学习数据，不要卸载或清除数据。
 
 
 ---
