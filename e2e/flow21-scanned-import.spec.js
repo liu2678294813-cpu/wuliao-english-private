@@ -57,6 +57,7 @@ test("扫描 PDF：image-only 10 页可取消、可重试并完整组装完形�
   // The synthetic fixture spans Text 1 across two pages; Texts 2–4 each have
   // one paragraph. These are source counts, not OCR-generated expectations.
   expect(reading.map((c) => c.paragraphs)).toEqual([2, 1, 1, 1]);
+  await page.locator(".import-candidate").first().getByRole("button", { name: "检查与编辑", exact: true }).click();
   await expect(page.locator(".import-candidate textarea").first()).not.toHaveValue("");
 
   // 扫描件末页答案只作为边界；编辑器不会将其提升为可靠官方答案。
