@@ -22,6 +22,7 @@ test("背词四种组合、循环锁定、撤销、清除与刷新", async ({ pa
   await expect(row).toHaveClass(/masked/);
   await page.locator("#undoButton").click();
   await expect(row).not.toHaveClass(/masked/);
+  page.once("dialog", (dialog) => dialog.accept());
   await page.locator("#clearButton").click();
   await page.locator('[data-memory-rule="cycle"]').click();
   for (let i = 1; i <= 5; i++) {
@@ -31,6 +32,7 @@ test("背词四种组合、循环锁定、撤销、清除与刷新", async ({ pa
   await expect(row.locator(".mark-button")).toBeDisabled();
   await page.reload();
   await expect(row).toHaveClass(/masked/);
+  page.once("dialog", (dialog) => dialog.accept());
   await page.locator("#clearButton").click();
   await expect(row).not.toHaveClass(/masked/);
   await page.locator('[data-memory-input="swipe"]').click();
@@ -47,6 +49,7 @@ test("背词四种组合、循环锁定、撤销、清除与刷新", async ({ pa
   await swipe(true); await expect(row).toHaveClass(/masked/);
   await page.locator('[data-memory-rule="default"]').click();
   await expect(row).toHaveClass(/masked/);
+  page.once("dialog", (dialog) => dialog.accept());
   await page.locator("#clearButton").click(); await swipe(); await expect(row).toHaveClass(/masked/);
   await page.screenshot({ path: "output/vocabulary-modes.png" });
 });

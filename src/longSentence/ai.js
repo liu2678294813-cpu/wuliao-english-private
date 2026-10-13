@@ -103,6 +103,16 @@ export function createLongSentenceAiService({ callAi = providerCallAi, getProfil
           result = await invoke([...messages, { role: "user", content: `只修复一次 JSON/schema 格式，不能添加答案字段。${block("invalid_output", result.raw)}\n${block("validation_error", error.code)}` }], LONG_SENTENCE_GENERATE_PROMPT_VERSION);
           batch = validateGeneratedBatch(parseLongSentenceJson(result.raw), input);
         }
+        // A syntactically valid JSON batch may contain zero usable sentences.
+        // Retry the rejected batch once with explicit validator feedback instead
+        // of reporting an empty successful response to the training page.
+        if (!batch.items.length && batch.missingCount) {
+          const feedback = batch.errors.map(error => ({ index: error.index, code: error.code }));
+          const rejectedErrors = batch.errors;
+          result = await invoke([...messages, { role: "user", content: `上一批 JSON 可解析，但全部未通过质量契约。仅重新生成符合原定数量及所有约束的新 items，不要附带答案。${block("validation_errors", feedback)}` }], LONG_SENTENCE_GENERATE_PROMPT_VERSION);
+          batch = validateGeneratedBatch(parseLongSentenceJson(result.raw), input);
+          batch.errors = [...rejectedErrors, ...batch.errors];
+        }
         const items = batch.items.map(item => ({ ...item, generationLineage: result.lineage }));
         const publishValidated = async (validItems, batchIndex) => {
           if (!validItems.length || typeof detail.onValidatedItems !== "function") return;

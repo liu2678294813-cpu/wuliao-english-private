@@ -7,6 +7,7 @@ import { AnnotationToolbar } from "../ui/AnnotationToolbar.jsx";
 import WritingInkSurface from "../writing/WritingInkSurface.jsx";
 import { sentenceTextFingerprint } from "../translationProgress.js";
 import { aggregateSelectedWords, groupSourcesTree, listDifficultSources, listLearnedSources, selectionState } from "./source.js";
+import { chooseLongSentenceSources, chooseLongSentenceWords, MAX_LONG_SENTENCE_SOURCES, MAX_LONG_SENTENCE_WORDS } from "./sourceBatch.js";
 import { LONG_SENTENCE_INK_PERSISTENCE, longSentenceInkIdentity } from "./ink.js";
 import * as repository from "./repository.js";
 import "./longSentence.css";
@@ -116,6 +117,7 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
   const [query, setQuery] = useState("");
   const [onlySelected, setOnlySelected] = useState(false);
   const [count, setCount] = useState(initial.count || 5);
+  const [batchCursor, setBatchCursor] = useState(initial.batchCursor || 0);
   const [dueSkills, setDueSkills] = useState([]);
   const [dueCount, setDueCount] = useState(0);
   const [records, setRecords] = useState([]);
@@ -140,8 +142,8 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
     const ready = import("./ai.js").then(module => { instance = module.createLongSentenceAiService(); return instance; });
     return { generate: async input => (await ready).generate(input), evaluate: async input => (await ready).evaluate(input), cancelAll: () => instance?.cancelAll() };
   }, [username]);
-  const selectionRef = useRef({ selected, deselectedWords, count });
-  selectionRef.current = { selected, deselectedWords, count };
+  const selectionRef = useRef({ selected, deselectedWords, count, batchCursor });
+  selectionRef.current = { selected, deselectedWords, count, batchCursor };
   const currentItem = bundle?.items[bundle.session.currentItemIndex || 0] || null;
   const currentAttempt = bundle?.attempts.find(attempt => attempt.id === currentItem?.attemptId) || null;
   const evaluations = bundle?.evaluations.filter(record => record.attemptId === currentAttempt?.id) || [];
@@ -158,7 +160,6 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
   }, [bundle]);
   const selectedHistory = historyEntries.find(entry => entry.attempt.id === historyAttemptId) || null;
   const words = useMemo(() => aggregateSelectedWords(unknownWords, sources, selected), [unknownWords, sources, selected]);
-  const selectedWords = words.filter(word => !deselectedWords.includes(word.wordId));
   const available = isLongSentenceStorageAvailable();
   const applyBundle = useCallback(value => { bundleRef.current = value; setBundle(value); }, []);
   const showError = useCallback(reason => { if (!alive.current) return; setError(reason?.message || String(reason)); }, []);
@@ -247,10 +248,25 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
     if (!navigator.onLine) throw Object.assign(new Error("当前离线，可继续编辑已保存的草稿"), { code: "offline" });
     await flush();
     let value = bundleRef.current;
+    let samplingNotice = "";
     if (!replacement && !supplement) {
-      const selectedSources = skill?.sources || sources.filter(source => source.status === "resolved" && selected.includes(source.sourceReviewId));
-      if (!selectedSources.length) throw new Error("请至少选择一个可用的困难原句");
-      const session = await repository.createSession({ sources: selectedSources, words: skill?.words || selectedWords, count: skill ? 1 : Number(count), originContext, skillId: skill?.id, extraPractice });
+      const allSelectedSources = skill?.sources || sources.filter(source => source.status === "resolved" && selected.includes(source.sourceReviewId));
+      if (!allSelectedSources.length) throw new Error("请至少选择一个可用的困难原句");
+      // A large selection remains intact. Only a bounded, rotating set enters
+      // this training session so AI output cannot explode quadratically when
+      // source difficulty metadata is repeated for every generated sentence.
+      const sourceBatch = chooseLongSentenceSources(allSelectedSources, skill ? 0 : selectionRef.current.batchCursor);
+      const sourceIds = sourceBatch.items.map(source => source.sourceReviewId);
+      const eligibleWords = skill?.words || aggregateSelectedWords(unknownWords, sources, sourceIds).filter(word => !deselectedWords.includes(word.wordId));
+      const wordBatch = chooseLongSentenceWords(eligibleWords);
+      const session = await repository.createSession({ sources: sourceBatch.items, words: wordBatch.items, count: skill ? 1 : Number(count), originContext, skillId: skill?.id, extraPractice });
+      if (!skill && sourceBatch.total > MAX_LONG_SENTENCE_SOURCES) {
+        setBatchCursor(sourceBatch.nextCursor);
+        selectionRef.current = { ...selectionRef.current, batchCursor: sourceBatch.nextCursor };
+      }
+      if (sourceBatch.total > MAX_LONG_SENTENCE_SOURCES || wordBatch.total > MAX_LONG_SENTENCE_WORDS) {
+        samplingNotice = `本次从 ${sourceBatch.total} 条已选原句中使用 ${sourceBatch.items.length} 条、从 ${wordBatch.total} 个相关词中使用 ${wordBatch.items.length} 个；原有勾选不变，下一次生成自动轮换来源。`;
+      }
       value = { session, items: [], attempts: [], evaluations: [] };
       applyBundle(value); await onOpenSession(session.id);
     }
@@ -284,7 +300,8 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
     if (!result.items.length) throw new Error("本次没有通过质量校验的句子，来源和草稿已保留，可手动重试。");
     await queue.current;
     applyBundle(await repository.loadSession(session.id));
-    if (result.missingCount) setNotice(`已保留 ${result.items.length} 句，仍缺 ${result.missingCount} 句。可手动补齐。`);
+    if (result.missingCount) setNotice(`已保留 ${result.items.length} 句，仍缺 ${result.missingCount} 句。可手动补齐。` + (samplingNotice ? ` ${samplingNotice}` : ""));
+    else if (samplingNotice) setNotice(samplingNotice);
   }
 
   async function submit(reanalyze = false) {
@@ -336,7 +353,7 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
     {loading && <p role="status">正在读取学习记录…</p>}
     {!sessionId && <><nav className="ls-tabs" role="tablist" aria-label="长难句模块">{TABS.map(label => <button key={label} role="tab" type="button" aria-selected={tab === label} onClick={() => { setTab(label); setOffset(0); setError(""); }}>{label}</button>)}</nav>
       {tab === "生成训练" && <div className="ls-generate-grid"><section className="ls-card"><h2>选择困难原句</h2><SelectBox entries={sources.filter(source => source.status === "resolved")} selected={selected} onChange={selectSources}>全选可用原句（已选 {selected.length}）</SelectBox>{!loading && !sources.length && <p>还没有待掌握的困难句。请在精读中将原句标为“需复盘”。</p>}<SourceTree sources={sources} selected={selected} onChange={selectSources} /></section>
-        <section className="ls-card"><h2>搭配陌生词</h2><p className="ls-muted">取所选文章的陌生词并集；每句自然使用其中 0–3 个。</p><label>搜索陌生词<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label><label className="ls-select-label"><input type="checkbox" checked={onlySelected} onChange={event => setOnlySelected(event.target.checked)} />只看已选</label><div className="ls-words">{words.filter(word => (!onlySelected || !deselectedWords.includes(word.wordId)) && `${word.word} ${word.meaning}`.toLowerCase().includes(query.toLowerCase())).map(word => <label className="ls-word" key={word.wordId}><input type="checkbox" checked={!deselectedWords.includes(word.wordId)} onChange={event => setDeselectedWords(previous => event.target.checked ? previous.filter(id => id !== word.wordId) : [...new Set([...previous, word.wordId])])} /><span><strong>{word.word}</strong>{word.meaning && ` · ${word.meaning}`}<small>{word.refs.length} 处文章来源</small></span></label>)}</div><label className="ls-count">训练数量<select data-testid="long-sentence-count" value={count} onChange={event => setCount(Number(event.target.value))}>{[1,2,3,4,5].map(number => <option key={number} value={number}>{number} 句</option>)}</select></label><p>难度：高于所选原句中最高难度一个结构层级。</p><button className="ls-primary" data-testid="long-sentence-generate" type="button" disabled={busy || loading || !available || !selected.length} onClick={() => run(() => generate())}>{busy ? "正在生成…" : `生成 ${count} 句训练`}</button></section></div>}
+        <section className="ls-card"><h2>搭配陌生词</h2><p className="ls-muted">取所选文章的陌生词并集；每句自然使用其中 0–3 个。</p><label>搜索陌生词<input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label><label className="ls-select-label"><input type="checkbox" checked={onlySelected} onChange={event => setOnlySelected(event.target.checked)} />只看已选</label><div className="ls-words">{words.filter(word => (!onlySelected || !deselectedWords.includes(word.wordId)) && `${word.word} ${word.meaning}`.toLowerCase().includes(query.toLowerCase())).map(word => <label className="ls-word" key={word.wordId}><input type="checkbox" checked={!deselectedWords.includes(word.wordId)} onChange={event => setDeselectedWords(previous => event.target.checked ? previous.filter(id => id !== word.wordId) : [...new Set([...previous, word.wordId])])} /><span><strong>{word.word}</strong>{word.meaning && ` · ${word.meaning}`}<small>{word.refs.length} 处文章来源</small></span></label>)}</div><label className="ls-count">训练数量<select data-testid="long-sentence-count" value={count} onChange={event => setCount(Number(event.target.value))}>{[1,2,3,4,5].map(number => <option key={number} value={number}>{number} 句</option>)}</select></label><p>每次最多取用 {MAX_LONG_SENTENCE_SOURCES} 条原句和 {MAX_LONG_SENTENCE_WORDS} 个相关陌生词；超出时自动轮换、保留原勾选。难度高于本次取用原句中最高难度一个结构层级。</p><button className="ls-primary" data-testid="long-sentence-generate" type="button" disabled={busy || loading || !available || !selected.length} onClick={() => run(() => generate())}>{busy ? "正在生成…" : `生成 ${count} 句训练`}</button></section></div>}
       {tab === "待掌握" && <section className="ls-card"><h2>原句待掌握 · {sources.length}</h2><p>通过原句复习中的“现在能独立理解”完成后，原句才进入已学习。</p>{sources.map(source => <article className="ls-list-row" key={source.sourceReviewId}><div><small>{source.resourceTitle} · {source.articleLabel}</small><p>{source.text || source.error}</p></div><button type="button" disabled={busy || source.status !== "resolved"} onClick={() => run(async () => { await flush(); await onStartOriginalReview(source); })}>复习原句</button></article>)}</section>}
       {tab === "待复习" && <section className="ls-card"><h2>今日到期 {dueCount} 项</h2>{dueSkills.map(skill => <article className="ls-list-row" key={skill.id}><div><p>{skill.structureFingerprint}</p><small>到期 {skill.nextDueAt} · 已练 {skill.attemptCount || 0} 次</small></div><button type="button" disabled={busy || !available} onClick={() => run(() => generate({ skill }))}>开始复习</button></article>)}{!dueCount && <p>今天没有到期的结构技能。</p>}<div className="ls-actions"><button type="button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 20))}>上一页</button><button type="button" disabled={offset + 20 >= dueCount} onClick={() => setOffset(offset + 20)}>下一页</button></div></section>}
       {tab === "已学习" && <section className="ls-card"><h2>已学习原句 · {learned.length}</h2>{!learned.length && <p>原句复习完成后会显示在这里；旧记录缺少完成凭据的原句不会自动加入。</p>}{learned.map(source => <article className="ls-list-row" key={`${source.sourceReviewId}:${source.learnedAt}`}><div><small>{source.resourceTitle} · {source.articleLabel}</small><p>{source.text || source.sourceSnapshot?.text}</p><small>完成于 {new Date(source.learnedAt).toLocaleString()}</small>{source.status !== "resolved" && <p>{source.error || "来源暂不可用，显示完成时快照"}</p>}</div></article>)}</section>}

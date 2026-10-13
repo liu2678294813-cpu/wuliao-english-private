@@ -85,7 +85,7 @@ function redoFlow(flow, now, completed = false) {
 }
 
 async function captureCrossSentenceSelection(page) {
-  return page.locator(".clean-article").evaluate((article) => {
+  return page.locator("#deep-clean-text .clean-article").evaluate((article) => {
     const paragraphs = [...article.querySelectorAll("[data-evidence-paragraph][data-evidence-sentence]")]
       .filter((node) => node.firstChild?.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 24);
     if (paragraphs.length < 2) return false;

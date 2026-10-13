@@ -87,6 +87,41 @@ if (bundle.split(startToken).length !== 2 || bundle.split(endToken).length !== 2
 const end = hasScreeningModule ? bundle.indexOf('/* wuliao-screening-module:end */', start) + '/* wuliao-screening-module:end */'.length : bundle.indexOf('function So({english:e})', start);
 if (start < 0 || end <= start) throw new Error('未找到完整筛查控制器边界，已停止构建');
 bundle = bundle.slice(0, start) + hook + bundle.slice(end);
-if (!bundle.includes(moduleImport)) bundle = moduleImport + bundle;
+// Git on Windows may check this bundle out with CRLF. The declaration, rather
+// than its trailing newline, is the idempotency marker.
+if (!bundle.includes(moduleImport.trimEnd())) bundle = moduleImport + bundle;
 bundle = bundle.replace('text-center animate-fade-in select-none','text-center select-none');
+// Keep source metadata and replace the legacy view with readable modules.
+const replaceOnce = (before, after, description) => {
+  if (bundle.includes(after)) return;
+  if (bundle.split(before).length !== 2) throw new Error(`${description}补丁位置不唯一，已停止构建`);
+  bundle = bundle.replace(before, after);
+};
+replaceOnce('sourceWord:n.english,sourceWordChinese:n.chinese',
+  'sourceWord:n.english,sourceWordChinese:n.chinese,sourceWordId:n.wordId', '筛查候选词身份');
+replaceOnce('sourceWord:t.sourceWord,sourceWordChinese:t.sourceWordChinese',
+  'sourceWord:t.sourceWord,sourceWordChinese:t.sourceWordChinese,sourceWordId:t.sourceWordId', '筛查选项身份');
+// Restore the already-authorized account before route guards render. Previously
+// an effect restored it too late and direct /confusion links bounced to dashboard.
+replaceOnce('(0,_.useState)({username:null,isLoggedIn:!1})',
+  '(0,_.useState)(()=>({username:localStorage.getItem(Ra)||null,isLoggedIn:!!localStorage.getItem(Ra)}))', '混淆词深链接账号恢复');
+const confusionImport = 'import { ConfusionView as wuliaoConfusionView } from "../confusion-view.js";\n';
+if (!bundle.includes(confusionImport.trimEnd())) bundle = confusionImport + bundle;
+const confusionStart = '/* wuliao-confusion-view:start */';
+const confusionEnd = '/* wuliao-confusion-view:end */';
+const viewStart = bundle.indexOf(bundle.includes(confusionStart) ? confusionStart : 'function Fz(){');
+const viewEnd = bundle.includes(confusionEnd) ? bundle.indexOf(confusionEnd) + confusionEnd.length : bundle.indexOf('function Iz(', viewStart);
+if (viewStart < 0 || viewEnd <= viewStart || bundle.split('function Fz(){').length !== 2) throw new Error('混淆词页面边界不唯一，已停止构建');
+bundle = bundle.slice(0, viewStart) + `${confusionStart}\nfunction Fz(){const {username}=Ba();return _.createElement(wuliaoConfusionView,{React:_,username})}\n${confusionEnd}` + bundle.slice(viewEnd);
+const obsoleteLinks = [
+  ',(0,Y.jsx)(ji,{to:Ga.CONFUSION,className:Ka,children:`混淆词对照`})',
+  'n>0&&(0,Y.jsx)(Ua,{variant:`secondary`,onClick:()=>o(Ga.CONFUSION),size:`lg`,className:`w-full`,children:`查看混淆词`}),',
+];
+for (let index = 0; index < obsoleteLinks.length; index++) {
+  const marker = `/* wuliao-confusion-entry-removed:${index} */`;
+  if (bundle.includes(marker)) continue;
+  const token = obsoleteLinks[index];
+  if (bundle.split(token).length !== 2) throw new Error('混淆词旧入口位置不唯一，已停止构建');
+  bundle = bundle.replace(token, marker);
+}
 await writeFile(bundlePath, bundle, "utf8");

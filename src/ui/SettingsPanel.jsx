@@ -4,6 +4,8 @@ import { flushDurableInk } from "../durableInkStorage.js";
 import { getAppInfo } from "../appInfo";
 import { getDeveloperMode } from "../developerMode";
 import ModalShell from "./Overlay";
+import AppUpdateSection from "./AppUpdateSection.jsx";
+import { appUpdater } from "../appUpdater.js";
 import { useBackHandler } from "./BackContext";
 import { BACK_PRIORITY } from "./backController";
 import {
@@ -29,7 +31,20 @@ export default function SettingsPanel({
   onLongSentenceTrainingEnabledChange,
 }) {
   const devMode = getDeveloperMode();
-  const info = getAppInfo();
+  const buildInfo = getAppInfo();
+  const [installedInfo, setInstalledInfo] = useState(null);
+  const info = buildInfo.platform === "android" ? {
+    ...buildInfo, appVersion: installedInfo?.versionName || "读取中", buildId: installedInfo?.versionCode || "",
+  } : buildInfo;
+  useEffect(() => {
+    if (buildInfo.platform !== "android") return;
+    let active = true;
+    const refresh = () => { void appUpdater.getInstalledInfo().then(value => { if (active) setInstalledInfo(value); }).catch(() => {}); };
+    refresh();
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => { active = false; document.removeEventListener("visibilitychange", refresh); window.removeEventListener("focus", refresh); };
+  }, [buildInfo.platform]);
   const [devOn, setDevOn] = useState(() => devMode.isDeveloperMode());
   const [tapCount, setTapCount] = useState(0);
   const [showPin, setShowPin] = useState(false);
@@ -278,6 +293,7 @@ export default function SettingsPanel({
           {info.buildId ? (
             <div className="settings-row"><span>Build</span><strong>{info.buildId}</strong></div>
           ) : null}
+          {info.platform === "android" ? <AppUpdateSection /> : null}
           <div className="settings-row"><span>平台</span><strong>{info.platform === "android" ? "Android" : "Web / Browser"}</strong></div>
           {info.gitCommit ? (
             <div className="settings-row"><span>Git Commit</span><strong>{info.gitCommit}</strong></div>

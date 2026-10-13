@@ -32,7 +32,8 @@ import {
   getClozeProgress,
 } from "./clozeProgress";
 import { loadClozeTranslationProgress, translationEntryFor } from "./clozeTranslationProgress";
-import { getClozeOfficialAnswerKey } from "./clozeAnswerKeys";
+import { verifiedOfficialAnswers } from "./import/answers.js";
+import MaterialAnswers from "./import/MaterialAnswers.jsx";
 import { listClozeReviewTasks } from "./clozeReview";
 import { buildClozeSentenceModel } from "./clozeSentences";
 import { loadOfficialCloze } from "./library";
@@ -101,7 +102,7 @@ function EntryRow({ record, d1Task, d7Task, expanded, onToggle, title = "", entr
     const year = Number(resource?.year) || Number(String(record.resourceId || "").match(/\d{4}/)?.[1] || 0);
     const progress = getClozeProgress(record.resourceId, record.clozeId);
     const translationProgress = loadClozeTranslationProgress(record.resourceId, record.clozeId);
-    const officialAnswers = year ? getClozeOfficialAnswerKey({ year, clozeId: record.clozeId }) : {};
+    const officialAnswers = verifiedOfficialAnswers(resource, "cloze");
     setEntry(buildClozeArchiveEntry({
       progress,
       translationProgress,
@@ -128,6 +129,7 @@ function EntryRow({ record, d1Task, d7Task, expanded, onToggle, title = "", entr
       else if (resource.clozeSource) cloze = await loadOfficialCloze(resource);
       if (!cancelled && cloze) {
         setClozeDetail({
+          resource,
           cloze,
           sentenceModel: buildClozeSentenceModel(cloze, record.resourceId, record.clozeId),
           translationProgress: loadClozeTranslationProgress(record.resourceId, record.clozeId),
@@ -193,6 +195,7 @@ function EntryRow({ record, d1Task, d7Task, expanded, onToggle, title = "", entr
 
       {expanded && (
         <div className="cloze-archive-detail">
+          {clozeDetail?.resource?.importVersion && <MaterialAnswers resource={clozeDetail.resource} content={clozeDetail.cloze} attempts={Object.fromEntries(Object.entries(getClozeProgress(record.resourceId, record.clozeId)?.attempts || {}).map(([n, a]) => [n, a.reviewAnswer || a.firstAnswer || ""]))} label="复查作答" reveal />}
           {detailFailed && (
             <p className="cloze-archive-detail-failed">正文模型读取失败，可重新展开重试。</p>
           )}
@@ -325,7 +328,7 @@ export default function ClozeLearningArchiveModal({ onClose, onStartReview = nul
   const items = useMemo(() => records.map((record) => {
     const resource = postgraduateClozeResources.find((item) => item.id === record.resourceId);
     const year = Number(resource?.year) || Number(String(record.resourceId || "").match(/\d{4}/)?.[1] || 0) || null;
-    const officialAnswers = year ? getClozeOfficialAnswerKey({ year, clozeId: record.clozeId }) : {};
+    const officialAnswers = verifiedOfficialAnswers(resource, "cloze");
     const tasks = findClozeReviewTasksForEntry(reviewTasks, record.resourceId, record.clozeId, record.sourceDate);
     return {
       record,

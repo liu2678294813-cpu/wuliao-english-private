@@ -1,5 +1,6 @@
 import { withMemoryProgress } from "./memory-record.js";
 import { isUnknownWordId, readUnknownWordList, filterResolvableUnknownRecords } from "./unknown-word-list.js";
+import { makeConfusion, newConfusionEventId, flushPendingConfusions, PENDING_CONFUSIONS } from "./confusion-records.js";
 
 const CURRENT_USER_KEY = "kaoyan_vocab_current_user";
 const MEMORY_DB_NAME = "KaoyanVocabMemorizeDB";
@@ -195,25 +196,34 @@ async function readAllUserRecords() {
   }
 }
 
-async function downgradeWrongWord(item) {
+async function downgradeWrongWord(item, confusion, reviewDate) {
   const db = await openMemoryDatabase();
   try {
     const transaction = db.transaction(MEMORY_STORE, "readwrite");
+    const done = transactionDone(transaction);
+    done.catch(() => {});
     const store = transaction.objectStore(MEMORY_STORE);
     const now = Date.now();
-    item.records.forEach((record) => {
+    for (const [index, snapshot] of item.records.entries()) {
+      const record = await requestToPromise(store.get(snapshot.memoryKey));
+      if (!record || record.username !== snapshot.username) {
+        transaction.abort(); throw new Error("复习记录已变化，请重新打开页面");
+      }
       const dates = recordDates(record);
-      store.put({
+      const updated = {
         ...withMemoryProgress(record, record.wordId, 0, { username: record.username, listKey: record.listKey, now }),
         maskedAt: record.maskedAt || (record.clickCount >= 3 ? record.updatedAt : undefined),
         maskedDates: dates,
-        lastReviewDate: state.selectedDate,
+        lastReviewDate: reviewDate,
         lastReviewResult: "wrong",
         reviewedAt: now,
         updatedAt: now,
-      });
-    });
-    await transactionDone(transaction);
+      };
+      if (index === 0 && confusion) updated[PENDING_CONFUSIONS] =
+        [...(record[PENDING_CONFUSIONS] || []).filter((row) => row.eventId !== confusion.eventId), confusion];
+      store.put(updated);
+    }
+    await done;
   } finally {
     db.close();
   }
@@ -465,7 +475,7 @@ async function choicesForWord(word, context = {}) {
       primary.push(...selectDistractors(word, fallback.entries.filter((entry) => !meanings.has(entry.chinese)), { context })
         .slice(0, DISTRACTOR_COUNT - primary.length));
     }
-    return shuffle([...primary.map((entry) => ({ chinese: entry.chinese, correct: false })),
+    return shuffle([...primary.map((entry) => ({ wordId: entry.wordId, english: entry.english, chinese: entry.chinese, correct: false })),
       { chinese: word.chinese, correct: true }], Math.random);
   } else if (String(word.wordId).startsWith("import:")) {
     candidates = (await readImportedWords(null, singleImportedListKey(word, context)))
@@ -480,7 +490,7 @@ async function choicesForWord(word, context = {}) {
   }
   const rng = Math.random;
   const choices = selectDistractors(word, candidates, { rng, context })
-    .map((candidate) => ({ chinese: candidate.chinese, correct: false }));
+    .map((candidate) => ({ wordId: candidate.wordId, english: candidate.english, chinese: candidate.chinese, correct: false }));
   choices.push({ chinese: word.chinese, correct: true });
   return shuffle(choices, rng);
 }
@@ -585,14 +595,26 @@ async function answerQuestion(choice, selectedButton) {
     answerHint.textContent = "正确，原黑线保持不变";
   } else {
     try {
-      pendingReviewWrite = downgradeWrongWord(item);
+      item.confusionEventId ||= newConfusionEventId();
+      const confusion = makeConfusion({ username: state.username, eventId: item.confusionEventId,
+        source: 'review', reviewDate: state.selectedDate, listId: singleImportedListKey(item.word, item),
+        word: item.word, choice });
+      const username = state.username, reviewDate = state.selectedDate;
+      pendingReviewWrite = (async () => {
+        if (!item.reviewCommitted) {
+          await downgradeWrongWord(item, confusion, reviewDate);
+          item.reviewCommitted = true;
+        }
+        await flushPendingConfusions(username);
+      })();
       await pendingReviewWrite;
     } catch (error) {
       console.error(error);
-      showMessage("取消黑线失败，请重试本词");
+      const text = item.reviewCommitted ? "复习记录已保存，混淆记录同步失败；请点击原选项重试" : "保存失败，请重试本词";
+      showMessage(text); answerHint.textContent = text;
       state.answered = false;
-      skipButton.disabled = false;
-      buttons.forEach((button) => { button.disabled = false; });
+      skipButton.disabled = item.reviewCommitted;
+      buttons.forEach((button) => { button.disabled = item.reviewCommitted && button !== selectedButton; });
       return;
     } finally {
       pendingReviewWrite = null;
@@ -638,6 +660,7 @@ async function selectDate(date, { preserveWordId = "", previousIndex = 0 } = {})
 }
 
 async function readCurrentReviewSources() {
+  await flushPendingConfusions(state.username);
   const [records, snapshot] = await Promise.all([
     readAllUserRecords(), readUnknownWordList(state.username),
   ]);
@@ -710,6 +733,10 @@ autoSpeakToggle.addEventListener("change", () => {
 wordButton.addEventListener("click", () => speakWord(wordButton.textContent));
 skipButton.addEventListener("click", () => answerQuestion(null, null));
 restartButton.addEventListener("click", () => {
+  for (const item of state.words) {
+    delete item.confusionEventId;
+    delete item.reviewCommitted;
+  }
   localStorage.removeItem(sessionKey());
   state.currentIndex = 0;
   state.correct = 0;
@@ -717,6 +744,10 @@ restartButton.addEventListener("click", () => {
   renderQuestion();
 });
 window.addEventListener("pagehide", saveSession);
+window.__wuliaoFlushVocabulary = async () => {
+  if (pendingReviewWrite) await pendingReviewWrite;
+  await flushPendingConfusions(state.username);
+};
 window.addEventListener("focus", requestReviewRefresh);
 window.addEventListener("pageshow", () => { if (state.selectedDate) requestReviewRefresh(); });
 document.addEventListener("visibilitychange", () => {

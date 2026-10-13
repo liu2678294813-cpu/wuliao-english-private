@@ -1,3 +1,4 @@
+import MaterialAnswers from "./import/MaterialAnswers.jsx";
 // 完形长期复习会话（E 阶段）：D+1 选择性检索 / D+7 保持确认。
 //
 // 领域边界：
@@ -500,6 +501,7 @@ export default function ClozeReviewSession({ taskKey, onClose }) {
 
   return (
     <div className="cloze-review-page">
+      {resourceRef.current?.importVersion && <MaterialAnswers resource={resourceRef.current} content={cloze} attempts={Object.fromEntries(Object.entries(task?.attempts || {}).map(([n, a]) => [n, a.answer || ""]))} label="复习作答" reveal={submitted} />}
       <header className="cloze-review-header">
         <div>
           <small>{isD7 ? "CLOZE D+7 CONFIRMATION" : "CLOZE D+1 RETRIEVAL"}</small>

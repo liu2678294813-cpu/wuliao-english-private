@@ -976,11 +976,11 @@ function createV4Database() {
   return indexedDb;
 }
 
-test("L IndexedDB v4→v8 is additive; old data survives and new training indexes are exact", async () => {
+test("L IndexedDB v4→v9 is additive; old data survives and new training indexes are exact", async () => {
   const indexedDb = createV4Database();
   const database = await openWuliaoEnglishDatabase(indexedDb);
   assert.equal(database.version, WULIAO_ENGLISH_DB_VERSION);
-  assert.equal(WULIAO_ENGLISH_DB_VERSION, 8);
+  assert.equal(WULIAO_ENGLISH_DB_VERSION, 9);
   for (const name of ["custom-pdfs", "unknown-words", "pdf-parse-cache", "exam-ink"]) {
     assert.equal(database.objectStoreNames.contains(name), true);
     assert.equal(database.stores.get(name).records.values().next().value.value, `keep-${name}`);
@@ -1001,6 +1001,11 @@ test("L IndexedDB v4→v8 is additive; old data survives and new training indexe
       : name === "long-sentence-ink" ? ["ownerRecordId", "username", "usernameSession"]
         : ["username", "usernameSession"];
     assert.deepEqual([...store.indexes].sort(), indexes);
+  }
+  for (const name of ["import-files", "import-batches", "import-cache", "writing-materials", "material-answers", "material-explanations", "answer-evaluations", "import-receipts"]) {
+    const store = database.stores.get(name);
+    assert.equal(store.keyPath, "id");
+    assert.deepEqual([...store.indexes].sort(), ["materialId", "username"]);
   }
   database.close();
 });

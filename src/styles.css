@@ -10235,3 +10235,7 @@ a:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+.settings-update-backdrop { position: fixed; inset: 0; z-index: 1400; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 23, 42, .5); }
+.settings-update-panel { width: min(560px, 100%); max-height: min(80vh, 720px); overflow: auto; background: var(--surface, #fff); color: var(--text, #172033); border-radius: 18px; padding: 20px; box-shadow: 0 20px 70px rgba(0, 0, 0, .22); }
+.settings-update-notes { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 14px; line-height: 1.65; max-height: 38vh; overflow: auto; }
+.settings-update-panel progress { width: 100%; accent-color: #2563eb; }

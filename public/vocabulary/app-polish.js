@@ -234,8 +234,9 @@
   };
 
   const installEmbeddedWorkspaceTools = () => {
-    if (!IS_HOSTED || !appHeaderExists()) return;
+    if (!appHeaderExists()) return;
     const route = currentRoute();
+    if (!IS_HOSTED && !['/dashboard', '/confusion'].includes(route)) return;
     const toolsExist = route === "/dashboard"
       ? Boolean(document.getElementById(EMBEDDED_DASHBOARD_LIBRARY_ID))
       : Boolean(document.getElementById(EMBEDDED_TOOLS_ID));
@@ -261,9 +262,11 @@
       if (heading?.parentElement) {
         heading.textContent = "仪表盘";
         heading.parentElement.classList.add("embedded-dashboard-heading");
+        addButton("混淆词", () => { location.hash = "#/confusion"; });
         const button = addButton("词库", () => { location.hash = "#/lists"; });
         button.id = EMBEDDED_DASHBOARD_LIBRARY_ID;
-        heading.insertAdjacentElement("afterend", button);
+        container.classList.add("embedded-dashboard-actions");
+        heading.insertAdjacentElement("afterend", container);
         embeddedToolsRoute = route;
       }
     } else if (route === "/lists") {
@@ -275,19 +278,12 @@
       });
     } else if (route.startsWith("/learning")) {
       const from = new URLSearchParams(location.hash.split("?")[1] || "").get("from");
-      addButton("混淆词对照", () => {
-        location.hash = "#/confusion";
-      });
       addButton(from === "memorize" ? "返回背诵" : "返回", embeddedBack);
     } else if (route === "/confusion") {
-      const previous = routeStack[routeStack.length - 2];
-      addButton("返回学习单词", () => {
-        if (previous && previous.startsWith("/learning")) location.hash = previous;
-        else location.hash = "#/learning";
-      });
+      addButton("返回词库首页", () => { location.hash = "#/dashboard"; });
     }
 
-    if (container.childElementCount > 0) {
+    if (container.childElementCount > 0 && route !== "/dashboard") {
       const main = document.querySelector("#root main");
       if (main) {
         main.prepend(container);
@@ -343,7 +339,6 @@
     panel.hidden = true;
     [
       ["#/export", "导出单词表"],
-      ["#/confusion", "混淆词对照"],
       ["/vocabulary/memorize.html", "背词训练"],
       ["/vocabulary/review.html", "今日复习"],
       ["/vocabulary/import.html", "导入 PDF / Excel 词库"],

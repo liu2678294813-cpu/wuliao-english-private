@@ -237,7 +237,8 @@ test("复习答错调用统一进度转换并保留原记录元数据", () => {
   assert.match(js, /withMemoryProgress\(record, record\.wordId, 0/);
   assert.match(js, /maskedAt:\s*record\.maskedAt/);
   assert.match(js, /maskedDates:\s*dates/);
-  assert.match(js, /lastReviewDate:\s*state\.selectedDate/);
+  assert.match(js, /lastReviewDate:\s*reviewDate/);
+  assert.match(js, /reviewDate = state\.selectedDate/);
   assert.match(js, /lastReviewResult:\s*"wrong"/);
   assert.match(js, /reviewedAt:\s*now/);
   assert.match(js, /恢复为 0\/3/);

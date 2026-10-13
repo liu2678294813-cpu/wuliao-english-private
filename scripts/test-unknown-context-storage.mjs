@@ -78,7 +78,7 @@ test("legacy records still edit/delete/toggle; phrase does not need schema migra
   });
   assert.equal(result.legacyMeaning, "编辑旧义"); assert.equal(result.legacyHasSenses, false); assert.equal(result.sourceType, "cloze");
   assert.equal(result.toggledCount, 0); assert.equal(result.normalized, "be responsible for"); assert.equal(result.meaning, "对……负责");
-  assert.equal(result.occurrences.length, 3); assert.equal(result.version, 8); assert.equal(result.finalCount, 0);
+  assert.equal(result.occurrences.length, 3); assert.equal(result.version, 9); assert.equal(result.finalCount, 0);
 });
 
 test("stale lifecycle/account guards prevent writes in the transaction", async () => {

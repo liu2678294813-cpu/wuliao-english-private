@@ -15,6 +15,14 @@ export const STAGES = [
 ];
 
 export const STAGE_IDS = STAGES.map((stage) => stage.id);
+const QUESTION_ONLY_STAGES = new Set(["deep-first-read", "deep-first-quiz", "deep-redo"]);
+export function configureQuestionlessFlow(flow) {
+  const next = cloneFlow(flow);
+  next.questionless = true;
+  for (const id of QUESTION_ONLY_STAGES) next.stages[id] = { status: "skipped", completedAt: null };
+  if (QUESTION_ONLY_STAGES.has(next.currentStage)) next.currentStage = next.currentStage === "deep-redo" ? "deep-review" : "deep-clean-text";
+  return next;
+}
 
 export const STAGE_LABELS = Object.fromEntries(STAGES.map((stage) => [stage.id, stage.label]));
 
@@ -226,6 +234,7 @@ export function hasReachedStage(flow, stageId) {
 }
 
 export function isStageLocked(flow, stageId) {
+  if (flow?.questionless && QUESTION_ONLY_STAGES.has(stageId)) return true;
   if (stageId === "deep-redo" && !hasReachedStage(flow, stageId)) return true;
   const reached = Math.max(stageIndex(currentStageOf(flow)), ...STAGE_IDS
     .filter((id) => ["completed", "skipped"].includes(flow?.stages?.[id]?.status)
@@ -281,7 +290,7 @@ export function completeStage(flow, stageId, now = Date.now()) {
 
   const next = cloneFlow(flow);
   next.stages[stageId] = { status: "completed", completedAt: now };
-  const nextStage = STAGES[stageIndex(stageId) + 1];
+  const nextStage = STAGES.slice(stageIndex(stageId) + 1).find((s) => !next.questionless || !QUESTION_ONLY_STAGES.has(s.id));
   if (nextStage) {
     next.currentStage = nextStage.id;
     if (next.stages[nextStage.id].status !== "completed") next.stages[nextStage.id] = { status: "current", completedAt: null };

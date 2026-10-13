@@ -13,6 +13,7 @@
 // `{ cloze, clozeId, isOfficial, year }`。
 
 import { getClozeOfficialAnswerKey } from "./clozeAnswerKeys";
+import { verifiedOfficialAnswers } from "./import/answers.js";
 import {
   effectiveConfidence,
   listPostCorrectionPriorityBlankNumbers,
@@ -139,6 +140,7 @@ export function officialAnswerFor(
   answerResolver = getClozeOfficialAnswerKey,
 ) {
   if (!canSeeOfficialAnswers(stageId) || !isOfficial) return null;
+  if (answerResolver === getClozeOfficialAnswerKey) return verifiedOfficialAnswers(resource, "cloze");
   const year = Number(resource?.year) || Number(String(resource?.id || "").match(/\d{4}/)?.[1] || 0);
   return answerResolver({ year, clozeId });
 }

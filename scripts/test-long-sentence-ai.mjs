@@ -46,6 +46,15 @@ test("one JSON repair and one supplement are separate finite budgets", async () 
   const result = await service.generate({ ...generate, count: 2 });
   assert.equal(calls.length, 3); assert.equal(result.items.length, 1); assert.equal(result.missingCount, 1); assert.equal(result.status, "partial");
 });
+test("a parseable but entirely rejected generation receives one targeted quality retry", async () => {
+  const invalid = { ...item(), difficultyPolicy: "match_source" };
+  const { service, calls } = setup([{ items: [invalid] }, { items: [item()] }]);
+  const result = await service.generate(generate);
+  assert.equal(result.status, "complete");
+  assert.equal(result.items.length, 1);
+  assert.equal(calls.length, 2);
+  assert.match(calls[1].messages.at(-1).content, /invalid_difficulty_policy/);
+});
 test("a second invalid initial JSON terminates without a loop", async () => {
   const { service, calls } = setup(["invalid", "invalid again"]);
   await assert.rejects(service.generate(generate), error => error.code === "invalid_json"); assert.equal(calls.length, 2);

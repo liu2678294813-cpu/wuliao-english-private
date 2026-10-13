@@ -1,8 +1,9 @@
 import { getUserItem, setUserItem } from "./userData";
 import { normalizeCloze } from "./clozeParser";
 
-const YEARS = Array.from({ length: 17 }, (_, index) => 2007 + index);
 const env = (typeof import.meta !== "undefined" && import.meta.env) || {};
+export const hasBundledArticles = env.VITE_TOOLS_ONLY !== "1";
+const YEARS = hasBundledArticles ? Array.from({ length: 17 }, (_, index) => 2007 + index) : [];
 const assetBase = env.BASE_URL || "";
 
 export const postgraduateResources = YEARS.flatMap((year) => {

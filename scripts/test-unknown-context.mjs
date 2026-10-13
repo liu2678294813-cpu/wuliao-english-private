@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import { normalizeUnknownTerm, normalizeUnknownWord } from "../src/unknownWords.js";
 import { createDirectUnknownTap, shouldHandleDirectUnknownTap, unknownWordRanges,
   expandUnknownSelectionSpans, unknownSentenceContextFromToken, unknownPointerRegion,
-  createUnknownSelectionHooks } from "../src/unknownWordInteraction.js";
+  createUnknownSelectionHooks, unknownTouchWordFromPoint } from "../src/unknownWordInteraction.js";
 import { upsertUnknownContextSense } from "../src/storage.js";
 import { resolveUnknownContextMeaning } from "../src/unknownWordContext.js";
 import { createLongPressCandidate, updateLongPressCandidate, shouldActivateTemporaryEraser,
@@ -93,6 +93,97 @@ function tapHarness() {
   const event = (type, x = 0, timeStamp = 0, pointerId = 1) => ({ type, pointerType: "touch", pointerId, clientX: x, clientY: 0, timeStamp });
   return { tap, commits, event };
 }
+
+function touchGeometryFixture() {
+  document.body.innerHTML = '<main><div class="sentence-source"><p data-unknown-scope="translation:p1:s1" data-sentence-scope="translation:p1:s1">of every word</p></div><button>control</button><textarea></textarea></main>';
+  const root = document.querySelector("main"), scope = root.querySelector("p");
+  const rect = (left, right, top = 100, bottom = 116) => ({ left, right, top, bottom, width: right - left, height: bottom - top });
+  const boxes = { of: rect(100, 110), every: rect(114, 145), word: rect(160, 190) };
+  const previousRects = dom.window.Range.prototype.getClientRects;
+  const previousPoint = document.elementFromPoint;
+  dom.window.Range.prototype.getClientRects = function () { return boxes[this.toString()] ? [boxes[this.toString()]] : []; };
+  scope.getClientRects = () => [rect(90, 200, 90, 130)];
+  document.elementFromPoint = () => scope;
+  return { root, scope, tokens: unknownWordRanges(scope), restore() {
+    dom.window.Range.prototype.getClientRects = previousRects;
+    if (previousPoint) document.elementFromPoint = previousPoint; else delete document.elementFromPoint;
+  } };
+}
+
+test("finger geometry accepts a 4px vertical miss and 6px boundary, rejects far/ambiguous gaps", () => {
+  const f = touchGeometryFixture();
+  try {
+    for (const y of [96, 100, 116, 120, 94, 122]) assert.equal(unknownTouchWordFromPoint(105, y, f.root)?.word, "of");
+    for (const y of [93.9, 122.1]) assert.equal(unknownTouchWordFromPoint(105, y, f.root), null);
+    assert.equal(unknownTouchWordFromPoint(111, 108, f.root)?.word, "of");
+    assert.equal(unknownTouchWordFromPoint(112, 108, f.root), null);
+    assert.equal(unknownTouchWordFromPoint(111.5, 108, f.root), null);
+    assert.equal(unknownTouchWordFromPoint(114.5, 108, f.root)?.word, "every");
+    assert.equal(unknownTouchWordFromPoint(155, 108, f.root)?.word, "word");
+    assert.equal(unknownTouchWordFromPoint(210, 108, f.root), null);
+  } finally { f.restore(); }
+});
+
+test("finger up keeps the down word in whitespace but rejects an actual neighboring glyph", () => {
+  const f = touchGeometryFixture();
+  try {
+    for (const x of [110, 112, 113.9]) assert.equal(unknownTouchWordFromPoint(x, 108, f.root, f.tokens[0])?.word, "of");
+    assert.equal(unknownTouchWordFromPoint(114.5, 108, f.root, f.tokens[0]), null);
+    assert.equal(unknownTouchWordFromPoint(105, 123, f.root, f.tokens[0]), null);
+    f.scope.firstChild.data = "of changed sentence";
+    f.scope.replaceChildren(document.createTextNode("of every word"));
+    assert.equal(unknownTouchWordFromPoint(105, 108, f.root, f.tokens[0]), null);
+  } finally { f.restore(); }
+});
+
+test("finger near-hit excludes controls, writing, hidden text and overlays outside the paper", () => {
+  const f = touchGeometryFixture();
+  try {
+    for (const selector of ["button", "textarea"]) {
+      document.elementFromPoint = () => f.root.querySelector(selector);
+      assert.equal(unknownTouchWordFromPoint(105, 108, f.root), null);
+    }
+    document.elementFromPoint = () => document.body;
+    assert.equal(unknownTouchWordFromPoint(105, 108, f.root), null);
+    document.elementFromPoint = () => f.scope;
+    for (const style of ["display:none", "visibility:hidden", "opacity:0"]) {
+      f.scope.parentElement.setAttribute("style", style);
+      assert.equal(unknownTouchWordFromPoint(105, 108, f.root), null);
+    }
+    f.scope.parentElement.removeAttribute("style");
+    f.scope.parentElement.classList.add("translation-unit");
+    assert.equal(unknownTouchWordFromPoint(105, 108, f.root), null);
+  } finally { f.restore(); }
+});
+
+for (const [pointerType, duration, expected] of [["touch", 400, 1], ["touch", 450, 1], ["touch", 451, 0], ["mouse", 400, 0], ["pen", 400, 0]]) {
+  test(`touch duration is opt-in and isolated: ${pointerType} ${duration}ms`, async () => {
+    const f = touchGeometryFixture();
+    try {
+      let commits = 0, touchCalls = 0;
+      const tap = createDirectUnknownTap({ canHandle: () => true, hitTest: () => f.tokens[0], maxTouchDuration: 450,
+        touchHitTest: (x, y, anchor) => { touchCalls++; return unknownTouchWordFromPoint(x, y, f.root, anchor); }, onCommit: () => commits++ });
+      const event = (type, timeStamp) => ({ type, pointerType, pointerId: 1, clientX: 105, clientY: 108, timeStamp });
+      tap.down(event("pointerdown", 0)); tap.finish(event("pointerup", duration)); tap.finish(event("pointerup", duration));
+      await Promise.resolve();
+      assert.equal(commits, expected);
+      assert.equal(touchCalls, pointerType === "touch" ? (expected ? 2 : 1) : 0);
+    } finally { f.restore(); }
+  });
+}
+
+test("in-place sentence edits cancel an anchored finger gesture", async () => {
+  const f = touchGeometryFixture();
+  try {
+    let commits = 0;
+    const tap = createDirectUnknownTap({ canHandle: () => true,
+      touchHitTest: (x, y, anchor) => unknownTouchWordFromPoint(x, y, f.root, anchor), onCommit: () => commits++ });
+    const event = (type, timeStamp) => ({ type, pointerType: "touch", pointerId: 1, clientX: 105, clientY: 108, timeStamp });
+    tap.down(event("pointerdown", 0)); f.scope.firstChild.data = "of every replacement";
+    tap.finish(event("pointerup", 100)); await Promise.resolve();
+    assert.equal(commits, 0);
+  } finally { f.restore(); }
+});
 
 test("tap commits once and duplicate up cannot commit again", async () => {
   const { tap, commits, event } = tapHarness();

@@ -20,7 +20,7 @@ import { listCustomPdfs, listUnknownWords } from "./storage";
 import { listAiHistory } from "./ai";
 import { CLOZE_BASIS_TYPE_LABELS, getClozeProgress } from "./clozeProgress";
 import { loadClozeTranslationProgress, translationEntryFor } from "./clozeTranslationProgress";
-import { getClozeOfficialAnswerKey } from "./clozeAnswerKeys";
+import { verifiedOfficialAnswers } from "./import/answers.js";
 import { findClozeReviewTasksForEntry, listCompletedClozeRecords } from "./clozeLearningArchive";
 import { listClozeReviewTasks } from "./clozeReview";
 import {
@@ -35,6 +35,7 @@ import { localDateKey } from "./readingReview";
 import ModalShell from "./ui/Overlay";
 import { BACK_PRIORITY } from "./ui/backController";
 import AiFloatWindow from "./AiFloatWindow.jsx";
+import MaterialAnswers from "./import/MaterialAnswers.jsx";
 
 const CONFIDENCE_LABELS = { confident: "确定", uncertain: "犹豫", guess: "猜测" };
 
@@ -305,9 +306,7 @@ export default function ClozeSummaryPanel({
   }, [reviewTasks, resourceId, clozeId, resolvedCompletedAt]);
 
   const summary = useMemo(() => {
-    const officialAnswers = year
-      ? getClozeOfficialAnswerKey({ year, clozeId: clozeId || resourceId }) || {}
-      : {};
+    const officialAnswers = verifiedOfficialAnswers(resource, "cloze");
     return buildClozeLearningSummary({
       resource,
       resourceId,
@@ -382,6 +381,7 @@ export default function ClozeSummaryPanel({
         </header>
 
         <div className="cloze-summary-body">
+          {resource?.importVersion && resource.analysis?.clozes?.[0] && <MaterialAnswers resource={resource} content={resource.analysis.clozes[0]} attempts={Object.fromEntries(Object.entries(getClozeProgress(resourceId, clozeId || resourceId)?.attempts || {}).map(([n, a]) => [n, a.reviewAnswer || a.firstAnswer || ""]))} label="复查作答" reveal />}
           <section className="cloze-summary-section">
             <h3>训练状态</h3>
             <div className="cloze-summary-topline">

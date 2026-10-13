@@ -27,6 +27,71 @@ async function memoryRecord(page, username, listKey, wordId) {
   }, { username, listKey, wordId });
 }
 
+test("取消清除不改数据，确认清除后重启仍能恢复原遮挡和日期", async ({ page }) => {
+  const username = await openMemorize(page);
+  const rows = page.locator('.word-row');
+  const ids = await Promise.all([0,1].map(i=>rows.nth(i).getAttribute('data-word-id')));
+  for (const i of [0,1]) for (let n=1;n<=3;n++) {
+    await rows.nth(i).locator('.mark-button').click();
+    await expect.poll(async()=>(await memoryRecord(page,username,'original',ids[i]))?.clickCount).toBe(n);
+  }
+  const originals=await Promise.all(ids.map(id=>memoryRecord(page,username,'original',id)));
+  page.once('dialog',async dialog=>{expect(dialog.message()).toContain('2 个词');await dialog.dismiss()});
+  await page.locator('#clearButton').click();
+  expect(await memoryRecord(page,username,'original',ids[0])).toEqual(originals[0]);
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('#clearButton').click();
+  await expect.poll(async()=>(await memoryRecord(page,username,'original',ids[0]))?.clickCount).toBe(0);
+  await page.reload();
+  await expect(page.locator('#undoButton')).toHaveText('恢复上次清除');
+  await page.locator('#undoButton').click();
+  await expect.poll(async()=>(await memoryRecord(page,username,'original',ids[1]))?.clickCount).toBe(3);
+  for(const [i,id] of ids.entries()) {
+    const restored=await memoryRecord(page,username,'original',id);
+    expect(restored.maskedDates).toEqual(originals[i].maskedDates);
+    expect(restored.maskedAt).toBe(originals[i].maskedAt);
+    expect(restored.clearUndo).toBeUndefined();
+  }
+  await page.reload();
+  await expect(page.locator('#maskSummary')).toHaveText('已遮挡 2 个');
+});
+
+test("清除后新学过的词不被旧恢复覆盖", async ({ page }) => {
+  const username = await openMemorize(page);
+  const rows=page.locator('.word-row');
+  const ids=await Promise.all([0,1].map(i=>rows.nth(i).getAttribute('data-word-id')));
+  for(const i of [0,1]) {
+    await rows.nth(i).locator('.mark-button').click();
+    await expect.poll(async()=>(await memoryRecord(page,username,'original',ids[i]))?.clickCount).toBe(1);
+  }
+  page.once('dialog',dialog=>dialog.accept());await page.locator('#clearButton').click();
+  await expect.poll(async()=>(await memoryRecord(page,username,'original',ids[0]))?.clickCount).toBe(0);
+  await page.reload();
+  for(let n=1;n<=2;n++) {
+    await rows.nth(0).locator('.mark-button').click();
+    await expect.poll(async()=>(await memoryRecord(page,username,'original',ids[0]))?.clickCount).toBe(n);
+  }
+  const newer=await memoryRecord(page,username,'original',ids[0]);
+  await page.reload();await page.locator('#undoButton').click();
+  await expect.poll(async()=>(await memoryRecord(page,username,'original',ids[1]))?.clickCount).toBe(1);
+  expect(await memoryRecord(page,username,'original',ids[0])).toEqual(newer);
+});
+
+test("批量清除写入失败时原记录与恢复标记保持原样", async ({ page }) => {
+  const username=await openMemorize(page);
+  const rows=page.locator('.word-row');
+  const ids=await Promise.all([0,1].map(i=>rows.nth(i).getAttribute('data-word-id')));
+  for(const i of [0,1]) {
+    await rows.nth(i).locator('.mark-button').click();
+    await expect.poll(async()=>(await memoryRecord(page,username,'original',ids[i]))?.clickCount).toBe(1);
+  }
+  const before=await Promise.all(ids.map(id=>memoryRecord(page,username,'original',id)));
+  await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;let calls=0;IDBObjectStore.prototype.put=function(...args){if(this.name==='records'&&++calls===2)throw Error('injected failure');return put.apply(this,args)}});
+  page.once('dialog',dialog=>dialog.accept());await page.locator('#clearButton').click();
+  await expect(page.locator('#message')).toContainText('保存失败');
+  expect(await Promise.all(ids.map(id=>memoryRecord(page,username,'original',id)))).toEqual(before);
+});
+
 test("复习答错和我不会提交真正的 0/3，答对保持 3/3", async ({ page }) => {
   const username = await openMemorize(page);
   const rows = page.locator(".word-row");

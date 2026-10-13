@@ -83,10 +83,13 @@ test("ExamImportEditor：重新解析分支以运行代次阻止旧请求迟到�
   assert.match(sourceCode, /if \(parseRunRef\.current === runId\) setProgress\(nextProgress\)/);
 });
 
-test("资料库导入队列：StrictMode setup 恢复 alive，且复用已计算 fingerprint", async () => {
+test("资料库修复：StrictMode setup 恢复 alive；统一导入复用 fingerprint 并在返回时校验账号", async () => {
   const sourceCode = await source("src/App.jsx");
   assert.match(sourceCode, /useEffect\(\(\) => \{\s*\/\/ StrictMode[\s\S]*?aliveRef\.current = true;/);
-  assert.match(sourceCode, /addCustomPdf\(file, fingerprint\)/);
+  const controller = await source("src/import/controller.js");
+  assert.match(controller, /item\.fingerprint = fingerprint/);
+  assert.match(controller, /await computeFileFingerprint\(file\.file\) !== file\.fingerprint/);
+  assert.match(controller, /assertAccount\(this\.token\)/);
 });
 
 test("词汇导入 import.js：PDF 解析有超时与资源销毁", async () => {

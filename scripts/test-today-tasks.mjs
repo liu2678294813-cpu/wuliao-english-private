@@ -78,7 +78,7 @@ function fresh() {
   setCurrentUsername("alice");
 }
 
-function officialResource(id = "r1") {
+function officialResource(id = "postgraduate-2021-text-1") {
   return { id, kind: "official", year: 2021, text: 1, title: "2021 Text 1" };
 }
 
@@ -140,9 +140,9 @@ function resources() {
 
 test("A 未完成文章 → 出现 continue reading", () => {
   fresh();
-  seedFlow("r1", "p1", incompleteFlow("r1", "p1", 1000));
+  seedFlow("postgraduate-2021-text-1", "p1", incompleteFlow("postgraduate-2021-text-1", "p1", 1000));
   const data = buildTodayTasks(scanLearningState(), { resources: resources() });
-  assert.equal(data.continueReading.resourceId, "r1");
+  assert.equal(data.continueReading.resourceId, "postgraduate-2021-text-1");
   assert.equal(data.continueReading.stageLabel, "逐段精读");
   assert.equal(data.continueReading.stageIndex, 5);
   assert.equal(data.hasAny, true);
@@ -150,17 +150,17 @@ test("A 未完成文章 → 出现 continue reading", () => {
 
 test("多篇未完成 → 最近活动文章优先", () => {
   fresh();
-  seedFlow("r1", "p1", incompleteFlow("r1", "p1", 1000));
+  seedFlow("postgraduate-2021-text-1", "p1", incompleteFlow("postgraduate-2021-text-1", "p1", 1000));
   seedFlow("r2", "p1", incompleteFlow("r2", "p1", 2000));
   const data = buildTodayTasks(scanLearningState(), { resources: [officialResource(), officialResource("r2")] });
   assert.equal(data.continueReading.resourceId, "r2");
   assert.equal(data.moreInProgressCount, 1);
-  assert.equal(data.moreInProgress[0].resourceId, "r1");
+  assert.equal(data.moreInProgress[0].resourceId, "postgraduate-2021-text-1");
 });
 
 test("D in_progress → 最高优先级", () => {
   fresh();
-  const due = createNextDayReviewTask({ resourceId: "r1", passageId: "p1", now: Date.now() });
+  const due = createNextDayReviewTask({ resourceId: "postgraduate-2021-text-1", passageId: "p1", now: Date.now() });
   const later = createNextDayReviewTask({ resourceId: "r2", passageId: "p1", now: Date.now() });
   startReviewSession(later.task.taskKey);
   const data = buildTodayTasks(scanLearningState(), { resources: [officialResource(), officialResource("r2")] });
@@ -171,7 +171,7 @@ test("D in_progress → 最高优先级", () => {
 
 test("D overdue → 高于 due", () => {
   fresh();
-  const created = createNextDayReviewTask({ resourceId: "r1", passageId: "p1" });
+  const created = createNextDayReviewTask({ resourceId: "postgraduate-2021-text-1", passageId: "p1" });
   setUserItem(
     `wuliao:review-task:${created.task.taskKey}`,
     JSON.stringify({ ...created.task, dueDate: "2026-08-01" }),
@@ -185,7 +185,7 @@ test("D overdue → 高于 due", () => {
 
 test("due → 正确显示", () => {
   fresh();
-  scheduleManualReviewTask({ resourceId: "r1", passageId: "p1" });
+  scheduleManualReviewTask({ resourceId: "postgraduate-2021-text-1", passageId: "p1" });
   const data = buildTodayTasks(scanLearningState(), { resources: resources() });
   assert.equal(data.reviewSummary.todayItems.length, 1);
   assert.equal(data.reviewSummary.todayItems[0].status, "due");
@@ -193,7 +193,7 @@ test("due → 正确显示", () => {
 
 test("scheduled future task → 不进入今日任务", () => {
   fresh();
-  const created = createNextDayReviewTask({ resourceId: "r1", passageId: "p1" });
+  const created = createNextDayReviewTask({ resourceId: "postgraduate-2021-text-1", passageId: "p1" });
   setUserItem(
     `wuliao:review-task:${created.task.taskKey}`,
     JSON.stringify({ ...created.task, dueDate: localDateKey(Date.now() + 3 * 86400000) }),
@@ -206,8 +206,8 @@ test("scheduled future task → 不进入今日任务", () => {
 
 test("needs_review sentence → 可以进入待复盘", () => {
   fresh();
-  seedFlow("r1", "p1", completedFlow("r1", "p1"));
-  seedNeedsReview("r1", "p1");
+  seedFlow("postgraduate-2021-text-1", "p1", completedFlow("postgraduate-2021-text-1", "p1"));
+  seedNeedsReview("postgraduate-2021-text-1", "p1");
   const data = buildTodayTasks(scanLearningState(), { resources: resources() });
   assert.equal(data.pendingGroups.length, 1);
   assert.equal(data.pendingGroups[0].difficultCount, 1);
@@ -216,9 +216,9 @@ test("needs_review sentence → 可以进入待复盘", () => {
 
 test("有 D article review 覆盖该文章 → 不重复显示 needs_review", () => {
   fresh();
-  seedFlow("r1", "p1", completedFlow("r1", "p1"));
-  seedNeedsReview("r1", "p1");
-  scheduleManualReviewTask({ resourceId: "r1", passageId: "p1" });
+  seedFlow("postgraduate-2021-text-1", "p1", completedFlow("postgraduate-2021-text-1", "p1"));
+  seedNeedsReview("postgraduate-2021-text-1", "p1");
+  scheduleManualReviewTask({ resourceId: "postgraduate-2021-text-1", passageId: "p1" });
   const data = buildTodayTasks(scanLearningState(), { resources: resources() });
   assert.equal(data.pendingGroups.length, 0);
   assert.equal(data.reviewSummary.todayCount, 1);
@@ -226,18 +226,18 @@ test("有 D article review 覆盖该文章 → 不重复显示 needs_review", ()
 
 test("有未来 sentence_recheck → 今天不重复显示同一句待复盘", () => {
   fresh();
-  seedFlow("r1", "p1", completedFlow("r1", "p1"));
-  const key = seedNeedsReview("r1", "p1");
-  ensureSentenceRecheckTask({ resourceId: "r1", passageId: "p1", sentenceKeys: [key] });
+  seedFlow("postgraduate-2021-text-1", "p1", completedFlow("postgraduate-2021-text-1", "p1"));
+  const key = seedNeedsReview("postgraduate-2021-text-1", "p1");
+  ensureSentenceRecheckTask({ resourceId: "postgraduate-2021-text-1", passageId: "p1", sentenceKeys: [key] });
   const data = buildTodayTasks(scanLearningState(), { resources: resources() });
   assert.equal(data.pendingGroups.length, 0);
 });
 
 test("redo 错题 → 进入待复盘", () => {
   fresh();
-  seedFlow("r1", "p1", completedFlow("r1", "p1"));
-  seedFirstAnswers("r1", "p1", { 21: "A" });
-  seedRedoAnswers("r1", "p1", { 21: wrongLetter(officialAnswers()["21"]) });
+  seedFlow("postgraduate-2021-text-1", "p1", completedFlow("postgraduate-2021-text-1", "p1"));
+  seedFirstAnswers("postgraduate-2021-text-1", "p1", { 21: "A" });
+  seedRedoAnswers("postgraduate-2021-text-1", "p1", { 21: wrongLetter(officialAnswers()["21"]) });
   const data = buildTodayTasks(scanLearningState(), { resources: resources() });
   assert.equal(data.pendingGroups.length, 1);
   assert.equal(data.pendingGroups[0].questionCount, 1);
@@ -266,8 +266,8 @@ test("自定义 PDF 的遗留答案键不参与判错或待复盘", () => {
 
 test("D reviewAnswer 错题 → 进入待复盘（任务完成后）", () => {
   fresh();
-  seedFlow("r1", "p1", completedFlow("r1", "p1"));
-  const created = scheduleManualReviewTask({ resourceId: "r1", passageId: "p1" });
+  seedFlow("postgraduate-2021-text-1", "p1", completedFlow("postgraduate-2021-text-1", "p1"));
+  const created = scheduleManualReviewTask({ resourceId: "postgraduate-2021-text-1", passageId: "p1" });
   const wrong = wrongLetter(officialAnswers()["21"]);
   updateReviewSession(created.task.taskKey, {
     reviewAnswers: { "r1::p1::q21::xhash": wrong },
@@ -282,18 +282,18 @@ test("D reviewAnswer 错题 → 进入待复盘（任务完成后）", () => {
 
 test("first 错 redo 对 → 默认不进入长期待复盘", () => {
   fresh();
-  seedFlow("r1", "p1", completedFlow("r1", "p1"));
-  seedFirstAnswers("r1", "p1", { 21: wrongLetter(officialAnswers()["21"]) });
-  seedRedoAnswers("r1", "p1", { 21: officialAnswers()["21"] });
+  seedFlow("postgraduate-2021-text-1", "p1", completedFlow("postgraduate-2021-text-1", "p1"));
+  seedFirstAnswers("postgraduate-2021-text-1", "p1", { 21: wrongLetter(officialAnswers()["21"]) });
+  seedRedoAnswers("postgraduate-2021-text-1", "p1", { 21: officialAnswers()["21"] });
   const data = buildTodayTasks(scanLearningState(), { resources: resources() });
   assert.equal(data.pendingGroups.length, 0);
 });
 
 test("完成 D task 后今日任务及时变化", () => {
   fresh();
-  seedFlow("r1", "p1", completedFlow("r1", "p1"));
-  seedRedoAnswers("r1", "p1", { 21: wrongLetter(officialAnswers()["21"]) });
-  const created = scheduleManualReviewTask({ resourceId: "r1", passageId: "p1" });
+  seedFlow("postgraduate-2021-text-1", "p1", completedFlow("postgraduate-2021-text-1", "p1"));
+  seedRedoAnswers("postgraduate-2021-text-1", "p1", { 21: wrongLetter(officialAnswers()["21"]) });
+  const created = scheduleManualReviewTask({ resourceId: "postgraduate-2021-text-1", passageId: "p1" });
   const before = buildTodayTasks(scanLearningState(), { resources: resources() });
   assert.equal(before.reviewSummary.todayCount, 1);
   assert.equal(before.pendingGroups.length, 0);
@@ -307,9 +307,9 @@ test("完成 D task 后今日任务及时变化", () => {
 
 test("account 切换 → 任务完全隔离", () => {
   fresh();
-  seedFlow("r1", "p1", incompleteFlow("r1", "p1", 1000));
+  seedFlow("postgraduate-2021-text-1", "p1", incompleteFlow("postgraduate-2021-text-1", "p1", 1000));
   const alice = buildTodayTasks(scanLearningState(), { resources: resources() });
-  assert.equal(alice.continueReading.resourceId, "r1");
+  assert.equal(alice.continueReading.resourceId, "postgraduate-2021-text-1");
   setCurrentUsername("bob");
   const bob = buildTodayTasks(scanLearningState(), { resources: resources() });
   assert.equal(bob.continueReading, null);
@@ -353,16 +353,16 @@ test("自定义 PDF 提供句数进度", () => {
 
 test("library 状态图：完成 + 待复盘", () => {
   fresh();
-  seedFlow("r1", "p1", completedFlow("r1", "p1"));
-  seedNeedsReview("r1", "p1");
+  seedFlow("postgraduate-2021-text-1", "p1", completedFlow("postgraduate-2021-text-1", "p1"));
+  seedNeedsReview("postgraduate-2021-text-1", "p1");
   const map = buildLibraryStatusMap(scanLearningState(), { resources: resources() });
-  assert.equal(map.r1.hasRecords, true);
-  assert.equal(map.r1.label, "✓ 已完成 · 待复盘 1");
+  assert.equal(map["postgraduate-2021-text-1"].hasRecords, true);
+  assert.equal(map["postgraduate-2021-text-1"].label, "✓ 已完成 · 待复盘 1");
 });
 
 test("library 状态图：进行中", () => {
   fresh();
-  seedFlow("r1", "p1", incompleteFlow("r1", "p1", 1000, "deep-first-quiz"));
+  seedFlow("postgraduate-2021-text-1", "p1", incompleteFlow("postgraduate-2021-text-1", "p1", 1000, "deep-first-quiz"));
   const map = buildLibraryStatusMap(scanLearningState(), { resources: resources() });
-  assert.equal(map.r1.label, "进行中 · 初做");
+  assert.equal(map["postgraduate-2021-text-1"].label, "进行中 · 初做");
 });

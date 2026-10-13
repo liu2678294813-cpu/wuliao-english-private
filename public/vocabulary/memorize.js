@@ -1,5 +1,5 @@
 import { memoryProgress, memoryState, advanceMemory, swipeDirection } from "./memory-modes.js";
-import { withMemoryProgress } from "./memory-record.js";
+import { withMemoryProgress, clearUndoEntries } from "./memory-record.js";
 import { createWordSaveQueue } from "./word-save-queue.js";
 import { interactionTiming } from "./interaction-timing.js";
 import { UNKNOWN_LIST_KEY, isUnknownWordId, readUnknownWordList } from "./unknown-word-list.js";
@@ -374,7 +374,9 @@ function refreshModes() {
     button.disabled = saving || loadingList;
   });
   viewport.dataset.input = state.input;
-  undoButton.disabled = saving || loadingList || !undoStack.length;
+  const recoverable = clearUndoEntries(state.records.values()).length > 0;
+  undoButton.disabled = saving || loadingList || (!undoStack.length && !recoverable);
+  undoButton.textContent = !undoStack.length && recoverable ? "恢复上次清除" : "撤销上一步";
   clearButton.disabled = saving || loadingList;
   listSelect.disabled = saving || loadingList;
   rangeButton.disabled = saving || loadingList;
@@ -843,23 +845,39 @@ async function resetProgress(entries, remember = false) {
   if (saving || loadingList || !entries.length) return;
   saving = true; bulkSaving = true;
   refreshModes();
-  const records = entries.map(({ wordId, step }) => withProgress(state.records.get(wordId), wordId, step));
-  const previous = entries.map(({ wordId }) => ({ wordId, step: memoryProgress(state.records.get(wordId), state.rule) }));
+  const batchId = Date.now();
+  const records = entries.map(({ wordId, step, clearUndo }) => {
+    const previous = state.records.get(wordId);
+    const record = withProgress(previous, wordId, step);
+    if (remember) record.clearUndo = {
+      batchId, step: memoryProgress(previous), clearedAt: record.updatedAt,
+      maskedAt: previous?.maskedAt, maskedDates: previous?.maskedDates || [],
+    };
+    if (clearUndo) {
+      record.maskedAt = clearUndo.maskedAt;
+      record.maskedDates = clearUndo.maskedDates;
+    }
+    return record;
+  });
   try {
     bulkWrite = saveRecords(records);
     await bulkWrite;
     records.forEach((record) => state.records.set(record.wordId, record));
-    if (remember) undoStack.push(previous); else undoStack.pop();
+    if (remember) undoStack.push(clearUndoEntries(records)); else undoStack.pop();
     window.VocabularyBridge?.reportSessionUpdated?.();
   } catch { showMessage("保存失败，请重试"); }
   finally { bulkWrite = null; saving = false; bulkSaving = false; renderVisibleRows(true); updateSummary(); refreshModes(); }
 }
 clearButton.addEventListener("click", () => {
   if (!state.currentListKey || saving) return;
-  const entries = [...state.records.keys()].filter((id) => memoryProgress(state.records.get(id), state.rule) > 0).map((wordId) => ({ wordId, step: 0 }));
+  const visibleIds = new Set(state.words.map((word) => word.wordId));
+  const entries = [...state.records.keys()].filter((id) =>
+    (state.currentListKey !== UNKNOWN_LIST_KEY || visibleIds.has(id))
+    && memoryProgress(state.records.get(id), state.rule) > 0).map((wordId) => ({ wordId, step: 0 }));
+  if (!entries.length || !window.confirm(`将清除当前词库 ${entries.length} 个词的学习进度和遮挡。可撤销；重新打开 App 后可用“恢复上次清除”找回。是否继续？`)) return;
   resetProgress(entries, true);
 });
-undoButton.addEventListener("click", () => resetProgress(undoStack.at(-1) || []));
+undoButton.addEventListener("click", () => resetProgress(undoStack.at(-1) || clearUndoEntries(state.records.values())));
 document.querySelectorAll("[data-memory-rule], [data-memory-input]").forEach((button) => button.addEventListener("click", () => {
   if (saving || loadingList) return;
   if (button.dataset.memoryRule && button.dataset.memoryRule !== state.rule) state.rule = button.dataset.memoryRule;

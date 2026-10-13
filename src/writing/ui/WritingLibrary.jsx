@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ImportedWritingLibrary from "./ImportedWritingLibrary.jsx";
 import { onAppEvent } from "../../events/appEvents.js";
 import { AppEvent } from "../../events/eventTypes.js";
 import { WRITING_STAGE_SHORT, WRITING_STAGE_TITLES } from "./WritingStageShell.jsx";
@@ -181,10 +182,11 @@ export default function WritingLibrary({ services, username, onOpenSession, onCr
           <p>WRITING LAB</p>
           <h1>写作训练</h1>
         </div>
-        <button type="button" className="primary-button" onClick={() => document.getElementById("writing-question-bank")?.scrollIntoView?.({ behavior: "smooth", block: "start" })}>浏览历年真题</button>
+        <button type="button" className="primary-button" onClick={() => (services?.questionBank?.listYears?.().length ? document.getElementById("writing-question-bank") : document.querySelector(".writing-imported-materials"))?.scrollIntoView?.({ behavior: "smooth", block: "start" })}>{services?.questionBank?.listYears?.().length ? "浏览历年真题" : "查看导入作文"}</button>
       </header>
 
       <QuestionBank services={services} onOpenSession={onOpenSession} onConfigureTextAi={onConfigureTextAi} />
+      <ImportedWritingLibrary services={services} username={username} onOpenSession={onOpenSession} />
 
       {state.status === "loading" ? <section className="writing-library-state"><span className="writing-loader" />正在核对本账号的写作记录…</section> : null}
       {state.status === "failed" ? <section className="writing-library-state is-error"><strong>{state.error}</strong><button type="button" onClick={load}>重新载入</button></section> : null}
@@ -192,7 +194,7 @@ export default function WritingLibrary({ services, username, onOpenSession, onCr
         <>
           <section className="writing-library-section">
             <div className="writing-library-heading"><div><small>CONTINUE</small><h2>继续训练</h2></div><span>{model.activeItems.length} 项</span></div>
-            {model.activeItems.length ? <div className="writing-library-grid">{model.activeItems.map((item) => <SessionCard key={item.sessionId} item={item} onOpen={onOpenSession} />)}</div> : <div className="writing-library-empty"><strong>当前没有进行中的训练</strong><p>从已冻结的写作题目入口开始一场新训练。</p></div>}
+            {model.activeItems.length ? <div className="writing-library-grid">{model.activeItems.map((item) => <SessionCard key={item.sessionId} item={item} onOpen={onOpenSession} />)}</div> : <div className="writing-library-empty"><strong>当前没有进行中的训练</strong><p>从作文资料库选择题目，开始一场新训练。</p></div>}
           </section>
           <section className="writing-library-section">
             <div className="writing-library-heading"><div><small>ARCHIVE</small><h2>已完成</h2></div><span>{model.completedItems.length} 项</span></div>

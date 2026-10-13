@@ -337,3 +337,62 @@ test("额外练习与换句不推进正式调度，关闭入口保留训练及�
   expect(await originalSnapshot(page, user)).toEqual(original);
   expect((await reviewState(page, user))[SOURCE_KEY].reviewStatus).toBe("needs_review");
 });
+
+
+test("large saved source selection is bounded without deleting any selected originals", async ({ page }) => {
+  const user = await createAccount(page);
+  await seedOriginalFacts(page, user);
+  await page.evaluate(async ({ user, resourceId, passageId }) => {
+    const extras = Array.from({ length: 79 }, (_, index) =>
+      `Although the panel considered the evidence in its review number ${index + 1}, the researchers who examined the records recommended further investigation.`);
+    const sentenceKey = (text, index) => {
+      let hash = 5381;
+      for (const char of text.replace(/\s+/g, " ").trim().toLowerCase()) hash = ((hash << 5) + hash + char.charCodeAt(0)) | 0;
+      return `p1s${index + 1}:x${(hash >>> 0).toString(36)}`;
+    };
+    const key = `wuliao:user:${encodeURIComponent(user)}:wuliao:translation-progress:${resourceId}:${passageId}`;
+    const progress = JSON.parse(localStorage.getItem(key));
+    for (let index = 0; index < extras.length; index++) {
+      progress.sentences[sentenceKey(extras[index], index + 2)] = {
+        translationStatus: "corrected", reviewStatus: "needs_review",
+        translatedAt: Date.now() - 2000, correctedAt: Date.now() - 1000, reviewedAt: Date.now(),
+      };
+    }
+    localStorage.setItem(key, JSON.stringify(progress));
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("wuliao-english");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction("custom-pdfs", "readwrite");
+        const store = tx.objectStore("custom-pdfs"), request = store.get(resourceId);
+        request.onsuccess = () => {
+          const resource = request.result, passage = resource.analysis.passages[0];
+          passage.paragraphs[0].sentences.push(...extras);
+          passage.paragraphs[0].text = passage.paragraphs[0].sentences.join(" ");
+          passage.text = passage.paragraphs[0].text;
+          store.put(resource);
+        };
+        tx.oncomplete = resolve;
+        tx.onerror = tx.onabort = () => reject(tx.error);
+      });
+    } finally { db.close(); }
+  }, { user, resourceId: RESOURCE, passageId: PASSAGE });
+  await page.reload();
+  await page.locator(".home-page").waitFor();
+  const mock = await mockAi(page);
+  await navTo(page, "长难句");
+  await expect(loc(page, "source-checkbox")).toHaveCount(80);
+  await page.getByRole("checkbox", { name: /全选可用原句/ }).check();
+  await loc(page, "count").selectOption("1");
+  await loc(page, "generate").click();
+  await expect(loc(page, "sentence")).toBeVisible();
+  expect(block(mock.requests[0].messages, "source_sentences")).toHaveLength(6);
+  await expect(loc(page, "page")).toContainText("本次从 80 条已选原句中使用 6 条");
+  await page.getByRole("button", { name: "返回训练列表" }).click();
+  const selection = await page.evaluate(user => JSON.parse(localStorage.getItem(`wuliao:user:${encodeURIComponent(user)}:wuliao:long-sentence:selection`)), user);
+  expect(selection.selected).toHaveLength(80);
+  expect(selection.batchCursor).toBe(6);
+});

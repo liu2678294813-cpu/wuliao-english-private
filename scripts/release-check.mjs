@@ -9,7 +9,7 @@
 //
 // 退出码：0 = 通过（所有异常均被验证或解释）；1 = 存在未解释异常。
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exactContentFailuresInKnown } from "./release-known-exceptions.mjs";
 
@@ -23,7 +23,9 @@ function readJsonFile(path) {
 
 function run(name, command, args, { allowFail = false } = {}) {
   const started = Date.now();
-  const result = spawnSync(command, args, { cwd: root, stdio: "pipe", encoding: "utf8", shell: process.platform === "win32" });
+  const result = spawnSync(command, args, { cwd: root, stdio: "pipe", encoding: "utf8", maxBuffer: 32 * 1024 * 1024, shell: process.platform === "win32" });
+  mkdirSync(resolve("output/release-check"), { recursive: true });
+  writeFileSync(resolve("output/release-check", `${report.steps.length + 1}.log`), (result.stdout || "") + (result.stderr || "") + (result.error ? `\n${result.error.stack}` : ""));
   const durationMs = Date.now() - started;
   const ok = result.status === 0;
   report.steps.push({ name, ok: ok || allowFail, allowedFailure: !ok && allowFail, durationMs });

@@ -92,6 +92,7 @@ test("2/3 重载及删除重加恢复，清空当前列表不清除隐藏历史"
   await expect(rowFor(page)).toHaveCount(0);
   await rowFor(page, "unknown:zebra").locator(".mark-button").click();
   await expect.poll(async () => (await memoryRecord(page, username, "unknown:zebra"))?.clickCount).toBe(1);
+  page.once("dialog", (dialog) => dialog.accept());
   await page.locator("#clearButton").click();
   await expect.poll(async () => (await memoryRecord(page, username, "unknown:zebra"))?.clickCount).toBe(0);
   expect((await memoryRecord(page, username)).clickCount).toBe(2);

@@ -72,6 +72,53 @@ export function unknownWordFromPoint(clientX, clientY, cache) {
   }) || null;
 }
 
+// Finger taps use glyph geometry, without changing the precise pen/cloze path.
+export function unknownTouchWordFromPoint(clientX, clientY, root, anchorToken = null) {
+  const radius = 6;
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY) || !root?.isConnected) return null;
+  const target = document.elementFromPoint?.(clientX, clientY);
+  if (document.elementFromPoint && (!target || !root.contains(target))) return null;
+  if (target?.closest("button,input,select,textarea,[contenteditable],[data-unknown-ignore],.translation-unit,.deep-writing-lines")) return null;
+  if (anchorToken && (!root.contains(anchorToken.scope) || !anchorToken.range.startContainer.isConnected
+    || anchorToken.range.toString() !== anchorToken.word)) return null;
+
+  const visible = (element) => {
+    for (let node = element; node && root.contains(node); node = node.parentElement) {
+      if (node.hidden || node.getAttribute("aria-hidden") === "true" || node.inert) return false;
+      const style = window.getComputedStyle(node);
+      if (style.display === "none" || style.visibility !== "visible" || style.opacity === "0") return false;
+    }
+    return true;
+  };
+  const distanceToRects = (rects) => Math.min(Infinity, ...Array.from(rects, (rect) => {
+    if (rect.width <= 0 || rect.height <= 0 || rect.right < 0 || rect.bottom < 0
+      || rect.left > window.innerWidth || rect.top > window.innerHeight) return Infinity;
+    return Math.hypot(Math.max(rect.left - clientX, 0, clientX - rect.right),
+      Math.max(rect.top - clientY, 0, clientY - rect.bottom));
+  }));
+  const hits = [];
+  for (const scope of root.querySelectorAll(".sentence-source [data-unknown-scope]")) {
+    if (distanceToRects(scope.getClientRects()) > radius || !visible(scope)) continue;
+    for (const token of unknownWordRanges(scope)) {
+      const distance = distanceToRects(token.range.getClientRects());
+      if (distance <= radius && visible(token.range.startContainer.parentElement)) hits.push({ token, distance });
+    }
+  }
+  const exact = hits.filter((hit) => hit.distance === 0);
+  if (exact.length) {
+    if (exact.length !== 1) return null;
+    const token = exact[0].token;
+    return !anchorToken || (token.scope === anchorToken.scope && token.occurrenceId === anchorToken.occurrenceId)
+      ? token : null;
+  }
+  if (anchorToken) {
+    return hits.some(({ token }) => token.scope === anchorToken.scope && token.occurrenceId === anchorToken.occurrenceId)
+      ? anchorToken : null;
+  }
+  hits.sort((a, b) => a.distance - b.distance);
+  return hits.length && (!hits[1] || hits[1].distance - hits[0].distance > 1) ? hits[0].token : null;
+}
+
 export function setUnknownHighlight(name, ranges) {
   if (!globalThis.CSS?.highlights || typeof globalThis.Highlight !== "function") return;
   if (!document.querySelector("style[data-unknown-highlight-styles]")) {
@@ -219,8 +266,8 @@ export function shouldHandleDirectUnknownTap({ pointerType, button = 0, noteMode
   return pointerType === "touch" || !noteMode;
 }
 
-export function createDirectUnknownTap({ canHandle, hitTest = unknownWordFromPoint, onCommit, onError,
-  maxDisplacement = 10, maxDuration = 350 }) {
+export function createDirectUnknownTap({ canHandle, hitTest = unknownWordFromPoint, touchHitTest, onCommit, onError,
+  maxDisplacement = 10, maxDuration = 350, maxTouchDuration = maxDuration }) {
   let candidate = null;
   const pointers = new Set();
   const timestamp = (event) => Number.isFinite(event.timeStamp) ? event.timeStamp : performance.now();
@@ -233,10 +280,10 @@ export function createDirectUnknownTap({ canHandle, hitTest = unknownWordFromPoi
       pointers.add(event.pointerId);
       if (pointers.size > 1) { cancel(); return false; }
       if (!canHandle(event)) return false;
-      const token = hitTest(event.clientX, event.clientY);
+      const token = (event.pointerType === "touch" && touchHitTest ? touchHitTest : hitTest)(event.clientX, event.clientY);
       if (!token) return false;
       candidate = { id: event.pointerId, pointerType: event.pointerType, x: event.clientX,
-        y: event.clientY, time: timestamp(event), token, maxDisplacement: 0 };
+        y: event.clientY, time: timestamp(event), token, sentenceText: token.sentenceElement?.textContent, maxDisplacement: 0 };
       return true;
     },
     move(event) {
@@ -252,9 +299,12 @@ export function createDirectUnknownTap({ canHandle, hitTest = unknownWordFromPoi
       const tap = candidate;
       cancel();
       const distance = Math.max(tap.maxDisplacement, Math.hypot(event.clientX - tap.x, event.clientY - tap.y));
+      const durationLimit = tap.pointerType === "touch" ? maxTouchDuration : maxDuration;
       if (event.type !== "pointerup" || event.pointerType !== tap.pointerType || !canHandle(event)
-        || distance > maxDisplacement || timestamp(event) - tap.time > maxDuration) return true;
-      const token = hitTest(event.clientX, event.clientY);
+        || distance > maxDisplacement || timestamp(event) - tap.time > durationLimit) return true;
+      if (tap.pointerType === "touch" && touchHitTest && tap.token.sentenceElement?.textContent !== tap.sentenceText) return true;
+      const token = tap.pointerType === "touch" && touchHitTest
+        ? touchHitTest(event.clientX, event.clientY, tap.token) : hitTest(event.clientX, event.clientY);
       if (!token || token.occurrenceId !== tap.token.occurrenceId || token.scope !== tap.token.scope) return true;
       Promise.resolve().then(() => onCommit({ id: tap.id, tokens: new Map([[token.occurrenceId, token]]) })).catch(onError);
       return true;

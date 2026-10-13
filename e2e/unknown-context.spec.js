@@ -82,6 +82,108 @@ async function penGesture(page, path) {
   await cdp.detach();
 }
 
+async function fingerGesture(page, start, end = start, duration = 100) {
+  const cdp = await page.context().newCDPSession(page);
+  const timestamp = Date.now() / 1000;
+  try {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: start.x, y: start.y }], timestamp });
+    await page.waitForTimeout(duration);
+    if (end.x !== start.x || end.y !== start.y) {
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: end.x, y: end.y }], timestamp: timestamp + duration / 1000 - .001 });
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [], timestamp: timestamp + duration / 1000 });
+  } finally { await cdp.detach(); }
+}
+
+async function handwritingFixture(page) {
+  const f = await fixture(page, false);
+  await page.locator(".annotation-toolbar").getByRole("button", { name: "手写批注", exact: true }).click();
+  await expect(page.locator(".deep-reader-content")).toHaveClass(/note-mode/);
+  return f;
+}
+
+test("finger near-hits and 400ms presses save correctly in handwriting mode", async ({ page }, testInfo) => {
+  const f = await handwritingFixture(page);
+  let token = (await points(page))[4];
+  await fingerGesture(page, { x: token.x, y: token.y }, undefined, 400);
+  await expect.poll(async () => (await readUnknown(page, f.username)).map(r => r.word)).toContain(token.word);
+  for (const index of [7, 10]) {
+    token = (await points(page))[index];
+    const rect = await page.locator('.sentence-source [data-unknown-scope]').first().evaluate((scope, index) => {
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT), ranges = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) for (const match of node.data.matchAll(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g)) {
+        const range = document.createRange(); range.setStart(node, match.index); range.setEnd(node, match.index + match[0].length);
+        const b = range.getBoundingClientRect(); ranges.push({ top: b.top, bottom: b.bottom });
+      }
+      return ranges[index];
+    }, index);
+    await fingerGesture(page, { x: token.x, y: index === 7 ? rect.top - 4 : rect.bottom + 4 });
+    await expect.poll(async () => (await readUnknown(page, f.username)).map(r => r.word)).toContain(token.word);
+  }
+  expect(await readUnknown(page, f.username)).toHaveLength(3);
+  expect((await readDurableInkEntries(page, f.username)).flatMap(r => {
+    const value = JSON.parse(r.value); return Array.isArray(value) ? value : [];
+  })).toHaveLength(0);
+  await page.screenshot({ path: testInfo.outputPath("finger-near-hits.png") });
+  await reopen(page);
+  expect(await readUnknown(page, f.username)).toHaveLength(3);
+  await expect.poll(() => page.evaluate(() => CSS.highlights.get("wuliao-unknown-words")?.size || 0)).toBeGreaterThanOrEqual(3);
+  expect(f.errors).toEqual([]);
+});
+
+test("finger release anchors a gap to the down word and rejects a neighboring glyph", async ({ page }) => {
+  const f = await handwritingFixture(page);
+  const words = await points(page), token = words[8], next = words[9];
+  await fingerGesture(page, { x: token.right - 1, y: token.y }, { x: next.left - .5, y: token.y });
+  await expect.poll(async () => (await readUnknown(page, f.username)).map(r => r.word)).toEqual([token.word]);
+  await fingerGesture(page, token);
+  await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(0);
+  await fingerGesture(page, { x: token.right - 1, y: token.y }, { x: next.left + 1, y: token.y });
+  await page.waitForTimeout(250);
+  expect(await readUnknown(page, f.username)).toHaveLength(0);
+  await fingerGesture(page, { x: (token.right + next.left) / 2, y: token.y });
+  await page.waitForTimeout(250);
+  expect(await readUnknown(page, f.username)).toHaveLength(0);
+  expect(f.errors).toEqual([]);
+});
+
+test("finger timeout, multi-touch, cancel and scroll do not add or poison the next tap", async ({ page }) => {
+  const f = await handwritingFixture(page);
+  let token = (await points(page))[4];
+  await fingerGesture(page, token, undefined, 451);
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: token.x, y: token.y, id: 1 }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: token.x, y: token.y, id: 1 }, { x: token.x + 40, y: token.y, id: 2 }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: token.x, y: token.y }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: token.x, y: token.y }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: token.x, y: token.y - 70 }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  } finally { await cdp.detach(); }
+  token = (await points(page))[4];
+  expect(await readUnknown(page, f.username)).toHaveLength(0);
+  await fingerGesture(page, token);
+  await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(1);
+  expect(f.errors).toEqual([]);
+});
+
+test("100 successive finger adds and cancellations each match durable records and highlights", async ({ page }, testInfo) => {
+  const f = await handwritingFixture(page), token = (await points(page))[4];
+  for (let i = 0; i < 100; i++) {
+    await fingerGesture(page, token, undefined, 30);
+    const expected = i % 2 === 0 ? 1 : 0;
+    await expect.poll(async () => (await readUnknown(page, f.username)).length, { message: `finger gesture ${i + 1}` }).toBe(expected);
+    await expect.poll(() => page.evaluate(() => CSS.highlights.get("wuliao-unknown-words")?.size || 0)).toBe(expected);
+  }
+  expect((await readDurableInkEntries(page, f.username)).flatMap(r => {
+    const value = JSON.parse(r.value); return Array.isArray(value) ? value : [];
+  })).toHaveLength(0);
+  expect(f.errors).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath("finger-100-cancelled.png") });
+});
+
 test("touch adds then cancels a word, with durable highlights and contextual meaning", async ({ page }, testInfo) => {
   const f = await fixture(page);
   const token = (await points(page))[3];

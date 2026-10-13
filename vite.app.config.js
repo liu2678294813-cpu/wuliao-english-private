@@ -5,6 +5,7 @@ export default defineConfig(({ command }) => {
   const e2eOverlayOff = process.env.VITE_E2E_OVERLAY_OFF === "1";
   return {
     plugins: [react()],
+    define: { "import.meta.env.VITE_TOOLS_ONLY": JSON.stringify("0") },
     base: "./",
     build: {
       target: "es2022",

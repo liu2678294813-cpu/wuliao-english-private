@@ -1,4 +1,4 @@
-import { getOfficialAnswerKey } from "./answerKeys";
+import { verifiedOfficialAnswers } from "./import/answers.js";
 import { STAGE_IDS, STAGE_LABELS, isWorkflowCompleted } from "./readingFlow";
 import {
   TASK_TYPE_NEXT_DAY,
@@ -294,7 +294,7 @@ function officialAnswersFor(scan, ids, resources) {
     (item) => String(item.id || "") === String(ids.resourceId || ""),
   );
   if (resource && resource.kind !== "custom") {
-    return getOfficialAnswerKey(resource) || {};
+    return verifiedOfficialAnswers(resource, "reading");
   }
   // Custom/imported PDFs remain answerless even if an older app version left an
   // answer-key record behind. A scanned answer page is not a reliable official key.

@@ -17,6 +17,7 @@
 
 import { openHandwritingDatabase, HANDWRITING_DB } from "./vocabulary/handwritingStorage.js";
 import { getTelemetry } from "./telemetry/telemetry";
+import { FORMAL_IMPORT_STORES } from "./import/contracts.js";
 import { openWuliaoEnglishDatabase } from "./storage";
 import { flushDurableInk, inkStorageReady, isDurableInkKey, listDurableInk, writeDurableInk } from "./durableInkStorage.js";
 
@@ -64,6 +65,7 @@ export const IDB_INCLUDED = {
   WuliaoVocabHandwritingDB: { answers: {}, sessions: {} },
   "wuliao-english": {
     "custom-pdfs": { includeBlob: true },
+    ...Object.fromEntries(FORMAL_IMPORT_STORES.map((name) => [name, name === "import-files" ? { includeBlob: true } : {}])),
     "unknown-words": {},
     "exam-ink": { mergeByFingerprint: true },
     "writing-ink": { mergeByFingerprint: true },
@@ -90,7 +92,7 @@ export const IDB_INCLUDED = {
 };
 
 export const IDB_EXCLUDED_STORES = {
-  "wuliao-english": ["pdf-parse-cache", "device-private-writing-samples"],
+  "wuliao-english": ["pdf-parse-cache", "device-private-writing-samples", "import-batches", "import-cache"],
   KaoyanVocabDB: ["users"],
 };
 
@@ -570,13 +572,15 @@ export async function restoreBackup({
               message: "Existing fingerprinted ink snapshot differs; local data was preserved",
             });
           }
-        } else if (write.db === "wuliao-english" && write.store.startsWith("long-sentence-")) {
+        } else if (write.db === "wuliao-english" && (write.store.startsWith("long-sentence-") || FORMAL_IMPORT_STORES.includes(write.store) || write.store === "custom-pdfs" && write.value.importVersion)) {
           const existing = await idb.get?.(write.db, write.store, write.key);
           const stable = (value) => JSON.stringify(value, function (_key, item) {
             if (!item || typeof item !== "object" || Array.isArray(item)) return item;
             return Object.fromEntries(Object.keys(item).sort().map((key) => [key, item[key]]));
           });
-          if (!existing || stable(existing) !== stable(write.value)) {
+          const incoming = { ...write.value }, actual = existing ? { ...existing } : null;
+          if (write.store === "import-files" && incoming.file?.__backupAttachment) { incoming.file = { size: manifest.attachments[incoming.file.__backupAttachment]?.size }; if (actual) actual.file = { size: existing.file?.size }; }
+          if (!existing || stable(actual) !== stable(incoming)) {
             errors.push({
               storage: "indexedDB", db: write.db, store: write.store, key: write.key,
               code: "conflict", message: "Existing long sentence record differs; local data was preserved",
@@ -595,6 +599,19 @@ export async function restoreBackup({
       writtenIdb += 1;
     } catch (error) {
       errors.push({ storage: "indexedDB", db: write.db, store: write.store, key: write.key, message: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  // Imported materials require their sources and answers to survive restore together.
+  if (idb?.get) {
+    for (const write of plan.idbWrites.filter((w) => w.db === "wuliao-english" && (FORMAL_IMPORT_STORES.includes(w.store) || w.store === "custom-pdfs"))) {
+      const value = write.value;
+      const fileRefs = [value.sourceFileId, ...(value.content?.assets || []).map((a) => a.fileId)].filter(Boolean);
+      for (const ref of fileRefs) if (!(await idb.get("wuliao-english", "import-files", ref))) errors.push({ storage: "indexedDB", code: "missing-import-reference", message: "导入资料缺少来源附件", key: ref });
+      if (value.materialId && ["material-answers", "material-explanations", "answer-evaluations"].includes(write.store)) {
+        const material = await idb.get("wuliao-english", "custom-pdfs", value.materialId) || await idb.get("wuliao-english", "writing-materials", value.materialId);
+        if (!material || material.username !== username) errors.push({ storage: "indexedDB", code: "missing-import-material", message: "答案或评分缺少对应资料", key: value.materialId });
+      }
     }
   }
 
@@ -655,7 +672,7 @@ export function defaultBackupSources({ storage = globalThis.localStorage, indexe
   };
 }
 
-async function readAllIndexedDb(indexedDb) {
+async function readAllIndexedDb(indexedDb, { strict = false } = {}) {
   const databases = [];
   let names = [];
   try {
@@ -666,15 +683,37 @@ async function readAllIndexedDb(indexedDb) {
   const candidates = [...new Set([...(names || []).map((db) => db.name), "wuliao-english", "KaoyanVocabDB", "KaoyanVocabMemorizeDB", HANDWRITING_DB])];
   for (const name of candidates) {
     if (!IDB_INCLUDED[name]) continue;
-    const db = await (name === HANDWRITING_DB ? openHandwritingDatabase(indexedDb) : new Promise((resolve, reject) => {
+    const db = await (!strict && name === HANDWRITING_DB ? openHandwritingDatabase(indexedDb) : new Promise((resolve, reject) => {
       const request = indexedDb.open(name);
+      let missing = false;
+      if (strict) request.onupgradeneeded = () => { missing = true; request.transaction.abort(); };
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    })).catch(() => null);
+      request.onerror = () => missing ? resolve(null) : reject(request.error);
+      if (strict) request.onblocked = () => reject(new BackupError("backup-blocked", `无法读取 ${name}，已停止更新`));
+    })).catch((error) => { if (strict) throw error; return null; });
     if (!db) continue;
     try {
       const stores = [];
-      for (const storeName of Object.keys(IDB_INCLUDED[name])) {
+      const storeNames = [...Object.keys(IDB_INCLUDED[name]), ...(strict && name === "wuliao-english" ? ["reader-ink"] : []), ...(strict && name === "KaoyanVocabDB" ? ["users"] : [])];
+      for (const storeName of storeNames) {
+        if (strict && !db.objectStoreNames.contains(storeName)) continue;
+        if (strict) {
+          const records = await new Promise((resolve, reject) => {
+            const transaction = db.transaction(storeName, "readonly");
+            const records = [];
+            const request = transaction.objectStore(storeName).openCursor();
+            request.onsuccess = () => {
+              const cursor = request.result;
+              if (cursor) { records.push({ key: cursor.primaryKey, value: cursor.value }); cursor.continue(); }
+            };
+            request.onerror = () => reject(request.error);
+            transaction.oncomplete = () => resolve(records);
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new BackupError("backup-read-failed", `${name}/${storeName} 读取失败`));
+          });
+          stores.push({ name: storeName, records });
+          continue;
+        }
         const records = await new Promise((resolve, reject) => {
           const transaction = db.transaction(storeName, "readonly");
           const request = transaction.objectStore(storeName).getAll();
@@ -696,6 +735,36 @@ async function readAllIndexedDb(indexedDb) {
     }
   }
   return databases;
+}
+
+// Update backups must not turn an unreadable existing database into an empty backup.
+// Read account names without running credential migration or switching accounts.
+export async function readUpdateBackupSources({ storage = globalThis.localStorage, indexedDb = globalThis.indexedDB } = {}) {
+  if (!storage || !indexedDb) throw new BackupError("backup-unavailable", "学习数据存储不可用，已停止更新");
+  const entries = defaultBackupSources({ storage, indexedDb: null }).entries;
+  const databases = await readAllIndexedDb(indexedDb, { strict: true });
+  const usernames = new Set();
+  const current = storage.getItem(CURRENT_USER_KEY);
+  const legacy = storage.getItem(LEGACY_OWNER_KEY);
+  if (current) usernames.add(current);
+  if (legacy) usernames.add(legacy);
+  for (const entry of entries) {
+    const match = /^wuliao:user:([^:]+):/.exec(entry.key);
+    if (match) usernames.add(decodeURIComponent(match[1]));
+  }
+  const map = new Map(entries.map((entry) => [entry.key, entry]));
+  for (const database of databases) for (const store of database.stores) for (const record of store.records) {
+    if (record.value?.username) usernames.add(record.value.username);
+    if (database.name === "wuliao-english" && store.name === "reader-ink") {
+      const { username, key, value } = record.value || {};
+      if (!username || !isDurableInkKey(key) || typeof value !== "string") throw new BackupError("backup-ink-invalid", "笔迹存档异常，已停止更新");
+      JSON.parse(value);
+      const fullKey = `${userStoragePrefix(username)}${key}`;
+      map.set(fullKey, { key: fullKey, value });
+    }
+  }
+  if (!usernames.size) throw new BackupError("no-account", "没有可备份的账号，已停止更新");
+  return { usernames: [...usernames].sort(), entries: [...map.values()], databases };
 }
 
 async function encodeBlobToBase64(blob, { onProgress = null } = {}) {

@@ -1,4 +1,5 @@
 import { interactionTiming } from './interaction-timing.js';
+import { makeConfusion } from './confusion-records.js';
 // All question fields are published together. Storage never owns visible state.
 export function createScreeningController(api, publish, clock = globalThis) {
   let version = 0, state = {}, session, pending = null, preparedNext = null, locked = true, disposed = false;
@@ -58,6 +59,11 @@ export function createScreeningController(api, publish, clock = globalThis) {
     locked = true;
     const timing = interactionTiming('screening');
     const v = version, before = state, correct = selected?.isCorrect === true;
+    const confusion = !correct ? makeConfusion({ username: session.username,
+      eventId: `screening:${session.sessionKey}:${session.startedAt}:${session.currentIndex}`,
+      source: 'screening', round: session.round, listId: session.listId,
+      word: { wordId: session.sourceWordIds[session.currentIndex], english: before.currentEnglish,
+        chinese: before.currentCorrectOptionChinese || before.currentChinese }, choice: selected }) : null;
     const feedbackAt = clock.performance.now();
     const optionStates = Object.fromEntries(state.options.map((option) => [option.id,
       option.id === optionId ? (correct ? 'correct' : 'wrong') : option.isCorrect ? 'correct' : 'idle']));
@@ -74,11 +80,7 @@ export function createScreeningController(api, publish, clock = globalThis) {
       try {
         const saving = timing.save(() => api.save(nextSession, { username: session.username,
           wordId: session.sourceWordIds[session.currentIndex], round: session.round,
-          result: correct ? 'correct' : 'wrong', timestamp: Date.now() },
-        !correct && selected?.sourceWord ? { username: session.username, round: session.round,
-          correctEnglish: before.currentEnglish, correctChinese: before.currentCorrectOptionChinese || before.currentChinese,
-          wrongChinese: selected.chinese, sourceWord: selected.sourceWord,
-          sourceWordChinese: selected.sourceWordChinese ?? '', timestamp: Date.now() } : null));
+          result: correct ? 'correct' : 'wrong', timestamp: Date.now(), ...(confusion ? { confusion } : {}) }, confusion));
         pendingSave = saving;
         saving.then(() => { if (pendingSave === saving) pendingSave = null; }, () => { if (pendingSave === saving) pendingSave = null; });
         const completion = await saving;
@@ -198,7 +200,8 @@ export function screeningApi(deps) {
       await db.transaction('rw', db.wordRecords, db.confusionPairs, db.screeningSessions,
         db.screeningProgress, db.wordLists, async () => {
           await db.wordRecords.add(record);
-          if (confusion) await db.confusionPairs.add(confusion);
+          if (confusion && !await db.confusionPairs.where('username').equals(confusion.username)
+            .filter((row) => row.eventId === confusion.eventId).count()) await db.confusionPairs.add(confusion);
           await db.screeningSessions.put(session);
           await db.screeningProgress.put(session);
           if (session.currentIndex >= session.sourceWordIds.length) {
