@@ -12,7 +12,7 @@ async function reopen(page) {
   await page.waitForTimeout(650);
 }
 
-async function fixture(page, withAi = true) {
+async function fixture(page, withAi = true, currentStage = "deep-translation") {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   let calls = 0;
@@ -23,17 +23,24 @@ async function fixture(page, withAi = true) {
   const username = await createAccount(page, uniqueUsername("unknown-context"));
   await openOfficialResource(page, TITLE);
   await clickStageAdvance(page, "开始精读");
-  await page.evaluate(({ username, withAi }) => {
+  await page.evaluate(({ username, withAi, currentStage }) => {
     const prefix = `wuliao:user:${encodeURIComponent(username)}:`;
     const key = Object.keys(localStorage).find((key) => key.startsWith(`${prefix}wuliao:reading-flow:`));
     const flow = JSON.parse(localStorage.getItem(key));
     const stages = ["deep-cover", "deep-first-read", "deep-clean-text", "deep-first-quiz", "deep-translation", "deep-redo", "deep-review"];
     stages.forEach((id, index) => { flow.stages[id] = { status: index < 4 ? "completed" : index === 4 ? "current" : "pending", completedAt: index < 4 ? 100 : null }; });
-    flow.currentStage = "deep-translation";
-    flow.timedReading = { phase: "done", elapsedMs: 1000, startedAt: null, pausedAt: null, completedAt: 100 };
+    if (currentStage !== "deep-translation") {
+      // A completed workbook can be revisited at an earlier or later stage.
+      // Keep the visible sentence page reached while preserving the actual task.
+      stages.forEach((id) => { flow.stages[id] = { status: id === currentStage ? "current" : "completed", completedAt: id === currentStage ? null : 100 }; });
+    }
+    flow.currentStage = currentStage;
+    flow.timedReading = currentStage === "deep-clean-text"
+      ? { phase: "paused", elapsedMs: 1000, startedAt: null, pausedAt: 100, completedAt: null }
+      : { phase: "done", elapsedMs: 1000, startedAt: null, pausedAt: null, completedAt: 100 };
     localStorage.setItem(key, JSON.stringify(flow));
     if (withAi) localStorage.setItem(`${prefix}wuliao:ai:apikey`, "isolated-mock-key");
-  }, { username, withAi });
+  }, { username, withAi, currentStage });
   await reopen(page);
   return { username, errors, calls: () => calls };
 }
@@ -101,6 +108,69 @@ async function handwritingFixture(page) {
   await expect(page.locator(".deep-reader-content")).toHaveClass(/note-mode/);
   return f;
 }
+
+for (const stage of ["deep-cover", "deep-first-read", "deep-clean-text", "deep-first-quiz", "deep-translation", "deep-redo", "deep-review"]) {
+  test(`finger adds from visible sentence when actual task is ${stage}, without changing other learning state`, async ({ page }, testInfo) => {
+    const f = await fixture(page, false, stage);
+    await page.locator(".annotation-toolbar").getByRole("button", { name: "手写批注", exact: true }).click();
+    const protectedState = async () => page.evaluate((username) => {
+      const prefix = `wuliao:user:${encodeURIComponent(username)}:`;
+      return Object.fromEntries(Object.entries(localStorage).filter(([key]) => key.startsWith(prefix)
+        && /reading-flow:|answers:|translation-progress:|review-history:/.test(key)));
+    }, f.username);
+    let token = (await points(page))[4]; // Scroll back to the original sentence; no stage button.
+    const before = await protectedState();
+    const inkBefore = await readDurableInkEntries(page, f.username);
+    const flowEntry = Object.entries(before).find(([key]) => key.includes("reading-flow:"));
+    // The legacy clean-text stage is normalized into the initial quiz on entry.
+    expect(JSON.parse(flowEntry[1]).currentStage).toBe(stage === "deep-clean-text" ? "deep-first-quiz" : stage);
+    await fingerGesture(page, token);
+    await expect.poll(async () => (await readUnknown(page, f.username)).map(r => r.word)).toContain(token.word);
+    await expect.poll(() => page.evaluate(() => CSS.highlights.get("wuliao-unknown-words")?.size || 0)).toBe(1);
+    expect(await protectedState()).toEqual(before);
+    expect(await readDurableInkEntries(page, f.username)).toEqual(inkBefore);
+    await page.screenshot({ path: testInfo.outputPath(`finger-stage-${stage}.png`) });
+    await reopen(page);
+    expect(await readUnknown(page, f.username)).toHaveLength(1);
+    token = (await points(page))[4];
+    await fingerGesture(page, token);
+    await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(0);
+    expect(await protectedState()).toEqual(before);
+    expect(await readDurableInkEntries(page, f.username)).toEqual(inkBefore);
+    expect(f.errors).toEqual([]);
+  });
+}
+
+test("finger adds after archive sentence positioning from redo in keyboard mode without changing the task", async ({ page }) => {
+  const f = await fixture(page, false, "deep-redo");
+  await page.locator(".annotation-toolbar").getByRole("button", { name: "键盘输入", exact: true }).click();
+  const before = await page.evaluate((username) => {
+    const prefix = `wuliao:user:${encodeURIComponent(username)}:wuliao:reading-flow:`;
+    const key = Object.keys(localStorage).find(key => key.startsWith(prefix));
+    const value = localStorage.getItem(key);
+    const flow = JSON.parse(value);
+    window.dispatchEvent(new CustomEvent("wuliao:learning-archive-jump", { detail: {
+      resourceId: flow.resourceId, passageId: flow.passageId,
+      sentenceId: `${flow.resourceId}::${flow.passageId}::p1s1`,
+    } }));
+    return { key, value };
+  }, f.username);
+  await expect(page.locator('.stage-nav button[aria-current="step"]')).toContainText("逐段精读");
+  // Sentence positioning intentionally settles at 220/500ms and then 380ms.
+  // Finish that navigation before sampling the glyph coordinates for a tap.
+  await page.waitForTimeout(1000);
+  const token = (await points(page))[4];
+  const inkBefore = await readDurableInkEntries(page, f.username);
+  await fingerGesture(page, token);
+  await expect.poll(async () => (await readUnknown(page, f.username)).map(r => r.word)).toContain(token.word);
+  const otherTokens = await points(page);
+  await page.mouse.click(otherTokens[7].x, otherTokens[7].y);
+  await penGesture(page, [otherTokens[8]]);
+  expect(await readUnknown(page, f.username)).toHaveLength(1);
+  expect(await page.evaluate(key => localStorage.getItem(key), before.key)).toBe(before.value);
+  expect(await readDurableInkEntries(page, f.username)).toEqual(inkBefore);
+  expect(f.errors).toEqual([]);
+});
 
 test("finger near-hits and 400ms presses save correctly in handwriting mode", async ({ page }, testInfo) => {
   const f = await handwritingFixture(page);

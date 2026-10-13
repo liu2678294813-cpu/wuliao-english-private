@@ -2084,7 +2084,10 @@ export default function CustomDeepReader({
     canHandle: (event) => shouldHandleDirectUnknownTap({
       pointerType: event.pointerType, button: event.button, noteMode: noteModeRef.current,
       activeInk: activeInkRef.current || unknownSelectionRef.current,
-      enabled: !reviewActive && !evidenceEditorRef.current && flowRef.current?.currentStage === "deep-translation",
+      // Viewing an original sentence is enough for a finger tap, even when
+      // the canonical task has advanced. Keep the mouse/pen stage gate.
+      enabled: !reviewActive && !evidenceEditorRef.current
+        && (event.pointerType === "touch" || flowRef.current?.currentStage === "deep-translation"),
     }),
     hitTest: (x, y) => {
       const token = unknownWordFromPoint(x, y);
