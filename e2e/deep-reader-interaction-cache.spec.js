@@ -234,12 +234,20 @@ test("reader interaction: one synthetic pen gesture after unknown miss creates d
     const point = await writing.evaluate(async (element) => {
     element.scrollIntoView({ block: "center", behavior: "instant" });
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const before = element.getBoundingClientRect();
+    // The reader reapplies its saved scroll position after font/layout settle.
+    // A point valid for only two frames can land on the earlier stem table.
+    // Require a stable, non-interactive part of this exact writing row before
+    // sending the sole pen gesture; never retry the gesture itself.
+    await new Promise((resolve) => setTimeout(resolve, 500));
     const rect = element.getBoundingClientRect();
-    const x = rect.right - 70;
+    const x = rect.left + rect.width / 2;
     const y = rect.top + 20;
     const target = document.elementFromPoint(x, y);
     return { x, y, ready: y > (document.querySelector(".annotation-toolbar")?.getBoundingClientRect().bottom || 0)
-      && y < innerHeight - 20 && Boolean(target?.closest(".translation-unit, .sentence-work")) };
+      && y < innerHeight - 20 && Math.abs(before.top - rect.top) < 1
+      && target?.closest(".translation-unit-tools") === element
+      && !target?.closest("button, input, textarea, a, [role='button']") };
     });
     if (point.ready) penPoint = point;
     return point.ready;
@@ -248,9 +256,12 @@ test("reader interaction: one synthetic pen gesture after unknown miss creates d
   await cdp.send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", buttons: 1, clickCount: 1, pointerType: "pen", force: 0.5 });
   await testInfo.attach('pen-pointerdown-hit', { body: JSON.stringify(await page.evaluate(() => window.__testPenDown), null, 2), contentType: 'application/json' });
   // Assert before pointerup: state must change inside the original pointerdown.
-  await expect(toolbar.getByRole("button", { name: "笔", exact: true })).toHaveClass(/active/);
-  await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: x + 45, y: y + 9, button: "none", buttons: 1, pointerType: "pen", force: 0.5 });
-  await cdp.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: x + 60, y: y + 12, button: "left", buttons: 0, pointerType: "pen", force: 0 });
+  try {
+    await expect(toolbar.getByRole("button", { name: "笔", exact: true })).toHaveClass(/active/);
+    await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: x + 45, y: y + 9, button: "none", buttons: 1, pointerType: "pen", force: 0.5 });
+  } finally {
+    await cdp.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: x + 60, y: y + 12, button: "left", buttons: 0, pointerType: "pen", force: 0 });
+  }
   const readInk = () => page.evaluate(async (user) => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open("wuliao-english"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const rows = await new Promise((resolve, reject) => { const request = db.transaction("reader-ink").objectStore("reader-ink").getAll(); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
