@@ -27,3 +27,39 @@ playwright-report/
 .env.local
 .env.*.local
 eval-results/
+
+# Local development notes and generated reports stay outside published source.
+/AGENTS.md
+/.agents/
+/.codex/
+/reasonix.toml
+/docs/*
+!/docs/无聊英语-现有功能文档.pdf
+!/docs/无聊英语-功能修改过程文档.pdf
+/writing-slice*-review.md
+/*-annotation.png
+/eng.traineddata
+/wuliao-shots.mjs
+/wuliao-shots/
+/scripts/build-source-analysis-md.mjs
+/scripts/generate-unified-import-docs.py
+/scripts/generate_app_feedback_pdf.py
+/scripts/generate_launch_profit_plan_pdf.py
+/scripts/long-sentence-implementation-report.py
+/scripts/prepare-unified-import-release.py
+/scripts/probe-build-expr.mjs
+
+# Generated artifacts, local environments, credentials, and installation packages.
+/artifacts/
+/eval-results/
+.venv/
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.apk
+*.aab
+*.jks
+*.keystore
+# build/ contains source used by Sites; do not ignore it.
+# public/ includes required vocabulary bundles, OCR models, and learning PDFs.
