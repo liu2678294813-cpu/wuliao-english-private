@@ -41,12 +41,12 @@ test("duplicate update clicks start one download and one installation", async ()
 });
 test("failed backup blocks installation", async () => {
   const { controller, calls } = fixture({}, Error("数据库读取失败")); await controller.check(); await controller.update();
-  assert.deepEqual(calls, ["check", "download", "backup"]); assert.equal(controller.state.phase, "error");
+  assert.deepEqual(calls, ["check", "download", "backup", "cancel-download"]); assert.equal(controller.state.phase, "error");
 });
 test("unverified download and interrupted network block backup and installation", async () => {
   for (const downloadUpdate of [async () => ({ verified: false }), async () => { throw Error("网络中断"); }]) {
     const { controller, calls } = fixture({ downloadUpdate }); await controller.check(); await controller.update();
-    assert.deepEqual(calls, ["check"]); assert.equal(controller.state.phase, "error");
+    assert.deepEqual(calls, ["check", "cancel-download"]); assert.equal(controller.state.phase, "error");
   }
 });
 test("check failure is never reported as current latest, and is retryable", async () => {
@@ -62,4 +62,47 @@ test("same or lower remote code cannot trigger download", async () => {
 test("denied install permission reports retained old version", async () => {
   const { controller } = fixture({ installUpdate: async () => ({ status: "permission-denied" }) });
   await controller.check(); await controller.update(); assert.match(controller.state.message, /未允许安装/);
+});
+
+test("submission is not reported as completed installation", async () => {
+  const { controller } = fixture({ installUpdate: async () => ({ status: "submitted", targetVersionCode: 93 }) });
+  await controller.check(); await controller.update();
+  assert.equal(controller.state.phase, "installing"); assert.doesNotMatch(controller.state.message, /更新已完成/);
+});
+test("success requires an actual installed version reaching the target", async () => {
+  for (const installed of [undefined, { versionCode: 91 }]) {
+    const { controller } = fixture({ installUpdate: async () => ({ status: "installed", targetVersionCode: 93, installed }) });
+    await controller.check(); await controller.update(); assert.equal(controller.state.phase, "error");
+  }
+});
+test("restart restores a pending installer and resumes without downloading or backing up again", async () => {
+  let native = { status: "pending-user-action", targetVersionCode: 93, installed: release.installed };
+  const { controller, calls } = fixture({ getUpdateState: async () => native, resumeUpdate: async () => {
+    calls.push("resume"); native = { status: "installed", targetVersionCode: 93, installed: { versionCode: 93 } }; return native;
+  } });
+  const remove = await controller.connect(); assert.equal(controller.state.phase, "pending-install");
+  await controller.resume(); assert.equal(controller.state.phase, "latest");
+  assert.deepEqual(calls, ["resume"]); await remove();
+});
+test("pending installation can be cancelled and cleaned without changing learning state", async () => {
+  const { controller, calls } = fixture({ getUpdateState: async () => ({ status: "pending-user-action" }) });
+  const remove = await controller.connect(); await controller.cancel();
+  assert.deepEqual(calls, ["cancel-download"]); assert.equal(controller.state.phase, "idle"); await remove();
+});
+test("terminal callback racing submission remains authoritative and duplicate events are harmless", async () => {
+  let receive, native = { status: "idle" };
+  const { controller } = fixture({ addListener: async (name, callback) => { if (name === "updateStateChanged") receive = callback; return { remove: async () => {} }; },
+    getUpdateState: async () => native,
+    installUpdate: async () => {
+      native = { status: "installed", targetVersionCode: 93, installed: { versionCode: 93 } };
+      receive(native); receive(native); return { status: "submitted" };
+    },
+  });
+  const remove = await controller.connect(); await controller.check(); await controller.update();
+  assert.equal(controller.state.phase, "latest"); assert.match(controller.state.message, /更新已完成/); await remove();
+});
+test("failed cleanup is surfaced and failed backup never starts installation", async () => {
+  const { controller, calls } = fixture({ cancelDownload: async () => { throw Error("磁盘写入失败"); } }, Error("备份失败"));
+  await controller.check(); await controller.update();
+  assert.equal(controller.state.phase, "error"); assert.match(controller.state.message, /清理失败/); assert.ok(!calls.includes("install"));
 });

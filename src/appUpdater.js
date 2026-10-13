@@ -11,8 +11,50 @@ export function createUpdateController({ plugin, backup, onChange = () => {} }) 
   const state = { phase: "idle", release: null, installed: null, message: "", received: 0, total: 0 };
   const emit = (next) => { Object.assign(state, next); onChange({ ...state }); };
   const failure = (error) => emit({ phase: "error", message: error?.message || String(error || "更新失败，请重试") });
+  function acceptNative(result) {
+    if (!result || ["checking", "downloading", "backing-up"].includes(state.phase)) return;
+    const status = result.status;
+    if (status === "installed") {
+      const target = result.targetVersionCode || state.release?.versionCode;
+      if (!target || !result.installed || result.installed.versionCode < target) {
+        failure(new Error("实际版本尚未更新，请重新检查更新")); return;
+      }
+      running = false;
+      emit({ phase: "latest", installed: result.installed, message: "更新已完成，临时安装包已清理。" });
+    } else if (["pending-user-action", "permission-required", "ready"].includes(status)) {
+      running = false;
+      emit({ phase: "pending-install", installed: result.installed, message: result.message || "更新已准备好，请继续系统安装确认。" });
+    } else if (status === "submitted") {
+      emit({ phase: "installing", message: "正在准备系统覆盖安装，请等待系统确认…" });
+    } else if (["cancelled", "permission-denied", "failed"].includes(status)) {
+      running = false;
+      emit({ phase: status === "failed" ? "error" : "idle", installed: result.installed,
+        message: result.message || (status === "permission-denied" ? "未允许安装更新，原版本仍保留。" : "未完成安装，原版本仍保留。") });
+    }
+  }
+  async function reconcile() {
+    if (!plugin.getUpdateState) return;
+    const token = generation;
+    const result = await plugin.getUpdateState();
+    if (token === generation) acceptNative(result);
+  }
   return {
     state,
+    async connect() {
+      const listener = await plugin.addListener("updateStateChanged", acceptNative);
+      try { await reconcile(); }
+      catch (error) { await listener.remove(); throw error; }
+      return () => listener.remove();
+    },
+    reconcile,
+    async resume() {
+      if (running || state.phase !== "pending-install") return;
+      running = true; const token = ++generation;
+      emit({ phase: "installing", message: "正在打开系统覆盖安装确认…" });
+      try { const result = await plugin.resumeUpdate(); if (token === generation) { acceptNative(result); await reconcile(); } }
+      catch (error) { if (token === generation) failure(error); }
+      finally { if (token === generation) running = false; }
+    },
     async check() {
       if (running) return;
       running = true; const token = ++generation;
@@ -46,14 +88,23 @@ export function createUpdateController({ plugin, backup, onChange = () => {} }) 
         emit({ phase: "installing", message: "请在系统界面确认安装；首次更新可能需要允许本应用安装更新。" });
         const result = await plugin.installUpdate();
         active();
-        emit({ phase: result?.status === "installed" ? "latest" : "idle", message: result?.status === "permission-denied"
-          ? "未允许安装更新，原版本仍保留。" : result?.status === "installed" ? "更新已完成" : "未完成安装，原版本仍保留。" });
-      } catch (error) { if (token === generation) failure(error); }
+        // The native journal is authoritative if a terminal callback raced submission.
+        if (plugin.getUpdateState) await reconcile(); else acceptNative(result);
+      } catch (error) {
+        if (token === generation) {
+          if (!["installing", "pending-install"].includes(state.phase)) {
+            try { await plugin.cancelDownload(); } catch (cleanupError) {
+              failure(new Error(`${error.message || error}；更新临时文件清理失败：${cleanupError.message || cleanupError}`)); return;
+            }
+          }
+          failure(error);
+        }
+      }
       finally { try { await listener?.remove(); } finally { if (token === generation) running = false; } }
     },
     async cancel() {
       if (state.phase === "installing") return;
-      const needsCancel = running && state.phase !== "checking";
+      const needsCancel = (running && state.phase !== "checking") || state.phase === "pending-install";
       ++generation; running = false;
       emit({ phase: "idle", release: null, message: "", received: 0, total: 0 });
       if (needsCancel) await plugin.cancelDownload();

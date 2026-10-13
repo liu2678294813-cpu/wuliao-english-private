@@ -1,6 +1,11 @@
 package com.wuliao.english;
 
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.app.PendingIntent;
+import android.content.pm.PackageInstaller;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
@@ -9,7 +14,6 @@ import android.os.Build;
 import android.provider.Settings;
 import android.util.Base64;
 import androidx.activity.result.ActivityResult;
-import androidx.core.content.FileProvider;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -48,6 +52,82 @@ public class AppUpdaterPlugin extends Plugin {
     private int backupAccounts;
     private final Set<Integer> verifiedAccounts = new HashSet<>();
     private boolean backupSealed;
+    private JSONObject backupHashes = new JSONObject();
+    private volatile boolean resumed;
+    private BroadcastReceiver stateReceiver;
+
+    @Override public void load() {
+        stateReceiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) { refreshState(true); }
+        };
+        IntentFilter filter = new IntentFilter(AppUpdateStore.changeAction(getContext()));
+        if (Build.VERSION.SDK_INT >= 33) getContext().registerReceiver(stateReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        else getContext().registerReceiver(stateReceiver, filter);
+        worker.execute(() -> {
+            try {
+                JSONObject state = AppUpdateStore.reconcile(getContext());
+                if (AppUpdateStore.installing(state)) {
+                    release = state.optJSONObject("release");
+                    apk = new File(getContext().getCacheDir(), "updates/update.apk");
+                    String id = state.optString("backupId");
+                    if (id.matches("[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")) {
+                        backupDir = new File(getContext().getFilesDir(), "update-backups/" + id);
+                        backupId = id;
+                        backupSealed = AppUpdateStore.verifiedBackup(backupDir);
+                    }
+                    AppUpdateStore.prune(getContext(), null);
+                } else {
+                    AppUpdateStore.cleanup(getContext());
+                    if ("downloaded".equals(state.optString("status")) || "backing-up".equals(state.optString("status"))) {
+                        state.put("status", "failed").put("message", "上次更新已中断，原数据保留，请重试");
+                        AppUpdateStore.write(getContext(), state);
+                    }
+                }
+            } catch (Exception error) { android.util.Log.e("WuliaoUpdater", "Update recovery failed", error); }
+        });
+    }
+    private void stage(String status) throws Exception {
+        synchronized (AppUpdateStore.LOCK) {
+            JSONObject state = AppUpdateStore.read(getContext());
+            state.put("status", status).put("release", release).put("targetVersionCode", release.getLong("versionCode"))
+                .put("targetVersionName", release.getString("versionName"));
+            if (backupId != null) state.put("backupId", backupId);
+            AppUpdateStore.write(getContext(), state);
+        }
+    }
+    private JSObject snapshot() throws Exception {
+        JSONObject state = AppUpdateStore.reconcile(getContext());
+        state.remove("confirmation"); state.remove("release");
+        return new JSObject(state.toString()).put("installed", info());
+    }
+    private void refreshState(boolean openConfirmation) {
+        if (worker.isShutdown()) return;
+        worker.execute(() -> {
+            try {
+                notifyListeners("updateStateChanged", snapshot());
+                JSONObject state = AppUpdateStore.read(getContext());
+                if (resumed && !cancelled.get() && backupSealed && "permission-required".equals(state.optString("status"))
+                    && Build.VERSION.SDK_INT >= 26 && getContext().getPackageManager().canRequestPackageInstalls()) launchInstaller(null);
+                if (openConfirmation && resumed) launchConfirmation(false);
+            } catch (Exception error) { android.util.Log.e("WuliaoUpdater", "Unable to refresh update", error); }
+        });
+    }
+    @PluginMethod public void getUpdateState(PluginCall call) { execute(call, () -> call.resolve(snapshot())); }
+    @Override protected void handleOnResume() { resumed = true; refreshState(false); }
+    @Override protected void handleOnPause() { resumed = false; }
+    private void terminate(String status, String message) throws Exception {
+        synchronized (AppUpdateStore.LOCK) {
+            JSONObject state = AppUpdateStore.read(getContext());
+            int session = state.optInt("sessionId", -1);
+            if (session >= 0 && getContext().getPackageManager().getPackageInstaller().getSessionInfo(session) != null)
+                getContext().getPackageManager().getPackageInstaller().abandonSession(session);
+            state.put("status", status).put("message", message).put("sessionId", -1);
+            state.remove("confirmation");
+            AppUpdateStore.write(getContext(), state);
+            AppUpdateStore.cleanup(getContext());
+            apk = null; backupSealed = false;
+        }
+    }
 
     private interface Work { void run() throws Exception; }
     private void execute(PluginCall call, Work work) {
@@ -137,6 +217,8 @@ public class AppUpdaterPlugin extends Plugin {
         cancelled.set(false);
         execute(call, () -> {
             try {
+                if (AppUpdateStore.installing(AppUpdateStore.reconcile(getContext()))) throw new IllegalStateException("请先完成或取消当前更新");
+                AppUpdateStore.cleanup(getContext());
                 release = null;
                 JSONObject latest = json(AppUpdatePolicy.LATEST);
                 if (latest.optBoolean("draft") || latest.optBoolean("prerelease")) throw new IllegalStateException("没有可用的正式版本");
@@ -208,12 +290,22 @@ public class AppUpdaterPlugin extends Plugin {
         cancelled.set(false); backupSealed = false;
         execute(call, () -> {
             File part = null;
+            boolean started = false;
             try {
                 readyRelease(call);
+                if (AppUpdateStore.installing(AppUpdateStore.reconcile(getContext()))) throw new IllegalStateException("更新正在等待安装");
+                AppUpdateStore.cleanup(getContext());
+                backupDir = null; backupId = null;
+                synchronized (AppUpdateStore.LOCK) {
+                    AppUpdateStore.write(getContext(), new JSONObject().put("status", "downloading").put("attemptId", UUID.randomUUID().toString()).put("sessionId", -1));
+                }
+                started = true;
                 File folder = new File(getContext().getCacheDir(), "updates");
                 if (!folder.isDirectory() && !folder.mkdirs()) throw new IllegalStateException("无法创建下载目录");
                 long total = release.getLong("apkBytes");
-                if (folder.getUsableSpace() < total + 32L * 1024 * 1024) throw new IllegalStateException("存储空间不足，请释放空间后重试");
+                long backupBytes = UpdateFiles.bytes(new File(getContext().getFilesDir(), "update-backups"));
+                if (folder.getUsableSpace() < Math.addExact(Math.multiplyExact(total, 2L), backupBytes) + 32L * 1024 * 1024)
+                    throw new IllegalStateException("更新临时空间不足（需要下载、安装暂存及安全备份），请释放空间后重试");
                 part = new File(folder, "update.apk.part");
                 File complete = new File(folder, "update.apk");
                 apk = null;
@@ -234,7 +326,11 @@ public class AppUpdaterPlugin extends Plugin {
                 if (complete.exists() && !complete.delete()) throw new IllegalStateException("无法替换旧缓存");
                 if (!part.renameTo(complete)) throw new IllegalStateException("无法保存安装包");
                 active(); apk = complete;
+                stage("downloaded");
                 call.resolve(new JSObject().put("verified", true));
+            } catch (Exception error) {
+                if (started) terminate("failed", error.getMessage());
+                throw error;
             } finally {
                 if (part != null) part.delete();
                 busy.set(false);
@@ -246,7 +342,7 @@ public class AppUpdaterPlugin extends Plugin {
         HttpURLConnection current = connection;
         if (current != null) current.disconnect();
         execute(call, () -> {
-            if (apk != null) { apk.delete(); apk = null; }
+            terminate("cancelled", "已取消更新，原版本和学习数据保留。");
             call.resolve();
         });
     }
@@ -255,9 +351,10 @@ public class AppUpdaterPlugin extends Plugin {
             active(); if (apk == null) throw new IllegalStateException("安装包尚未校验");
             Integer count = call.getInt("accounts");
             if (count == null || count < 1 || count > 10000) throw new IllegalStateException("账号备份数量无效");
-            backupId = UUID.randomUUID().toString(); backupAccounts = count; verifiedAccounts.clear(); backupSealed = false;
+            backupId = UUID.randomUUID().toString(); backupAccounts = count; verifiedAccounts.clear(); backupSealed = false; backupHashes = new JSONObject();
             backupDir = new File(getContext().getFilesDir(), "update-backups/" + backupId);
             if (!backupDir.mkdirs()) throw new IllegalStateException("无法创建本机备份");
+            stage("backing-up");
             call.resolve(new JSObject().put("backupId", backupId));
         });
     }
@@ -275,7 +372,8 @@ public class AppUpdaterPlugin extends Plugin {
             // JSON offsets below 2^31 arrive as Integer, while PluginCall.getLong
             // only accepts Long. JSONObject reads both numeric representations.
             if (bytes.length == 0 || bytes.length > 256 * 1024 || file.length() != call.getData().optLong("offset", -1L)) throw new IllegalStateException("备份分块顺序无效");
-            if (backupDir.getUsableSpace() < bytes.length + 16L * 1024 * 1024) throw new IllegalStateException("备份空间不足，已停止安装");
+            if (backupDir.getUsableSpace() < bytes.length + release.getLong("apkBytes") + 32L * 1024 * 1024)
+                throw new IllegalStateException("备份和安装暂存空间不足，已停止安装");
             verifiedAccounts.remove(call.getInt("accountIndex"));
             try (FileOutputStream output = new FileOutputStream(file, true)) { output.write(bytes); output.getFD().sync(); }
             call.resolve();
@@ -286,6 +384,7 @@ public class AppUpdaterPlugin extends Plugin {
             File file = accountFile(call);
             if (!sha(file).equals(call.getString("sha256"))) throw new IllegalStateException("本机备份回读校验失败，已停止安装");
             verifiedAccounts.add(call.getInt("accountIndex"));
+            backupHashes.put(String.valueOf(call.getInt("accountIndex")), call.getString("sha256"));
             call.resolve(new JSObject().put("verified", true));
         });
     }
@@ -293,27 +392,38 @@ public class AppUpdaterPlugin extends Plugin {
         execute(call, () -> {
             active();
             if (backupId == null || !backupId.equals(call.getString("backupId")) || verifiedAccounts.size() != backupAccounts) throw new IllegalStateException("全账号备份尚未完成");
-            JSONObject receipt = new JSONObject().put("targetVersionCode", release.getLong("versionCode")).put("accounts", backupAccounts).put("createdAt", System.currentTimeMillis());
+            JSONObject receipt = new JSONObject().put("targetVersionCode", release.getLong("versionCode")).put("accounts", backupAccounts).put("createdAt", System.currentTimeMillis()).put("sha256", backupHashes);
             try (FileOutputStream output = new FileOutputStream(new File(backupDir, "verified.json"))) {
                 output.write(receipt.toString().getBytes(StandardCharsets.UTF_8)); output.getFD().sync();
             }
             backupSealed = true;
+            stage("ready");
+            AppUpdateStore.prune(getContext(), null);
             call.resolve(new JSObject().put("verified", true));
         });
     }
     @PluginMethod public void installUpdate(PluginCall call) {
+        if (!busy.compareAndSet(false, true)) { call.reject("更新正在处理中"); return; }
         execute(call, () -> {
-            active();
-            if (!backupSealed) throw new IllegalStateException("更新前备份未完成，已停止安装");
-            validateApk(apk);
-            getActivity().runOnUiThread(() -> {
-                try {
+            try {
+                active();
+                if (!backupSealed || backupDir == null || !AppUpdateStore.verifiedBackup(backupDir)
+                    || AppUpdateStore.receipt(backupDir).getLong("targetVersionCode") != release.getLong("versionCode"))
+                    throw new IllegalStateException("更新前备份未完成，已停止安装");
+                validateApk(apk);
+                if (Build.VERSION.SDK_INT >= 26 && !getContext().getPackageManager().canRequestPackageInstalls()) stage("permission-required");
+                getActivity().runOnUiThread(() -> {
+                    try {
                     if (Build.VERSION.SDK_INT >= 26 && !getContext().getPackageManager().canRequestPackageInstalls()) {
                         Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getContext().getPackageName()));
                         startActivityForResult(call, intent, "permissionResult");
-                    } else launchInstaller(call);
-                } catch (Exception error) { call.reject("无法打开系统安装界面", "installer_failed", error); }
-            });
+                    } else execute(call, () -> launchInstaller(call));
+                    } catch (Exception error) {
+                        execute(call, () -> { terminate("failed", "无法打开系统安装界面"); throw error; });
+                    }
+                });
+            } catch (Exception error) { terminate("failed", error.getMessage()); throw error; }
+            finally { busy.set(false); }
         });
     }
     @ActivityCallback private void permissionResult(PluginCall call, ActivityResult result) {
@@ -321,22 +431,76 @@ public class AppUpdaterPlugin extends Plugin {
         if (!cancelled.get() && Build.VERSION.SDK_INT >= 26 && getContext().getPackageManager().canRequestPackageInstalls()) {
             // Repeat the checksum and version checks after returning from Settings.
             installUpdate(call);
-        } else call.resolve(new JSObject().put("status", "permission-denied"));
+        } else execute(call, () -> { terminate("permission-denied", "未允许安装更新，原版本仍保留。"); call.resolve(snapshot()); });
     }
     private void launchInstaller(PluginCall call) throws Exception {
-        active();
-        Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", apk);
-        Intent intent = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).putExtra(Intent.EXTRA_RETURN_RESULT, true);
-        startActivityForResult(call, intent, "installationResult");
+        try {
+            active();
+            JSONObject current = AppUpdateStore.read(getContext());
+            if (current.optInt("sessionId", -1) >= 0) { if (call != null) call.resolve(snapshot()); return; }
+            validateApk(apk);
+            PackageInstaller installer = getContext().getPackageManager().getPackageInstaller();
+            PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            params.setAppPackageName(getContext().getPackageName()); params.setSize(apk.length());
+            if (Build.VERSION.SDK_INT >= 31) params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED);
+            if (getContext().getCacheDir().getUsableSpace() < apk.length() + 32L * 1024 * 1024) throw new IllegalStateException("安装暂存空间不足，原版本仍保留。");
+            int sessionId = installer.createSession(params);
+            try {
+                synchronized (AppUpdateStore.LOCK) {
+                    current.put("sessionId", sessionId).put("status", "submitted").put("message", "正在准备系统覆盖安装…");
+                    AppUpdateStore.write(getContext(), current);
+                }
+            } catch (Exception error) { installer.abandonSession(sessionId); throw error; }
+            try (PackageInstaller.Session session = installer.openSession(sessionId)) {
+                try (InputStream input = new FileInputStream(apk); java.io.OutputStream output = session.openWrite("base.apk", 0, apk.length())) {
+                    byte[] buffer = new byte[65536]; int count;
+                    while ((count = input.read(buffer)) != -1) { active(); output.write(buffer, 0, count); }
+                    session.fsync(output);
+                }
+                active();
+                Intent result = new Intent(getContext(), AppUpdateReceiver.class).setAction(AppUpdateStore.resultAction(getContext()))
+                    .putExtra("attemptId", current.getString("attemptId"));
+                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+                if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
+                PendingIntent callback = PendingIntent.getBroadcast(getContext(), sessionId, result, flags);
+                session.commit(callback.getIntentSender());
+            }
+            if (call != null) call.resolve(snapshot());
+            else notifyListeners("updateStateChanged", snapshot());
+        } catch (Exception error) { terminate("failed", error.getMessage()); throw error; }
     }
-    @ActivityCallback private void installationResult(PluginCall call, ActivityResult result) {
-        if (call == null) return;
-        execute(call, () -> call.resolve(new JSObject().put("status", code(installed()) >= release.getLong("versionCode") ? "installed" : "cancelled").put("installed", info())));
+    private void launchConfirmation(boolean force) throws Exception {
+        final Intent confirmation;
+        synchronized (AppUpdateStore.LOCK) {
+            JSONObject state = AppUpdateStore.read(getContext());
+            if (!"pending-user-action".equals(state.optString("status")) || !state.has("confirmation") || (!force && state.optBoolean("promptLaunched"))) return;
+            confirmation = AppUpdateStore.decodeIntent(state.getString("confirmation"));
+            state.put("promptLaunched", true); AppUpdateStore.write(getContext(), state);
+        }
+        getActivity().runOnUiThread(() -> {
+            try { getActivity().startActivity(confirmation); }
+            catch (Exception error) {
+                if (!worker.isShutdown()) worker.execute(() -> {
+                    try { terminate("failed", "无法打开系统安装确认，请重试"); notifyListeners("updateStateChanged", snapshot()); }
+                    catch (Exception failure) { android.util.Log.e("WuliaoUpdater", "Unable to finish failed confirmation", failure); }
+                });
+            }
+        });
+    }
+    @PluginMethod public void resumeUpdate(PluginCall call) {
+        execute(call, () -> {
+            JSONObject state = AppUpdateStore.reconcile(getContext());
+            if ("ready".equals(state.optString("status")) || "permission-required".equals(state.optString("status"))) { installUpdate(call); return; }
+            if ("pending-user-action".equals(state.optString("status"))) launchConfirmation(true);
+            call.resolve(snapshot());
+        });
     }
     @Override protected void handleOnDestroy() {
+        resumed = false;
         cancelled.set(true);
         if (connection != null) connection.disconnect();
-        worker.shutdownNow();
+        if (stateReceiver != null) getContext().unregisterReceiver(stateReceiver);
+        // Submitted sessions and complete backups survive Activity destruction.
+        worker.shutdown();
     }
 }
