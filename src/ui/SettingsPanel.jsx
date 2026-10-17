@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { openBackupDestination, exportManualBackup, parseBackupFile } from "../manualBackup.js";
+import { getCurrentUsername } from "../userData.js";
 import { flushPendingSaves } from "../saveCoordinator.js";
 import { flushDurableInk } from "../durableInkStorage.js";
 import { getAppInfo } from "../appInfo";
@@ -12,11 +14,7 @@ import {
   BACKUP_FORMAT,
   BACKUP_JOURNAL_KEY,
   BACKUP_VERSION,
-  browserEncodeAttachment,
-  createBackup,
-  defaultBackupSources,
   defaultRestoreSources,
-  parseBackup,
   previewRestore,
   recordBackupTelemetry,
   restoreBackup,
@@ -56,7 +54,12 @@ export default function SettingsPanel({
   const [backupMessage, setBackupMessage] = useState("");
   const [backupError, setBackupError] = useState(false);
   const [restoreManifest, setRestoreManifest] = useState(null);
+  useEffect(() => () => { void restoreManifest?.dispose?.(); }, [restoreManifest]);
   const backupFileRef = useRef(null);
+  const backupLock = useRef(false);
+  const backupCancelled = useRef(false);
+  useEffect(() => () => { backupCancelled.current = true; }, []);
+  const assertBackupAccount = () => { if (backupCancelled.current || getCurrentUsername() !== username) throw new Error("操作已取消或账号已切换，备份任务已停止"); };
 
   useEffect(() => devMode.subscribe(setDevOn), [devMode]);
   useEffect(() => () => window.clearTimeout(lockResetTimerRef.current), []);
@@ -102,40 +105,30 @@ export default function SettingsPanel({
   });
 
   async function handleExportBackup() {
+    if (backupLock.current) return;
+    backupLock.current = true;
+    backupCancelled.current = false;
     setBackupBusy(true);
     setBackupError(false);
-    setBackupMessage("正在生成本机备份…");
+    setBackupMessage("请选择备份保存位置…");
     const startedAt = performance.now();
+    let destination;
     try {
+      destination = await openBackupDestination(`wuliao-backup-${username}-${new Date().toISOString().slice(0, 10)}.json`);
+      assertBackupAccount();
       await flushPendingSaves();
       await flushDurableInk(username);
-      const sources = defaultBackupSources();
-      const { manifest, fileText, counts } = await createBackup({
-        sources,
-        username,
-        appVersion: info.appVersion,
-        encodeAttachment: browserEncodeAttachment,
-      });
-      const blob = new Blob([fileText], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `wuliao-backup-${username}-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-      setBackupMessage(
-        `已导出 ${counts.localStorage} 条本地数据 + ${counts.indexedDB} 条词库数据`
-        + (counts.customPdfs ? `，含 ${counts.customPdfs} 份自定义 PDF` : "")
-        + "；不含 API Key、密码与缓存。",
-      );
+      const { counts, saved } = await exportManualBackup({ username, appVersion: info.appVersion, destination,
+        active: assertBackupAccount, onProgress: setBackupMessage });
+      setBackupMessage(`${saved ? "已保存并校验备份" : "已生成并发起下载"}：${counts.localStorage} 条本地数据 + ${counts.indexedDB} 条数据库记录，${counts.customPdfs} 个附件；不含 API Key、密码与缓存。`);
       recordBackupTelemetry("backup.export", { status: "ok", counts, durationMs: performance.now() - startedAt });
     } catch (error) {
+      await destination?.abort().catch(() => {});
       setBackupError(true);
       setBackupMessage(error instanceof Error ? `导出失败：${error.message}` : "导出失败，请重试");
       recordBackupTelemetry("backup.export", { status: "failed", durationMs: performance.now() - startedAt });
     } finally {
+      backupLock.current = false;
       setBackupBusy(false);
     }
   }
@@ -143,15 +136,17 @@ export default function SettingsPanel({
   async function handleSelectBackupFile(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file) return;
+    if (!file || backupLock.current) return;
+    backupLock.current = true;
     setBackupBusy(true);
     setBackupError(false);
     setRestoreManifest(null);
     try {
-      const text = await file.text();
-      const manifest = await parseBackup(text);
+      backupCancelled.current = false;
+      const manifest = await parseBackupFile(file, { active: assertBackupAccount, onProgress: setBackupMessage });
       const preview = previewRestore(manifest, username);
       if (!preview.sameAccount) {
+        await manifest.dispose?.();
         setBackupError(true);
         setBackupMessage(`这份备份属于账号 ${preview.accounts.join("、")}，不能恢复到当前账号 ${username}。`);
         return;
@@ -166,14 +161,17 @@ export default function SettingsPanel({
       setBackupError(true);
       setBackupMessage(error instanceof Error ? `导入失败：${error.message}` : "导入失败，请检查文件");
     } finally {
+      backupLock.current = false;
       setBackupBusy(false);
     }
   }
 
   async function handleRestoreBackup() {
     const manifest = restoreManifest;
-    if (!manifest || backupBusy) return;
+    if (!manifest || backupBusy || backupLock.current) return;
     if (!window.confirm(`将把这份备份合并到当前账号 ${username}：只补入不存在的记录，不覆盖现有数据；不含密码与 API Key。确定恢复？`)) return;
+    backupLock.current = true;
+    backupCancelled.current = false;
     setBackupBusy(true);
     setBackupError(false);
     setBackupMessage("正在恢复…");
@@ -181,10 +179,12 @@ export default function SettingsPanel({
     try {
       await flushPendingSaves();
       await flushDurableInk(username);
+      assertBackupAccount();
       const sources = defaultRestoreSources();
       const result = await restoreBackup({
         manifest,
         username,
+        active: assertBackupAccount,
         ...sources,
         journal: (entry) => {
           try {
@@ -215,6 +215,7 @@ export default function SettingsPanel({
       setBackupMessage(error instanceof Error ? `恢复失败：${error.message}` : "恢复失败，请重试");
       recordBackupTelemetry("backup.restore", { status: "failed", durationMs: performance.now() - startedAt, errors: 1 });
     } finally {
+      backupLock.current = false;
       setBackupBusy(false);
     }
   }
@@ -258,6 +259,7 @@ export default function SettingsPanel({
           </div>
           <div className="settings-row">
             <span>从备份文件恢复</span>
+            {backupBusy && <button type="button" className="settings-action" onClick={() => { backupCancelled.current = true; }}>取消当前操作</button>}
             <button className="settings-action" type="button" disabled={backupBusy} onClick={() => backupFileRef.current?.click()}>
               选择备份文件
             </button>

@@ -727,3 +727,23 @@
   .writing-library * { scroll-behavior: auto !important; transition: none !important; }
   .writing-loader { animation-duration: 1.8s; }
 }
+
+.writing-library-hero-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.writing-example-toolbar { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 160; display: flex; align-items: center; gap: 12px; padding: 12px 18px; border: 1px solid #b9a674; border-radius: 14px; background: #202426; color: #f4f0e5; box-shadow: 0 6px 24px #0005; width: max-content; max-width: 94vw; }
+.writing-example-library { width: min(760px, 94vw); max-height: 85dvh; overflow: auto; padding: 24px; border-radius: 18px; background: var(--surface, #faf8f2); color: var(--text, #252b29); }
+.writing-example-library header, .writing-example-library footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.writing-example-library input { width: 100%; padding: 12px; border: 1px solid #9a9a8e; border-radius: 8px; }
+.writing-example-library article { padding: 18px 0; border-bottom: 1px solid #b9b4a8; }
+.writing-example-library footer { justify-content: flex-end; margin-top: 12px; }
+.writing-example-library button { min-height: 40px; padding: 8px 14px; }
+.writing-example-original { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; user-select: text; }
+[data-example-text], [data-example-text] p, [data-example-text] span, [data-example-text] button { user-select: text; -webkit-user-select: text; }
+.writing-reading-sheet [data-example-text] small { user-select: none; -webkit-user-select: none; }
+
+.writing-examples-backdrop { position: fixed; inset: 0; z-index: 1600; display: grid; place-items: center; padding: 20px; background: #061d26a8; backdrop-filter: blur(4px); }
+.writing-example-library { background: #f7f5ed; color: #123e49; box-sizing: border-box; box-shadow: 0 20px 70px #0005; }
+.writing-example-library header { margin-bottom: 20px; }
+.writing-example-library h2 { margin: 4px 0; font-size: 26px; }
+.writing-example-library input { box-sizing: border-box; background: #fff; color: #123e49; }
+.writing-example-library button { border: 1px solid #a5b6b3; border-radius: 8px; background: #fff; color: #123e49; cursor: pointer; }
+.writing-example-library small { overflow-wrap: anywhere; line-height: 1.6; }

@@ -817,3 +817,6 @@ body[data-app-route="screening"] #root main #skipButton {
 /* A question is one visual update; feedback must not fade across frames. */
 body[data-app-route="screening"] main .animate-fade-in { animation: none !important; }
 body[data-app-route="screening"] main .grid button { transition: none !important; }
+
+/* Standalone vocabulary pages keep the same page scale as the embedded app. */
+html, body { touch-action: pan-x pan-y; }

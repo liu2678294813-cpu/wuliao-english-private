@@ -190,10 +190,10 @@ function PromptCard({ prompt, compact = false }) {
   );
 }
 
-function DocumentText({ text, empty = "暂无可显示内容" }) {
+function DocumentText({ text, source, empty = "暂无可显示内容" }) {
   const paragraphs = paragraphList(text);
   if (!paragraphs.length) return <p className="writing-empty-copy">{empty}</p>;
-  return <article className="writing-document-text">{paragraphs.map((paragraph, index) => <p key={`${index}:${paragraph.slice(0, 24)}`}>{paragraph}</p>)}</article>;
+  return <article className="writing-document-text" data-example-text data-example-source={source}>{paragraphs.map((paragraph, index) => <p key={`${index}:${paragraph.slice(0, 24)}`}>{paragraph}</p>)}</article>;
 }
 
 function actionButton(label, action, busyAction, onClick, options = {}) {
@@ -268,7 +268,7 @@ export function W1SampleReadingStage({ vm, commandContext, services, busyAction,
             <div><h2>训练范文</h2><p>点按英文单词可显式加入或取消陌生词。</p></div>
             <span>{sample.wordCount} 词</span>
           </div>
-          <article>
+          <article data-example-text data-example-source="sample">
             {sample.segments.map((segment, segmentIndex) => (
               <p key={segment.unitId} data-unit-id={segment.unitId}>
                 <small>{String(segmentIndex + 1).padStart(2, "0")}</small>
@@ -283,7 +283,7 @@ export function W1SampleReadingStage({ vm, commandContext, services, busyAction,
                         className={marked.has(occurrenceId) ? "is-marked" : ""}
                         aria-pressed={marked.has(occurrenceId)}
                         aria-label={`${marked.has(occurrenceId) ? "取消" : "标记"}陌生词 ${part}`}
-                        onClick={() => toggleWord(part, segment.unitId, occurrenceId)}
+                        onClick={() => { if (!window.getSelection()?.toString().trim()) toggleWord(part, segment.unitId, occurrenceId); }}
                       >
                         {part}
                       </button>
@@ -397,7 +397,7 @@ export function W2TranslationStage({ vm, commandContext, services, username, cre
         username={username}
         layout={layout}
         sourceLabel="完整英文范文"
-        sourcePane={<DocumentText text={vm.sampleEssayText} />}
+        sourcePane={<DocumentText source="sample" text={vm.sampleEssayText} />}
         workLabel="我的完整中文翻译"
         workActions={<InputModePicker value={inputMethod} onChange={(value) => { setInputMethod(value); setDraftChangeToken((token) => token + 1); }} disabled={busyAction === "w2-commit"} />}
         workPane={(
@@ -707,7 +707,7 @@ export function W4CompareStage({ vm, commandContext, services, createId, busyAct
           <div className="writing-compare-document-grid">
             <section><h3>我的中文</h3><DocumentText text={translationDocument(vm.translationSnapshot.units)} /></section>
             <section><h3>我的反译</h3><DocumentText text={userText} /></section>
-            <section><h3>范文原文</h3><DocumentText text={vm.sampleEssayText} /></section>
+            <section><h3>范文原文</h3><DocumentText source="sample" text={vm.sampleEssayText} /></section>
           </div>
         ) : (
           <div className="writing-compare-grid">
@@ -1372,7 +1372,7 @@ export function W8ScoreRewriteStage({ vm, commandContext, services, createId, bu
       </section>
       <section className="writing-reference-rewrite">
         <div className="writing-section-heading"><div><h2>AI 参考改写</h2><p>必须先正式提交自己的二稿，之后才可单独生成。</p></div><button type="button" className="writing-button-secondary" disabled={!submittedRevision || !selectedScore || busyAction === "w8-rewrite"} onClick={requestRewrite}>{busyAction === "w8-rewrite" ? "正在生成…" : submittedRevision ? "生成参考改写" : "先提交二稿"}</button></div>
-        {rewrite ? <div className="writing-rewrite-result"><article><small>AI 参考文本</small><p>{rewrite.result.referenceText}</p></article><section><h3>改动说明</h3>{rewrite.result.changeNotes.map((note, index) => <article key={`${note.category}:${index}`}><strong>{note.category}</strong><p><del>{note.fromExcerpt}</del> → <ins>{note.toExcerpt}</ins></p><span>{note.reason}</span></article>)}</section><section><h3>整体理由</h3><ul>{rewrite.result.rationale.map((item) => <li key={item}>{item}</li>)}</ul></section></div> : <p className="writing-empty-copy">参考改写会显示在独立区域，绝不会写入“我的二稿”输入框。</p>}
+        {rewrite ? <div className="writing-rewrite-result"><article><small>AI 参考文本</small><p data-example-text data-example-source="ai-rewrite">{rewrite.result.referenceText}</p></article><section><h3>改动说明</h3>{rewrite.result.changeNotes.map((note, index) => <article key={`${note.category}:${index}`}><strong>{note.category}</strong><p><del>{note.fromExcerpt}</del> → <ins>{note.toExcerpt}</ins></p><span>{note.reason}</span></article>)}</section><section><h3>整体理由</h3><ul>{rewrite.result.rationale.map((item) => <li key={item}>{item}</li>)}</ul></section></div> : <p className="writing-empty-copy">参考改写会显示在独立区域，绝不会写入“我的二稿”输入框。</p>}
       </section>
     </WritingStageShell>
   );

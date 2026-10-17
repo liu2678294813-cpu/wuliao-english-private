@@ -683,3 +683,6 @@ body[data-app-route="confusion"] #root main .p-12.text-center::before {
   .embedded-dashboard-actions button { padding: 0 9px; }
   .embedded-dashboard-heading > h2 { font-size: 22px; }
 }
+
+/* Keep page gestures at 1x; document controls manage their own content scale. */
+html, body { touch-action: pan-x pan-y; }

@@ -1,3 +1,4 @@
+import { ExampleLibrary } from "./WritingExamples.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ImportedWritingLibrary from "./ImportedWritingLibrary.jsx";
 import { onAppEvent } from "../../events/appEvents.js";
@@ -153,6 +154,8 @@ function QuestionBank({ services, onOpenSession, onConfigureTextAi }) {
 export default function WritingLibrary({ services, username, onOpenSession, onCreateSession, onConfigureTextAi }) {
   const [state, setState] = useState({ status: "loading", model: null, error: "" });
   const generation = useRef(0);
+  const [examplesOpen, setExamplesOpen] = useState(false);
+  useEffect(() => setExamplesOpen(false), [username]);
 
   const load = useCallback(async () => {
     const current = generation.current + 1;
@@ -182,9 +185,11 @@ export default function WritingLibrary({ services, username, onOpenSession, onCr
           <p>WRITING LAB</p>
           <h1>写作训练</h1>
         </div>
-        <button type="button" className="primary-button" onClick={() => (services?.questionBank?.listYears?.().length ? document.getElementById("writing-question-bank") : document.querySelector(".writing-imported-materials"))?.scrollIntoView?.({ behavior: "smooth", block: "start" })}>{services?.questionBank?.listYears?.().length ? "浏览历年真题" : "查看导入作文"}</button>
+        <div className="writing-library-hero-actions"><button type="button" className="writing-button-secondary" onClick={() => setExamplesOpen(true)}>例句</button>
+        <button type="button" className="primary-button" onClick={() => (services?.questionBank?.listYears?.().length ? document.getElementById("writing-question-bank") : document.querySelector(".writing-imported-materials"))?.scrollIntoView?.({ behavior: "smooth", block: "start" })}>{services?.questionBank?.listYears?.().length ? "浏览历年真题" : "查看导入作文"}</button></div>
       </header>
 
+      {examplesOpen && <ExampleLibrary key={username} username={username} services={services} onOpenSession={onOpenSession} onClose={() => setExamplesOpen(false)} />}
       <QuestionBank services={services} onOpenSession={onOpenSession} onConfigureTextAi={onConfigureTextAi} />
       <ImportedWritingLibrary services={services} username={username} onOpenSession={onOpenSession} />
 

@@ -1,3 +1,4 @@
+import { displayMeaning } from "./screening-options.js";
 import { interactionTiming } from './interaction-timing.js';
 import { makeConfusion } from './confusion-records.js';
 // All question fields are published together. Storage never owns visible state.
@@ -8,7 +9,7 @@ export function createScreeningController(api, publish, clock = globalThis) {
   const initial = { currentEnglish: '', currentChinese: '', currentCorrectOptionChinese: '', options: [],
     currentIndex: 0, totalWords: 0, correctCount: 0, wrongCount: 0, answered: false,
     selectedOptionId: null, optionStates: {}, isComplete: false, loading: true,
-    familiarName: '', rawName: '', rawListId: null };
+    familiarName: '', rawName: '', rawListId: null, optionError: '' };
   const emit = (patch) => { state = { ...state, ...patch }; publish(state); };
   const valid = (v) => !disposed && v === version;
   function cancelTimer() {
@@ -24,11 +25,15 @@ export function createScreeningController(api, publish, clock = globalThis) {
     const currentSession = session;
     if (index >= currentSession.sourceWordIds.length) return { isComplete: true, loading: false };
     const wordId = currentSession.sourceWordIds[index];
-    const [word, options] = await Promise.all([api.word(wordId), api.options(wordId)]);
-    return { questionId: `${currentSession.sessionKey}:${v}:${index}:${wordId}`, sessionVersion: v,
+    let optionError = '';
+    const [word, options] = await Promise.all([api.word(wordId), api.options(wordId).catch(error => {
+      if (error.code !== 'insufficient-meanings') throw error;
+      optionError = error.message; return [];
+    })]);
+    return { optionError, questionId: `${currentSession.sessionKey}:${v}:${index}:${wordId}`, sessionVersion: v,
       currentEnglish: word?.english ?? wordId, currentChinese: word?.chinese ?? '',
       currentCorrectOptionChinese: options.find((option) => option.isCorrect)?.chinese ?? '',
-      options: options.map((option) => ({ ...option, chinese: option.chinese.replace(/^[A-L][.、]\s*/, '') })),
+      options: options.map((option) => ({ ...option, chinese: displayMeaning(option.chinese) })),
       currentIndex: index, optionStates: Object.fromEntries(options.map((option) => [option.id, 'idle'])),
       answered: false, selectedOptionId: null, loading: false, isComplete: false };
   }
@@ -54,6 +59,7 @@ export function createScreeningController(api, publish, clock = globalThis) {
   const prepare = (index, v) => question(index, v).then((value) => ({ value }), (error) => ({ error }));
   function answer(optionId) {
     if (locked || disposed || state.isComplete || state.loading) return pending;
+    if (state.optionError && optionId !== api.skipId) return;
     const selected = state.options.find((option) => option.id === optionId);
     if (!selected && optionId !== api.skipId) return;
     locked = true;
@@ -72,13 +78,13 @@ export function createScreeningController(api, publish, clock = globalThis) {
     const feedbackShown = correct ? Promise.resolve(feedbackAt) : Promise.resolve(api.feedbackShown?.() ?? feedbackAt);
     const nextSession = { ...session, currentIndex: session.currentIndex + 1,
       correctIds: [...session.correctIds], wrongIds: [...session.wrongIds], updatedAt: Date.now() };
-    nextSession[correct ? 'correctIds' : 'wrongIds'].push(session.sourceWordIds[session.currentIndex]);
+    if (!state.optionError) nextSession[correct ? 'correctIds' : 'wrongIds'].push(session.sourceWordIds[session.currentIndex]);
     // Attach rejection handling immediately while the current answer is saving.
     const prepared = preparedNext || prepare(nextSession.currentIndex, v);
     let saved = false;
     const work = (async () => {
       try {
-        const saving = timing.save(() => api.save(nextSession, { username: session.username,
+        const saving = timing.save(() => api.save(nextSession, before.optionError ? null : { username: session.username,
           wordId: session.sourceWordIds[session.currentIndex], round: session.round,
           result: correct ? 'correct' : 'wrong', timestamp: Date.now(), ...(confusion ? { confusion } : {}) }, confusion));
         pendingSave = saving;
@@ -109,7 +115,12 @@ export function createScreeningController(api, publish, clock = globalThis) {
     work.catch(() => {}).finally(() => { if (pending === work) pending = null; });
     return work;
   }
-  return { start, answer, getState: () => state, getSession: () => session,
+  async function retry() {
+    const v = version;
+    const next = await question(session.currentIndex, v);
+    if (valid(v)) { emit(next); locked = false; preparedNext = prepare(session.currentIndex + 1, v); }
+  }
+  return { start, answer, retry, getState: () => state, getSession: () => session,
     flush: () => pendingSave || Promise.resolve(),
     invalidate() { ++version; cancelTimer(); locked = true; },
     dispose() { disposed = true; ++version; cancelTimer(); } };
@@ -164,7 +175,7 @@ export function useScreening(React, api, username, round, listId) {
       if (window.__wuliaoScreeningContext === context) delete window.__wuliaoScreeningContext;
     };
   }, [username, round, listId]);
-  return { ...state, handleAnswer: (id) => { controller.current?.answer(id)?.catch(() => {}); },
+  return { ...state, handleRetry: () => controller.current?.retry().catch(error => api.error("重新加载失败", error)), handleAnswer: (id) => { controller.current?.answer(id)?.catch(() => {}); },
     handleSkip: () => { controller.current?.answer(api.skipId)?.catch(() => {}); } };
 }
 
@@ -199,7 +210,7 @@ export function screeningApi(deps) {
       let completion = {};
       await db.transaction('rw', db.wordRecords, db.confusionPairs, db.screeningSessions,
         db.screeningProgress, db.wordLists, async () => {
-          await db.wordRecords.add(record);
+          if (record) await db.wordRecords.add(record);
           if (confusion && !await db.confusionPairs.where('username').equals(confusion.username)
             .filter((row) => row.eventId === confusion.eventId).count()) await db.confusionPairs.add(confusion);
           await db.screeningSessions.put(session);

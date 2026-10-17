@@ -72,7 +72,7 @@ export async function hashUpdateAttachment(blob, active) {
   return { data: '', size: blob.size, sha256: hash.hex() };
 }
 
-async function* jsonPieces(value, blobs, active, path = []) {
+export async function* jsonPieces(value, blobs, active = () => {}, path = []) {
   if (path.length === 3 && path[0] === 'attachments' && path[2] === 'data' && blobs.has(path[1])) {
     const blob = blobs.get(path[1]);
     yield '"';
@@ -94,6 +94,10 @@ async function* jsonPieces(value, blobs, active, path = []) {
     yield '"';
   } else if (value && typeof value.toJSON === 'function') {
     yield* jsonPieces(value.toJSON(path[path.length - 1] ?? ''), blobs, active, path);
+  } else if (value?.[Symbol.asyncIterator]) {
+    yield '['; let first = true;
+    for await (const item of value) { active(); if (!first) yield ','; first = false; yield* jsonPieces(item, blobs, active, [...path, 'item']); }
+    yield ']';
   } else if (Array.isArray(value)) {
     yield '[';
     for (let i = 0; i < value.length; i++) { if (i) yield ','; yield* jsonPieces(value[i] ?? null, blobs, active, [...path, i]); }

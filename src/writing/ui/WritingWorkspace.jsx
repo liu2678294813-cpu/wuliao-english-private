@@ -1,3 +1,4 @@
+import { ExampleSelection } from "./WritingExamples.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { onAppEvent } from "../../events/appEvents.js";
 import { AppEvent } from "../../events/eventTypes.js";
@@ -252,7 +253,7 @@ export default function WritingWorkspace({
   };
 
   return (
-    <div className="writing-workspace-frame">
+    <ExampleSelection key={requestedKey + workspace.safeStage} username={username} sessionId={sessionId} stage={workspace.safeStage} title={`${workspace.stageViewModel.promptSnapshot?.year || ""} ${workspace.stageViewModel.promptSnapshot?.promptText || "写作训练"}`}><div className="writing-workspace-frame">
       {actionError ? <WritingStageNotice tone="error" title="操作未完成" role="alert">{actionError}</WritingStageNotice> : null}
       <StageComponent
         key={`${workspace.sessionId}:${workspace.safeStage}`}
@@ -273,7 +274,7 @@ export default function WritingWorkspace({
         onToggleImmersive={toggleImmersive}
         onExitImmersive={exitImmersive}
       />
-    </div>
+    </div></ExampleSelection>
   );
 }
 

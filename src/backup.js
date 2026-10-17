@@ -19,7 +19,7 @@ import { openHandwritingDatabase, HANDWRITING_DB } from "./vocabulary/handwritin
 import { getTelemetry } from "./telemetry/telemetry";
 import { FORMAL_IMPORT_STORES } from "./import/contracts.js";
 import { openWuliaoEnglishDatabase } from "./storage";
-import { flushDurableInk, inkStorageReady, isDurableInkKey, listDurableInk, writeDurableInk } from "./durableInkStorage.js";
+import { flushDurableInk, inkStorageReady, isDurableInkKey, listDurableInk, readDurableInk, writeDurableInk } from "./durableInkStorage.js";
 
 // Backup v1 keeps logical learning keys, independent of their physical store.
 function includeDurableEntries(entries, storage) {
@@ -273,6 +273,7 @@ export async function createBackup({
   onProgress = null,
   encodeAttachment = null,
   serialize = true,
+  staging = null,
 } = {}) {
   if (!username) throw new BackupError("no-account", "请先登录账号再导出备份");
   const legacyOwner = (sources.entries || []).find((item) => item.key === LEGACY_OWNER_KEY)?.value || "";
@@ -294,14 +295,21 @@ export async function createBackup({
   let attachmentIndex = 0;
   let totalBlobs = 0;
 
-  for (const database of databases) {
+  if (staging) {
+    for (const [name, entries] of Object.entries(sections.localStorage)) {
+      const list = staging.list();
+      for (const entry of entries) await list.push(entry);
+      sections.localStorage[name] = list;
+    }
+  }
+  for await (const database of databases) {
     const includedStores = IDB_INCLUDED[database.name];
     if (!includedStores) continue;
     sections.indexedDB[database.name] = {};
     for (const store of database.stores || []) {
       if (!includedStores[store.name]) continue;
-      const records = [];
-      for (const record of store.records || []) {
+      const records = staging ? staging.list() : [];
+      for await (const record of store.records || []) {
         if (!record || !record.value || typeof record.value !== "object") continue;
         if (record.value.username != null && record.value.username !== username) continue;
         if (privateSessionIds.has(record.value.sessionId) || privateSessionIds.has(record.value.sourceSessionId)) continue;
@@ -332,7 +340,7 @@ export async function createBackup({
           value.file = { __backupAttachment: attachmentId };
           totalBlobs += 1;
         }
-        records.push({ key: record.key, value });
+        await records.push({ key: record.key, value });
       }
       if (records.length) sections.indexedDB[database.name][store.name] = records;
     }
@@ -365,11 +373,11 @@ export async function createBackup({
 export function summarizeBackup(manifest) {
   const counts = { localStorage: 0, indexedDB: 0, customPdfs: 0 };
   for (const group of Object.values(manifest.sections?.localStorage || {})) {
-    counts.localStorage += Array.isArray(group) ? group.length : 0;
+    counts.localStorage += Array.isArray(group) || group?.[Symbol.asyncIterator] ? group.length : 0;
   }
   for (const stores of Object.values(manifest.sections?.indexedDB || {})) {
     for (const records of Object.values(stores || {})) {
-      counts.indexedDB += Array.isArray(records) ? records.length : 0;
+      counts.indexedDB += Array.isArray(records) || records?.[Symbol.asyncIterator] ? records.length : 0;
     }
   }
   counts.customPdfs = Object.keys(manifest.attachments || {}).length;
@@ -447,8 +455,8 @@ function isWritingLogicalKey(key) {
   return WRITING_LOGICAL_KEY_PREFIXES.some((prefix) => String(key || "").startsWith(prefix));
 }
 
-export function planRestoreWrites(manifest, { username, existingEntries = [] }) {
-  const existing = new Map(existingEntries.map((item) => [item.key, item.value]));
+export function planRestoreWrites(manifest, { username, existingEntries = [], existingMap = null }) {
+  const existing = existingMap || new Map(existingEntries.map((item) => [item.key, item.value]));
   const legacyOwner = plainStoredValue(existingEntries.find((item) => item.key === LEGACY_OWNER_KEY)?.value || "");
   const local = manifest.sections?.localStorage || {};
   const writes = [];
@@ -515,7 +523,7 @@ export function decodeAttachment(manifest, value) {
   if (!attachment) throw new BackupError("corrupt-backup", `备份缺少附件 ${attachmentId}`);
   return {
     attachment,
-    bytes: bytesFromBase64(attachment.data),
+    bytes: attachment.blob || bytesFromBase64(attachment.data),
     fileMeta: { name: attachment.name, type: attachment.type, size: attachment.size, sha256: attachment.sha256 },
   };
 }
@@ -535,10 +543,36 @@ export async function restoreBackup({
   idb,
   createFile,
   journal = null,
+  active = () => {},
 } = {}) {
   if (!username) throw new BackupError("no-account", "请先登录账号再恢复备份");
-  const plan = planRestoreWrites(manifest, { username, existingEntries });
-  const errors = [...plan.localStorageConflicts];
+  const errors = [];
+  let plannedLocal = 0, plannedIdb = 0;
+  const sampleLocal = [];
+  const existingMap = new Map(existingEntries.map(item => [item.key, item.value]));
+  async function* localWrites() {
+    for (const [group, records] of Object.entries(manifest.sections.localStorage)) {
+      for await (const record of records) {
+        active();
+        const partial = { sections: { localStorage: { [group]: [record] } } };
+        const plan = planRestoreWrites(partial, { username, existingEntries, existingMap });
+        errors.push(...plan.localStorageConflicts);
+        for (const write of plan.localStorageWrites) { plannedLocal++; if (sampleLocal.length < 5) sampleLocal.push(write); yield write; }
+      }
+    }
+  }
+  async function* idbWrites() {
+    for (const [db, stores] of Object.entries(manifest.sections.indexedDB)) {
+      for (const [store, records] of Object.entries(stores)) {
+        if (!IDB_INCLUDED[db]?.[store]) continue;
+        for await (const record of records) {
+          active();
+          if (!record?.value || record.value.username != null && record.value.username !== username) continue;
+          yield { storage: 'indexedDB', db, store, key: record.key, value: record.value };
+        }
+      }
+    }
+  }
   let writtenLocal = 0;
   let writtenIdb = 0;
 
@@ -549,17 +583,20 @@ export async function restoreBackup({
   }
 
   // write localStorage
-  for (const write of plan.localStorageWrites) {
+  for await (const write of localWrites()) {
     try {
-      await writeLocal({ ...write, restoringUsername: username });
-      writtenLocal += 1;
+      active();
+      const written = await writeLocal({ ...write, restoringUsername: username });
+      existingMap.set(write.key, write.value);
+      if (written !== false) writtenLocal += 1;
     } catch (error) {
       errors.push({ storage: "localStorage", key: write.key, message: error instanceof Error ? error.message : String(error) });
     }
   }
 
   // write IndexedDB（含附件还原）
-  for (const write of plan.idbWrites) {
+  for await (const write of idbWrites()) {
+    plannedIdb++;
     try {
       const exists = await idb.listExists(write.db, write.store, write.key);
       const storeRule = IDB_INCLUDED[write.db]?.[write.store];
@@ -600,6 +637,7 @@ export async function restoreBackup({
         const file = createFile(decoded.fileMeta, decoded.bytes);
         value = { ...value, file };
       }
+      active();
       await idb.put(write.db, write.store, write.key, value);
       writtenIdb += 1;
     } catch (error) {
@@ -609,7 +647,8 @@ export async function restoreBackup({
 
   // Imported materials require their sources and answers to survive restore together.
   if (idb?.get) {
-    for (const write of plan.idbWrites.filter((w) => w.db === "wuliao-english" && (FORMAL_IMPORT_STORES.includes(w.store) || w.store === "custom-pdfs"))) {
+    for await (const write of idbWrites()) {
+      if (!(write.db === "wuliao-english" && (FORMAL_IMPORT_STORES.includes(write.store) || write.store === "custom-pdfs"))) continue;
       const value = write.value;
       const fileRefs = [value.sourceFileId, ...(value.content?.assets || []).map((a) => a.fileId)].filter(Boolean);
       for (const ref of fileRefs) if (!(await idb.get("wuliao-english", "import-files", ref))) errors.push({ storage: "indexedDB", code: "missing-import-reference", message: "导入资料缺少来源附件", key: ref });
@@ -622,7 +661,6 @@ export async function restoreBackup({
 
   // verify：抽样回读
   const verified = { local: 0, idb: 0 };
-  const sampleLocal = plan.localStorageWrites.slice(0, 5);
   for (const write of sampleLocal) {
     try {
       if (writeLocal.read && writeLocal.read(write.key) === write.value) verified.local += 1;
@@ -631,7 +669,7 @@ export async function restoreBackup({
       // 抽样失败不视为恢复失败（已报告错误则说明写入有问题）
     }
   }
-  if (plan.idbWrites.length && idb.sampleCount) {
+  if (plannedIdb && idb.sampleCount) {
     try {
       verified.idb = await idb.sampleCount(username);
     } catch {
@@ -653,7 +691,7 @@ export async function restoreBackup({
     ok,
     writtenLocal,
     writtenIdb,
-    skipped: plan.localStorageWrites.length + plan.idbWrites.length - writtenLocal - writtenIdb,
+    skipped: plannedLocal + plannedIdb - writtenLocal - writtenIdb,
     errors,
     verified,
     transactionBoundary: "localStorage 与 IndexedDB 无法共享单一事务；恢复采用 preflight → write → verify → journal，中途失败会如实上报。",
@@ -662,7 +700,7 @@ export async function restoreBackup({
 
 // ---------------- 浏览器适配器 ----------------
 
-export function defaultBackupSources({ storage = globalThis.localStorage, indexedDb = globalThis.indexedDB } = {}) {
+export function defaultBackupSources({ storage = globalThis.localStorage, indexedDb = globalThis.indexedDB, strict = false } = {}) {
   const entries = [];
   if (storage) {
     for (let index = 0; index < storage.length; index += 1) {
@@ -673,7 +711,7 @@ export function defaultBackupSources({ storage = globalThis.localStorage, indexe
   }
   return {
     entries: includeDurableEntries(entries, storage),
-    databases: indexedDb ? () => readAllIndexedDb(indexedDb) : async () => [],
+    databases: indexedDb ? () => strict ? readPagedBackupDatabases(indexedDb) : readAllIndexedDb(indexedDb) : async () => [],
   };
 }
 
@@ -742,6 +780,40 @@ async function readAllIndexedDb(indexedDb, { strict = false } = {}) {
   return databases;
 }
 
+async function* readPagedBackupDatabases(indexedDb) {
+  for (const name of Object.keys(IDB_INCLUDED)) {
+    const db = await new Promise((resolve, reject) => {
+      const r = indexedDb.open(name); let missing = false;
+      r.onupgradeneeded = () => { missing = true; r.transaction.abort(); };
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => missing ? resolve(null) : reject(r.error);
+      r.onblocked = () => reject(new BackupError('backup-read-failed', `${name} 读取受阻`));
+    });
+    if (!db) continue;
+    try {
+      const stores = Object.keys(IDB_INCLUDED[name]).filter(key => db.objectStoreNames.contains(key)).map(storeName => ({
+        name: storeName,
+        records: { async *[Symbol.asyncIterator]() {
+          let last;
+          while (true) {
+            const rows = await new Promise((resolve, reject) => {
+              const tx = db.transaction(storeName, 'readonly'), rows = [];
+              const r = tx.objectStore(storeName).openCursor(last === undefined ? null : IDBKeyRange.lowerBound(last, true));
+              r.onsuccess = () => { const c = r.result; if (c && rows.length < 64) { rows.push({ key: c.primaryKey, value: c.value }); if (rows.length < 64) c.continue(); } };
+              r.onerror = () => reject(r.error); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error || new Error('读取备份数据失败'));
+              tx.oncomplete = () => resolve(rows);
+            });
+            for (const row of rows) yield row;
+            if (rows.length < 64) break;
+            last = rows[rows.length - 1].key;
+          }
+        } },
+      }));
+      yield { name, stores };
+    } finally { db.close(); }
+  }
+}
+
 // Update backups must not turn an unreadable existing database into an empty backup.
 // Read account names without running credential migration or switching accounts.
 export async function readUpdateBackupSources({ storage = globalThis.localStorage, indexedDb = globalThis.indexedDB } = {}) {
@@ -801,10 +873,12 @@ export function defaultRestoreSources({ storage = globalThis.localStorage, index
     const prefix = `wuliao:user:${encodeURIComponent(username)}:`;
     const logicalKey = write.key.startsWith(prefix) ? write.key.slice(prefix.length) : write.key;
     if (storage === globalThis.localStorage && inkStorageReady(username) && isDurableInkKey(logicalKey)) {
+      if (readDurableInk(username, logicalKey) != null) return false;
       writeDurableInk(username, logicalKey, write.value);
       await flushDurableInk(username);
       return;
     }
+    if (storage.getItem(write.key) != null) return false;
     if (write.storage === "localStorage-legacy") {
       storage.setItem(write.key, write.value);
       // legacy 原始 key 只对 owner 账号可读；本设备无 owner 时标记当前账号
@@ -864,7 +938,8 @@ export function defaultRestoreSources({ storage = globalThis.localStorage, index
         try {
           await new Promise((resolve, reject) => {
             const transaction = db.transaction(storeName, "readwrite");
-            const request = transaction.objectStore(storeName).put(value);
+            const store = transaction.objectStore(storeName);
+            const request = store.keyPath === null ? store.add(value, key) : store.add(value);
             request.onsuccess = () => {};
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);

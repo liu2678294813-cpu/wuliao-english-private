@@ -124,4 +124,18 @@ for (let index = 0; index < obsoleteLinks.length; index++) {
   if (bundle.split(token).length !== 2) throw new Error('混淆词旧入口位置不唯一，已停止构建');
   bundle = bundle.replace(token, marker);
 }
+// Deduplicate the exact displayed meanings, including the relaxed fallback.
+const optionImport = 'import { uniqueScreeningOptions as wuliaoUniqueOptions } from "../screening-options.js";';
+if (!bundle.includes(optionImport)) bundle = optionImport + '\n' + bundle;
+const optionStart = bundle.indexOf('async function yo(');
+const optionEnd = bundle.indexOf('async function bo(', optionStart);
+if (optionStart < 0 || optionEnd <= optionStart) throw new Error('筛选选项生成入口缺失');
+bundle = bundle.slice(0, optionStart) + 'async function yo(e){const [word,pool]=await Promise.all([oo(e),uo]);return wuliaoUniqueOptions(word,pool,{similar:mo,shuffle:go})}' + bundle.slice(optionEnd);
+if (!bundle.includes('optionError:wuliaoOptionError')) {
+  bundle = bundle.replace('handleAnswer:y,handleSkip:b}=xo(', 'handleAnswer:y,handleSkip:b,optionError:wuliaoOptionError,handleRetry:wuliaoRetry}=xo(');
+  const quizHook = bundle.indexOf('optionError:wuliaoOptionError');
+  const quizReturn = bundle.indexOf('return h?', quizHook);
+  if (quizHook < 0 || quizReturn < 0) throw new Error('筛选异常界面入口缺失');
+  bundle = bundle.slice(0, quizReturn) + 'return wuliaoOptionError?_.createElement("section",{role:"alert",className:"max-w-3xl mx-auto p-6"},_.createElement("p",null,wuliaoOptionError),_.createElement("button",{onClick:wuliaoRetry,className:"px-4 py-3"},"重试"),_.createElement("button",{onClick:b,className:"px-4 py-3"},"跳过本题（不记答错）")):h?' + bundle.slice(quizReturn + 'return h?'.length);
+}
 await writeFile(bundlePath, bundle, "utf8");
