@@ -12,20 +12,33 @@ export function createInkTileRenderer({ createWorker, drawFallback, drawOverlay 
   const pending = new Map();
   const queued = new Map();
 
+  function runFallback(job) {
+    const current = () => !disposed && pending.get(job.tile) === job;
+    const appendedCount = job.appended.length;
+    const finish = () => {
+      if (!current()) return;
+      for (const stroke of job.appended.slice(appendedCount)) drawOverlay(job.tile, stroke, job.data);
+      pending.delete(job.tile);
+    };
+    const result = drawFallback(job.tile, { ...job.data, strokes: [...job.data.strokes, ...job.appended] }, current);
+    if (result?.then) result.then(finish, () => { if (current()) pending.delete(job.tile); });
+    else finish();
+  }
+
   function fallback() {
     disabled = true;
     worker?.terminate();
     worker = null;
     active = null;
     const jobs = [...pending.values()];
-    pending.clear();
     queued.clear();
-    for (const job of jobs) drawFallback(job.tile, { ...job.data, strokes: [...job.data.strokes, ...job.appended] });
+    for (const job of jobs) runFallback(job);
   }
 
   function pump() {
     if (active || disposed || !queued.size) return;
-    const job = queued.values().next().value;
+    let job;
+    for (const candidate of queued.values()) if (!job || (candidate.data.priority ?? 0) < (job.data.priority ?? 0)) job = candidate;
     queued.delete(job.tile);
     active = job;
     try {
@@ -68,14 +81,20 @@ export function createInkTileRenderer({ createWorker, drawFallback, drawOverlay 
           else disabled = true;
         } catch { disabled = true; }
       }
-      if (disabled) { drawFallback(tile, data); return; }
       const job = { id: ++sequence, tile, data, appended: [] };
       pending.set(tile, job);
+      if (disabled) { runFallback(job); return; }
       queued.set(tile, job);
       pump();
     },
     append(tile, stroke) { pending.get(tile)?.appended.push(stroke); },
     hasPending(tile) { return pending.has(tile); },
+    get scratchBytes() {
+      if (!disabled) return active ? active.tile.width * active.tile.height * 8 : 0;
+      let bytes = 0;
+      for (const job of pending.values()) bytes += job.tile.width * job.tile.height * 4;
+      return bytes;
+    },
     cancel(tile) { pending.delete(tile); queued.delete(tile); },
     dispose() {
       disposed = true;
@@ -101,6 +120,13 @@ export function createInkTileBitmapCache(maxBytes, release) {
   };
   return {
     take, clear,
+    has(index) { return entries.has(index); },
+    invalidate(indices) {
+      for (const index of indices) {
+        const tile = take(index);
+        if (tile) release(tile);
+      }
+    },
     put(index, tile) {
       const old = take(index);
       if (old && old !== tile) release(old);
@@ -109,5 +135,7 @@ export function createInkTileBitmapCache(maxBytes, release) {
       while (bytes > maxBytes) release(take(entries.keys().next().value));
     },
     get bytes() { return bytes; },
+    get size() { return entries.size; },
+    get maxBytes() { return maxBytes; },
   };
 }

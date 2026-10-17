@@ -38,7 +38,31 @@ export function createDeepInkTileIndex({ tileHeight, overlap, projectStroke, bou
   let buckets = new Map();
   const records = new WeakMap();
   const empty = [];
+  function addSource(source, info, geometry) {
+    let record = records.get(source);
+    if (!record || record.geometry !== geometry || record.points !== source.points) {
+      const stroke = projectStroke(source);
+      record = { geometry, points: source.points, stroke, bounds: boundsForStroke(stroke) };
+      records.set(source, record);
+    }
+    const padding = Math.max(overlap, (Number(source.width) || 3) * 2.2);
+    const last = Math.max(0, Math.ceil(info.contentHeight / tileHeight) - 1);
+    const first = Math.max(0, Math.floor((record.bounds.minY * info.contentHeight - padding) / tileHeight));
+    const end = Math.min(last, Math.floor((record.bounds.maxY * info.contentHeight + padding) / tileHeight));
+    for (let index = first; index <= end; index++) {
+      if (!buckets.has(index)) buckets.set(index, []);
+      buckets.get(index).push(record);
+    }
+  }
   return {
+    append(previousStrokes, strokes, added, info, geometry) {
+      if (!previous || previous.strokes !== previousStrokes || previous.geometry !== geometry
+        || previous.width !== info.contentWidth || previous.height !== info.contentHeight
+        || strokes.length !== previousStrokes.length + added.length) return false;
+      for (const source of added) addSource(source, info, geometry);
+      previous = { strokes, geometry, width: info.contentWidth, height: info.contentHeight };
+      return true;
+    },
     sync(strokes, info, geometry) {
       const { contentWidth, contentHeight } = info;
       if (previous?.strokes === strokes && previous.geometry === geometry
@@ -65,5 +89,6 @@ export function createDeepInkTileIndex({ tileHeight, overlap, projectStroke, bou
       previous = { strokes, geometry, width: contentWidth, height: contentHeight };
     },
     forTile(index) { return buckets.get(index) || empty; },
+    indices() { return [...buckets.keys()]; },
   };
 }

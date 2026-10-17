@@ -7,3 +7,4 @@
 .long-sentence-page .annotation-toolbar > *{flex-shrink:0}
 .long-sentence-page .annotation-toolbar button{min-height:48px;color:inherit}
 .long-sentence-page .annotation-toolbar button.active{background:#e2eee6;color:#28573e}
+.long-sentence-page fieldset{border:0;padding:0;margin:0;min-width:0}.long-sentence-page legend{font-size:21px;font-weight:650;margin-bottom:16px}.ls-setup .ls-count{margin-top:0;justify-content:flex-start}.ls-setup p{line-height:1.7}.ls-word span{overflow-wrap:anywhere}.ls-word small[lang=en]{max-width:480px;line-height:1.55;margin-top:4px}

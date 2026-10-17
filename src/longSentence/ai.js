@@ -4,6 +4,9 @@ import { createAiRequestLifecycle } from "../aiRequestLifecycle.js";
 import { fingerprintAiInput } from "../aiTasks.js";
 import { getCurrentUsername } from "../userData.js";
 import { LongSentenceValidationError, normalizeSources, normalizeWords, parseLongSentenceJson, validateCount, validateEvaluation, validateGeneratedBatch } from "./validator.js";
+import { assertLongSentenceSelection } from "./sourceBatch.js";
+import { ANALYSIS_VERSION, VERIFY_VERSION, buildSourceAnalysisMessages, validateSourceAnalysis, selectRequirements,
+  generationCoverageInstruction, validateCoverageCandidates, buildCoverageVerifyMessages, validateCoverageVerification } from "./coverage.js";
 
 export const LONG_SENTENCE_GENERATE_PROMPT_VERSION = "long-sentence.generate.v1";
 export const LONG_SENTENCE_EVALUATE_PROMPT_VERSION = "long-sentence.evaluate.v2";
@@ -47,6 +50,7 @@ export function buildEvaluateMessages(payload) {
 export function classifyLongSentenceAiError(error) {
   if (error?.name === "AbortError") return { code: "cancelled", message: "请求已取消", configureAi: false };
   const code = error?.code || (error?.status === 429 ? "rate_limit" : [401, 403].includes(error?.status) ? "auth_error" : "provider_error");
+  if (["selection_incompatible", "coverage_incomplete", "invalid_source_analysis", "invalid_requirements", "request_budget"].includes(code)) return { code, message: error.message, configureAi: false };
   if (["auth_error", "credential_unbound"].includes(code)) return { code, message: "当前 AI 凭据不可用，请打开统一 AI 设置检查", configureAi: true };
   const messages = { rate_limit: "AI 请求已达到限额，请稍后手动重试", timeout: "AI 请求超时，已保留当前选择、译文和笔迹", offline: "当前离线，已保存内容仍可查看和编辑", runtime_network_compatibility: "AI 网络连接失败，请检查网络后手动重试", invalid_json: "AI 返回格式有误，自动修复未成功", invalid_evaluation_schema: "AI 解析格式无效，请手动重试" };
   return { code, message: messages[code] || "AI 请求未完成，请稍后手动重试", configureAi: false };
@@ -81,6 +85,7 @@ export function createLongSentenceAiService({ callAi = providerCallAi, getProfil
           if (requestSignal.aborted || getUsername() !== username) throw aborted();
         };
         checkRequest();
+        if (identity.task === "generate-covered" && requests.length >= 5) throw new LongSentenceValidationError("request_budget", "已达到本次生成的请求上限，请手动重试");
         const response = await callAi({ profile, model: profile.modelId, messages, taskType, temperature: null, timeoutMs: 90000, signal: requestSignal });
         checkRequest();
         const lineage = { provider: response.providerId || profile.providerId, model: response.modelId || profile.modelId, requestId: response.requestId || `${lifecycleId}:${requests.length + 1}`, promptVersion: taskType, schemaVersion: LONG_SENTENCE_SCHEMA_VERSION, timestamp: now() };
@@ -95,6 +100,7 @@ export function createLongSentenceAiService({ callAi = providerCallAi, getProfil
   return {
     cancelAll() { lifecycle.cancelAll(); },
     generate(detail) {
+      if (detail.coverageVersion === 2) return generateCovered(detail);
       const sources = normalizeSources(detail.sources), words = normalizeWords(detail.words), count = validateCount(detail.count ?? 5);
       const excludedSentences = (detail.excludedSentences || []).map(String);
       const excludedFingerprints = (detail.excludedFingerprints || []).map(String);
@@ -182,6 +188,77 @@ export function createLongSentenceAiService({ callAi = providerCallAi, getProfil
       });
     },
   };
+
+  function generateCovered(detail) {
+    const sources = normalizeSources(detail.sources), words = normalizeWords(detail.words), count = validateCount(detail.count ?? 5);
+    assertLongSentenceSelection({ count: detail.contextCount || count, sources, words });
+    if (words.length > count * 3) throw new LongSentenceValidationError("invalid_words", "每个生成句最多承载三个目标词，请增加生成数量");
+    const excludedSentences = (detail.excludedSentences || []).map(String);
+    const excludedFingerprints = (detail.excludedFingerprints || []).map(String);
+    const identity = { task: "generate-covered", sessionId: detail.sessionId, requestVersion: detail.requestVersion ?? 1,
+      sources, words, count, excludedSentences, excludedFingerprints, requiredRequirementIds: detail.requiredRequirementIds,
+      sourceAnalysis: detail.sourceAnalysis, skill: detail.skill || null };
+    return run(identity, detail, async ({ invoke, check, requests, profile, username, signal }) => {
+      const progress = message => { check(); detail.onProgress?.(message); };
+      progress("正在分析来源难点…");
+      let analysis;
+      if (detail.sourceAnalysis) analysis = validateSourceAnalysis(detail.sourceAnalysis, sources);
+      else {
+        const messages = buildSourceAnalysisMessages(sources);
+        const analyze = async context => {
+          const result = await invoke(messages, ANALYSIS_VERSION, context?.signal || signal);
+          return validateSourceAnalysis(parseLongSentenceJson(result.raw), sources);
+        };
+        if (profile?.baseUrl && globalThis.localStorage && username === getCurrentUsername()) {
+          const fingerprint = fingerprintAiInput({ messages, provider: aiProviderResultIdentity(profile, profile.modelId),
+            model: profile.modelId, promptVersion: ANALYSIS_VERSION, schemaVersion: 2 });
+          const cached = await runCachedAiResult({ namespace: "long-sentence-source-analysis", fingerprint, username, signal,
+            force: Boolean(detail.forceSourceAnalysis), isCurrent: () => { try { check(); return true; } catch { return false; } },
+            request: analyze, validate: value => { validateSourceAnalysis(value, sources); return true; } });
+          analysis = cached.result;
+        } else analysis = await analyze();
+      }
+      check();
+      await detail.onSourceAnalysis?.(analysis);
+      check();
+      const requirements = selectRequirements(analysis, detail.requiredRequirementIds);
+      const fixedSources = sources.map(source => ({ ...source, difficulty: analysis.sources.find(entry => entry.sourceReviewId === source.sourceReviewId).difficulty }));
+      const input = { sources: fixedSources, words, count, excludedSentences, excludedFingerprints, skill: detail.skill || null };
+      const messages = buildGenerateMessages(input);
+      messages[0].content += `\n${generationCoverageInstruction({ analysis, requirements, count })}`;
+      let lastError, draftItems = [], result;
+      for (let round = 0; round < 2; round++) {
+        progress(round ? "正在修复未通过的句子…" : "正在生成整批练习…");
+        const prompt = round ? [...messages, { role: "user", content: `仅修复一次，返回完整的 ${count} 句并重新满足整批要求，不减少目标。${block("validation_error", lastError?.message || lastError?.code)}\n${block("previous_candidates", draftItems)}` }] : messages;
+        result = await invoke(prompt, "long-sentence.generate.v2");
+        try {
+          const raw = parseLongSentenceJson(result.raw);
+          draftItems = Array.isArray(raw.items) ? raw.items.map(item => ({ text: String(item?.text || "").slice(0, 2400) })) : [];
+          const items = validateCoverageCandidates(raw, input);
+          progress("正在检查全部词义与难点覆盖…");
+          const verified = await invoke(buildCoverageVerifyMessages({ items, sources: fixedSources, words, requirements }), VERIFY_VERSION);
+          const coverage = validateCoverageVerification(parseLongSentenceJson(verified.raw), { items, words, requirements });
+          const accepted = items.map((item, index) => ({ ...item, generationLineage: result.lineage,
+            trainingRequirements: requirements.filter(requirement => coverage.itemRequirements[index].includes(requirement.id)),
+            coverageReport: { version: 2, complete: true, verifierVersion: VERIFY_VERSION, wordCount: item.targetWordUses.length,
+              requirementCount: coverage.itemRequirements[index].length } }));
+          check();
+          await detail.onValidatedItems?.(accepted, { batchIndex: 0, requestVersion: detail.requestVersion ?? 1, sourceAnalysis: analysis, coverage });
+          check();
+          return { status: "complete", items: accepted, requestedCount: count, missingCount: 0, errors: [],
+            sourceAnalysis: analysis, coverage, raw: result.raw, lineage: result.lineage, requests };
+        } catch (error) {
+          if (!(error instanceof LongSentenceValidationError)) throw error;
+          if (error.code === "selection_incompatible") throw error;
+          lastError = error;
+        }
+      }
+      check();
+      const error = new LongSentenceValidationError("coverage_incomplete", `整批覆盖未通过，未替换已有练习。${lastError?.message || "请调整选择后重试。"}`);
+      error.draftItems = draftItems; error.sourceAnalysis = analysis;
+      throw error;
+    });
+  }
 }
 let defaultService;
 export function generateTraining(detail) { defaultService ||= createLongSentenceAiService(); return defaultService.generate(detail); }

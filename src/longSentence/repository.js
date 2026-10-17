@@ -4,6 +4,8 @@ import { localDateKey } from "../readingReview.js";
 import { sentenceTextFingerprint } from "../translationProgress.js";
 import { LONG_SENTENCE_STORES as S, listRecords } from "./data.js";
 import { nextSkillSchedule, skillIdFor } from "./schedule.js";
+import { assertLongSentenceSelection } from "./sourceBatch.js";
+import { itemTrainingScope, validateSourceAnalysis } from "./coverage.js";
 
 const own = (record, username) => record && record.username === username;
 const makeId = (username, type) => `${encodeURIComponent(username)}::long-sentence::${type}::${globalThis.crypto.randomUUID()}`;
@@ -82,18 +84,21 @@ function sourceSnapshot(source) {
 
 function wordSnapshot(word) {
   return { wordId: word.wordId || word.normalizedWord, word: word.word,
-    normalizedWord: word.normalizedWord || word.wordId, meaning: word.meaning || "", refs: word.refs || [] };
+    normalizedWord: word.normalizedWord || word.wordId, meaning: word.meaning || "", refs: word.refs || [],
+    ...(word.contextSentence ? { contextSentence: word.contextSentence } : {}) };
 }
 
 export async function createSession({ sources, words = [], count = 5, originContext = null, skillId = null,
-  extraPractice = false, now = Date.now() } = {}) {
+  extraPractice = false, coverageVersion = 1, sourceAnalysis = null, now = Date.now() } = {}) {
   if (!Number.isInteger(count) || count < 1 || count > 5) throw new Error("每次只能生成 1–5 句");
   if (!Array.isArray(sources) || !sources.length) throw new Error("请先选择困难原句");
+  if (coverageVersion === 2) assertLongSentenceSelection({ count, sources, words });
+  if (sourceAnalysis) validateSourceAnalysis(sourceAnalysis, sources);
   const username = currentAccount();
   const id = makeId(username, "session");
   const session = { id, sessionId: id, username, sources: sources.map(sourceSnapshot),
     words: words.map(wordSnapshot), count, originContext, skillId, extraPractice: Boolean(extraPractice),
-    itemIds: [], savedBatchKeys: [], currentItemIndex: 0, requestVersion: 0, status: "draft", createdAt: now, updatedAt: now };
+    coverageVersion, ...(sourceAnalysis ? { sourceAnalysis } : {}), itemIds: [], savedBatchKeys: [], currentItemIndex: 0, requestVersion: 0, status: "draft", createdAt: now, updatedAt: now };
   await transact([S.sessions], "readwrite", ({ stores, setResult }) => {
     stores[S.sessions].add(session);
     setResult(session);
@@ -101,7 +106,7 @@ export async function createSession({ sources, words = [], count = 5, originCont
   return session;
 }
 
-const sessionPatchKeys = new Set(["currentItemIndex", "requestVersion", "status", "selectedSourceIds", "selectedWordIds", "lastError", "originContext"]);
+const sessionPatchKeys = new Set(["currentItemIndex", "requestVersion", "status", "selectedSourceIds", "selectedWordIds", "lastError", "originContext", "sourceAnalysis", "generationDraft"]);
 export async function updateSession({ sessionId, patch = {}, expectedRequestVersion, now = Date.now() } = {}) {
   if (!sessionId || !patch || typeof patch !== "object" || Array.isArray(patch) || !Object.keys(patch).length
     || Object.keys(patch).some((key) => !sessionPatchKeys.has(key))
@@ -126,6 +131,13 @@ export async function updateSession({ sessionId, patch = {}, expectedRequestVers
       if (patch.currentItemIndex != null && patch.currentItemIndex >= Math.max(1, session.itemIds?.length || 0)) {
         fail(new Error("题号超出本次训练范围")); return;
       }
+      if (patch.sourceAnalysis) {
+        try { validateSourceAnalysis(patch.sourceAnalysis, session.sources); } catch (error) { fail(error); return; }
+      }
+      if (patch.generationDraft && (!Array.isArray(patch.generationDraft) || patch.generationDraft.length > 5
+        || patch.generationDraft.some(item => typeof item.text !== "string" || Object.keys(item).some(key => key !== "text")))) {
+        fail(new Error("候选草稿格式无效")); return;
+      }
       const next = { ...session, ...patch, updatedAt: now };
       stores[S.sessions].put(next);
       setResult(next);
@@ -146,7 +158,7 @@ function safeGeneratedItem(item) {
 }
 
 export async function saveGeneratedItems({ sessionId, requestVersion, items, replaceItemId = null,
-  batchIndex = 0, now = Date.now() } = {}) {
+  batchIndex = 0, coverage = null, now = Date.now() } = {}) {
   if (!sessionId || !Number.isInteger(requestVersion) || !Array.isArray(items) || !items.length || items.length > 5) {
     throw new Error("生成保存参数无效");
   }
@@ -172,6 +184,24 @@ export async function saveGeneratedItems({ sessionId, requestVersion, items, rep
       if (replaceIndex < 0 && activeIds.length + safeItems.length > session.count) {
         fail(new Error("生成句数量超过本次训练上限")); return;
       }
+      if (session.coverageVersion === 2) {
+        if (!coverage?.complete || coverage.version !== 2 || safeItems.some(item => !item.coverageReport?.complete || !Array.isArray(item.targetWordUses)
+          || !Array.isArray(item.trainingRequirements) || !item.trainingRequirements.length)
+          || (replaceIndex < 0 && (safeItems.length !== session.count || activeIds.length))) {
+          fail(new Error("整批词义和难点覆盖尚未完成，不能发布为正式训练")); return;
+        }
+        const usedWords = new Set(safeItems.flatMap(item => item.targetWordUses.map(use => use.wordId)));
+        if (replaceIndex < 0 && session.words.some(word => !usedWords.has(word.wordId))) {
+          fail(new Error("正式训练缺少已选词汇")); return;
+        }
+        const requiredIds = new Set(session.sourceAnalysis?.sources.flatMap(source => source.requirements.map(requirement => requirement.id)) || []);
+        const actualIds = new Set(safeItems.flatMap(item => item.trainingRequirements.map(requirement => requirement.id)));
+        if (!requiredIds.size || [...actualIds].some(id => !requiredIds.has(id))
+          || (replaceIndex < 0 && [...requiredIds].some(id => !actualIds.has(id)))) {
+          fail(new Error("正式训练缺少可核验的来源难点覆盖")); return;
+        }
+      }
+      const commit = () => {
       const createdItems = [];
       const attempts = [];
       for (const data of safeItems) {
@@ -199,11 +229,24 @@ export async function saveGeneratedItems({ sessionId, requestVersion, items, rep
       if (replaceIndex >= 0) activeIds.splice(replaceIndex, 1, createdItems[0].id);
       else activeIds.push(...createdItems.map((item) => item.id));
       const next = { ...session, itemIds: activeIds, savedBatchKeys: [...savedBatchKeys, batchKey],
+        ...(session.coverageVersion === 2 ? { generationDraft: [], coverageSummary: { version: 2, complete: true } } : {}),
         lastSavedRequestVersion: requestVersion,
         currentItemIndex: Math.min(Math.max(0, session.currentItemIndex || 0), Math.max(0, activeIds.length - 1)),
         status: activeIds.length >= session.count ? "ready" : "partial", updatedAt: now };
       stores[S.sessions].put(next);
       setResult({ session: next, items: createdItems, attempts });
+      };
+      if (session.coverageVersion === 2 && replaceItemId) {
+        readOwned(stores[S.items], replaceItemId, username, fail, oldItem => {
+          const words = new Set(safeItems[0].targetWordUses.map(use => use.wordId));
+          const requirements = new Set(safeItems[0].trainingRequirements.map(requirement => requirement.id));
+          if (oldItem.sessionId !== sessionId || oldItem.targetWordUses.some(use => !words.has(use.wordId))
+            || oldItem.trainingRequirements.some(requirement => !requirements.has(requirement.id))) {
+            fail(new Error("替换句未保留原题承担的词汇和结构难点")); return;
+          }
+          commit();
+        });
+      } else commit();
     });
   });
 }
@@ -345,8 +388,9 @@ export async function rateAttempt({ sessionId, attemptId, userRating, now = Date
             const evaluationId = attempt.latestEvaluationId;
             const evaluate = (evaluation) => {
               readonlyGet(stores[S.skills], skillId, username, fail, (existingSkill) => {
-                const skill = existingSkill || { id: skillId, username, sourceReviewIds: session.sources.map((s) => s.sourceReviewId),
-                  sources: session.sources, words: session.words,
+                const scope = item.coverageReport?.version === 2 ? itemTrainingScope(item, session) : { sources: session.sources, words: session.words };
+                const skill = existingSkill ? { ...existingSkill, ...(item.coverageReport?.version === 2 ? scope : {}) } : { id: skillId, username, sourceReviewIds: scope.sources.map((s) => s.sourceReviewId),
+                  ...scope,
                   structureFingerprint: item.structureFingerprint || "", attemptCount: 0, masteredStage: 0,
                   lapseCount: 0, nextDueAt: null, sentenceHistory: [], sentenceHistoryFingerprints: [], createdAt: now };
                 const transition = nextSkillSchedule({ skill, attemptId, userRating,

@@ -42,6 +42,8 @@ async function originalSnapshot(page, user) {
   return page.evaluate(({ prefix, resource, passage }) => Object.fromEntries([`wuliao:deep-answers:${resource}:${passage}:first`, `wuliao:deep-answers:${resource}:${passage}:redo`, `wuliao:question-evidence:${resource}:${passage}`, `wuliao:reading-flow:${resource}:${passage}`].map(key => [key, localStorage.getItem(prefix + key)])), { prefix: scoped(user, ""), resource: RESOURCE, passage: PASSAGE });
 }
 async function reviewState(page, user) { return page.evaluate(key => JSON.parse(localStorage.getItem(key)).sentences, scoped(user, `wuliao:translation-progress:${RESOURCE}:${PASSAGE}`)); }
+const COVERED_SENTENCE_C = "Even though the investigators whose findings reinforce earlier warnings concede that budget limits constrain further inspections, their report indicates that the coastal bridges remain unsafe.";
+const COVERED_SENTENCE_D = "The conservators, who must constrain chemical treatments to protect pigments that reinforce the painting's authenticity, argue that restoration should proceed only if independent tests confirm the canvas can withstand it.";
 function block(messages, tag) { const content = messages.filter(message => message.role === "user").map(message => message.content).join("\n"); const match = new RegExp(`<${tag}>\\s*([\\s\\S]*?)\\s*</${tag}>`).exec(content); return match ? JSON.parse(match[1]) : null; }
 async function mockAi(page, { failEvaluate = false, failGenerate = false, badGenerationItem = false, holdSupplement = false } = {}) {
   const requests = []; let generationCalls = 0, evaluateCalls = 0;
@@ -49,6 +51,20 @@ async function mockAi(page, { failEvaluate = false, failGenerate = false, badGen
   const supplementGate = holdSupplement ? new Promise(resolve => { releaseSupplement = resolve; }) : null;
   await page.route("https://api.deepseek.com/**", async route => {
     const body = route.request().postDataJSON(); requests.push(body);
+    const analyzing = block(body.messages, "DATA_sources");
+    const verifying = block(body.messages, "DATA_verification");
+    if (analyzing) {
+      const result = { sources: analyzing.map(source => ({ sourceReviewId: source.sourceReviewId, difficulty: 2,
+        requirements: [{ description: "来源的从句与主句关系", evidence: [source.text], relation: "保留从属关系及主句结论", commonPitfall: "混淆从句与主句" }] })) };
+      await route.fulfill({ json: { choices: [{ message: { content: JSON.stringify(result) } }] } }); return;
+    }
+    if (verifying) {
+      const result = { items: verifying.items.map((item, index) => ({ index, natural: true, aboveSource: true,
+        addedComplexityEvidence: [item.text], reason: "固定测试样例结构有效",
+        wordChecks: verifying.words.filter(word => item.text.includes(word.word)).map(word => ({ wordId: word.wordId, surfaceForm: word.word, meaningMatches: true, reason: "固定词义" })),
+        requirementChecks: verifying.requirements.filter(requirement => item.sourceReviewIds.includes(requirement.sourceReviewId)).map(requirement => ({ requirementId: requirement.id, evidence: [item.text], reason: "固定结构关系" })) })) };
+      await route.fulfill({ json: { choices: [{ message: { content: JSON.stringify(result) } }] } }); return;
+    }
     const sources = block(body.messages, "source_sentences");
     if (sources) {
       generationCalls += 1;
@@ -62,8 +78,8 @@ async function mockAi(page, { failEvaluate = false, failGenerate = false, badGen
         return;
       }
       const parameters = block(body.messages, "generation_parameters"), words = block(body.messages, "target_words");
-      const candidates = [TRAINING_SENTENCE_B, TRAINING_SENTENCE_C, QUALITY_CORPUS[1].generated];
-      const items = Array.from({ length: parameters.count }, (_, index) => qualityItem({ text: candidates[(generationCalls - 1 + index) % candidates.length], sourceReviewIds: [sources[0].sourceReviewId], fingerprint: parameters.structureFingerprint || TRAINING_FINGERPRINT, uses: generationCalls === 1 && index === 0 ? words.slice(0, 2).map(({ wordId, word }) => ({ wordId, word, surfaceForm: word })) : [] }));
+      const candidates = [TRAINING_SENTENCE_B, COVERED_SENTENCE_C, COVERED_SENTENCE_D, QUALITY_CORPUS[1].generated, QUALITY_CORPUS[2].generated];
+      const items = Array.from({ length: parameters.count }, (_, index) => qualityItem({ text: candidates[(generationCalls - 1 + index) % candidates.length], sourceReviewIds: sources.filter((_source, sourceIndex) => Math.floor(sourceIndex / 2) % parameters.count === index).slice(0,2).map(source => source.sourceReviewId).concat(sources.length <= index * 2 ? [sources[0].sourceReviewId] : []), fingerprint: parameters.structureFingerprint || TRAINING_FINGERPRINT, uses: words.filter(word => candidates[(generationCalls - 1 + index) % candidates.length].includes(word.word)).slice(0, 3).map(({ wordId, word }) => ({ wordId, word, surfaceForm: word })) }));
       // Difficulty covers all selected sources; actual structural references
       // can remain a subset of that selection.
       for (const item of items) {
@@ -84,6 +100,7 @@ async function mockAi(page, { failEvaluate = false, failGenerate = false, badGen
 async function openGenerator(page, { count = 1 } = {}) {
   await navTo(page, "长难句"); await expect(loc(page, "page")).toBeVisible();
   await page.getByRole("tab", { name: "生成训练", exact: true }).click();
+  await loc(page, "count").selectOption("1");
   await loc(page, "source-checkbox").first().check();
   for (const word of ["reinforce", "constrain"]) await page.getByRole("checkbox", { name: new RegExp(word) }).check();
   const countControl = loc(page, "count");
@@ -107,6 +124,7 @@ test("主链：原句困难 → 新句书写翻译 → 自评隔离 → 原句�
   const before = await originalSnapshot(page, username), unknownBefore = await rows(page, "unknown-words");
   const mock = await mockAi(page); await openGenerator(page);
   await expect(loc(page, "sentence")).toHaveText(TRAINING_SENTENCE_B);
+  await page.screenshot({ path: "artifacts/long-sentence-ink-20261017/long-sentence-training.png", fullPage: true });
   expect(mock.generationCount()).toBe(1); expect(mock.evaluationCount()).toBe(0);
   await expect(loc(page, "evaluation")).toHaveCount(0);
   expect(await page.locator("body").textContent()).not.toContain(TRAINING_EVALUATION.referenceTranslation);
@@ -142,43 +160,45 @@ test("主链：原句困难 → 新句书写翻译 → 自评隔离 → 原句�
   await page.reload(); await navTo(page, "长难句");
   await page.getByRole("tab", { name: "待复习", exact: true }).click();
   await page.getByRole("button", { name: "开始复习", exact: true }).first().click();
-  await expect(loc(page, "sentence")).toHaveText(TRAINING_SENTENCE_C);
-  const last = (await rows(page, "long-sentence-items")).find(item => item.text === TRAINING_SENTENCE_C);
+  await expect(loc(page, "sentence")).toHaveText(COVERED_SENTENCE_C);
+  const last = (await rows(page, "long-sentence-items")).find(item => item.text === COVERED_SENTENCE_C);
   expect(last.structureFingerprint).toBe(TRAINING_FINGERPRINT); expect(last.difficultyMetadata.targetDifficulty).toBeGreaterThan(last.difficultyMetadata.sourceDifficulty);
   expect(last.text).not.toBe(TRAINING_SOURCE); expect(last.text).not.toBe(TRAINING_SENTENCE_B);
 });
 
-test("坏项只补缺失条目，成功句不重生成", async ({ page }) => {
+test("坏项修复整批且验证通过后一次发布，不创建部分正式练习", async ({ page }) => {
   const user = await createAccount(page); await seedOriginalFacts(page, user);
   const mock = await mockAi(page, { badGenerationItem: true }); await openGenerator(page, { count: 2 });
   expect(mock.generationCount()).toBe(2);
-  expect(block(mock.requests[1].messages, "generation_parameters").count).toBe(1);
-  await expect.poll(async () => (await rows(page, "long-sentence-items")).length).toBe(2);
-  const items = await rows(page, "long-sentence-items"); expect(items.some(item => item.text === TRAINING_SENTENCE_B)).toBe(true);
+  const generations = mock.requests.filter(request => block(request.messages, "generation_parameters"));
+  expect(block(generations[1].messages, "generation_parameters").count).toBe(2);
+  expect(await rows(page, "long-sentence-items")).toHaveLength(2);
+  expect((await rows(page, "long-sentence-sessions"))[0].status).toBe("ready");
+  await expect(loc(page, "page")).toContainText("通过 AI 覆盖复核");
 });
 
-test("补齐仍在请求时首批已落库，补齐失败和刷新均保留成功句", async ({ page }) => {
+test("覆盖修复失败不提前创建练习，刷新保留候选草稿与完整目标", async ({ page }) => {
   const user = await createAccount(page); await seedOriginalFacts(page, user);
   const mock = await mockAi(page, { badGenerationItem: true, holdSupplement: true });
-  await openGenerator(page, { count: 2 });
+  await navTo(page, "长难句"); await loc(page, "count").selectOption("2");
+  await loc(page, "source-checkbox").first().check();
+  await loc(page, "generate").click();
   await expect.poll(() => mock.generationCount()).toBe(2);
-  await expect.poll(async () => (await rows(page, "long-sentence-items")).length).toBe(1);
-  await expect(loc(page, "translation")).not.toBeEditable();
-  const preserved = (await rows(page, "long-sentence-items"))[0];
-  expect(preserved.text).toBe(TRAINING_SENTENCE_B);
+  expect(await rows(page, "long-sentence-items")).toHaveLength(0);
+  await expect(loc(page, "translation")).toHaveCount(0);
   mock.releaseSupplement();
-  await expect(loc(page, "page")).toContainText("仍缺 1 句");
-  await expect(loc(page, "translation")).toBeEditable();
-  expect(mock.generationCount()).toBe(2);
+  await expect(page.getByRole("button", { name: "重试生成", exact: true })).toBeEnabled();
+  expect(await rows(page, "long-sentence-items")).toHaveLength(0);
   await page.reload();
-  await expect(loc(page, "sentence")).toHaveText(TRAINING_SENTENCE_B);
-  expect((await rows(page, "long-sentence-items")).map(item => item.id)).toEqual([preserved.id]);
+  await expect(loc(page, "page")).toContainText("已保留来源和选择");
+  expect((await rows(page, "long-sentence-sessions"))[0].count).toBe(2);
 });
 
 test("生成 503 不自动重试，空训练保留五句目标，手动重试仍请求五句", async ({ page }) => {
   const user = await createAccount(page); await seedOriginalFacts(page, user);
   const mock = await mockAi(page, { failGenerate: true });
   await navTo(page, "长难句");
+  await loc(page, "count").selectOption("1");
   await loc(page, "source-checkbox").first().check();
   await loc(page, "count").selectOption("5");
   await loc(page, "generate").click();
@@ -186,14 +206,14 @@ test("生成 503 不自动重试，空训练保留五句目标，手动重试仍
   await expect(retry).toBeEnabled();
   await expect(loc(page, "page").getByRole("alert")).toBeVisible();
   expect(mock.generationCount()).toBe(1);
-  expect(block(mock.requests[0].messages, "generation_parameters").count).toBe(5);
+  expect(block(mock.requests.filter(request => block(request.messages, "generation_parameters"))[0].messages, "generation_parameters").count).toBe(5);
   const firstSession = (await rows(page, "long-sentence-sessions"))[0];
   expect(firstSession.count).toBe(5);
   await retry.click();
   await expect.poll(() => mock.generationCount()).toBe(2);
   await expect(retry).toBeEnabled();
   expect(mock.generationCount()).toBe(2);
-  expect(block(mock.requests[1].messages, "generation_parameters").count).toBe(5);
+  expect(block(mock.requests.filter(request => block(request.messages, "generation_parameters"))[1].messages, "generation_parameters").count).toBe(5);
   const sessions = await rows(page, "long-sentence-sessions");
   expect(sessions).toHaveLength(1); expect(sessions[0].id).toBe(firstSession.id); expect(sessions[0].count).toBe(5);
   expect(await rows(page, "long-sentence-items")).toHaveLength(0);
@@ -207,6 +227,7 @@ test("来源在页面加载后变更时阻止生成，不发送旧句给 AI", as
   const user = await createAccount(page); await seedOriginalFacts(page, user);
   const mock = await mockAi(page);
   await navTo(page, "长难句");
+  await loc(page, "count").selectOption("1");
   await loc(page, "source-checkbox").first().check();
   await page.evaluate(async resourceId => {
     const db = await new Promise((resolve, reject) => { const request = indexedDB.open("wuliao-english"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
@@ -294,6 +315,7 @@ test("429 保留草稿和笔迹，主动重试才调用；解析有误保留旧�
 test("多选半选、草稿和书写刷新恢复、离线浏览与多宽度不溢出", async ({ page, context }) => {
   const user = await createAccount(page); await seedOriginalFacts(page, user, { secondDifficult: true }); await mockAi(page);
   await navTo(page, "长难句"); await expect(loc(page, "source-checkbox")).toHaveCount(2);
+  await loc(page, "count").selectOption("1");
   await loc(page, "source-checkbox").first().check();
   expect(await loc(page, "page").locator("input[type=checkbox]").evaluateAll(elements => elements.some(element => element.indeterminate))).toBe(true);
   await openGenerator(page); await drawAnalysis(page);
@@ -318,13 +340,13 @@ test("额外练习与换句不推进正式调度，关闭入口保留训练及�
   await expect.poll(async () => (await rows(page, "long-sentence-skills")).length).toBe(1);
   const formalSkill = (await rows(page, "long-sentence-skills"))[0];
   await page.getByRole("button", { name: "现在再来一句", exact: true }).click();
-  await expect(loc(page, "sentence")).toHaveText(TRAINING_SENTENCE_C);
+  await expect(loc(page, "sentence")).toHaveText(COVERED_SENTENCE_C);
   await loc(page, "translation").fill("这是额外练习的译文。"); await loc(page, "submit").click();
   await expect(loc(page, "evaluation")).toBeVisible(); await page.getByRole("button", { name: "仍困难", exact: true }).click();
   await expect.poll(async () => (await rows(page, "long-sentence-attempts")).filter(attempt => attempt.userRating).length).toBe(2);
   expect((await rows(page, "long-sentence-skills"))[0]).toEqual(formalSkill);
   await page.getByRole("button", { name: "换一句", exact: true }).click();
-  await expect(loc(page, "sentence")).toHaveText(QUALITY_CORPUS[1].generated);
+  await expect(loc(page, "sentence")).toHaveText(COVERED_SENTENCE_D);
   expect((await rows(page, "long-sentence-attempts")).filter(attempt => attempt.userRating)).toHaveLength(2);
   expect((await rows(page, "long-sentence-skills"))[0]).toEqual(formalSkill);
   const items = await rows(page, "long-sentence-items"), original = await originalSnapshot(page, user);
@@ -359,6 +381,7 @@ test("large saved source selection is bounded without deleting any selected orig
       };
     }
     localStorage.setItem(key, JSON.stringify(progress));
+    localStorage.setItem(`wuliao:user:${encodeURIComponent(user)}:wuliao:long-sentence:selection`, JSON.stringify({ count: 1, countConfirmed: true, selected: Object.entries(progress.sentences).filter(([_key, state]) => state.reviewStatus === "needs_review").map(([sentenceKey]) => JSON.stringify([resourceId, passageId, sentenceKey])), selectedWordIds: [] }));
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open("wuliao-english");
       request.onsuccess = () => resolve(request.result);
@@ -385,14 +408,38 @@ test("large saved source selection is bounded without deleting any selected orig
   const mock = await mockAi(page);
   await navTo(page, "长难句");
   await expect(loc(page, "source-checkbox")).toHaveCount(80);
-  await page.getByRole("checkbox", { name: /全选可用原句/ }).check();
-  await loc(page, "count").selectOption("1");
-  await loc(page, "generate").click();
-  await expect(loc(page, "sentence")).toBeVisible();
-  expect(block(mock.requests[0].messages, "source_sentences")).toHaveLength(6);
-  await expect(loc(page, "page")).toContainText("本次从 80 条已选原句中使用 6 条");
-  await page.getByRole("button", { name: "返回训练列表" }).click();
+  await expect(loc(page, "generate")).toBeDisabled();
+  await expect(loc(page, "page")).toContainText("选择超过当前句数的额度");
+  await expect(loc(page, "page")).toContainText("原句 80/2");
+  expect(mock.requests).toHaveLength(0);
+  await navTo(page, "首页");
   const selection = await page.evaluate(user => JSON.parse(localStorage.getItem(`wuliao:user:${encodeURIComponent(user)}:wuliao:long-sentence:selection`)), user);
   expect(selection.selected).toHaveLength(80);
-  expect(selection.batchCursor).toBe(6);
+});
+
+test("先选句数、陌生词上限与减少句数保留选择，桌面及手机布局可用", async ({ page }) => {
+  const user = await createAccount(page); await seedOriginalFacts(page, user, { secondDifficult: true });
+  await page.evaluate(async ({ user, resourceId, passageId }) => {
+    const db = await new Promise((resolve,reject) => { const req = indexedDB.open("wuliao-english"); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); });
+    try { await new Promise((resolve,reject) => { const tx=db.transaction("unknown-words","readwrite");
+      for (const word of ["adapt","assess"]) tx.objectStore("unknown-words").put({ id: `${user}:${word}`, username:user, resourceId,passageId,word,normalizedWord:word,meaning:"测试词义",occurrences:[],createdAt:Date.now() });
+      tx.oncomplete=resolve; tx.onabort=tx.onerror=()=>reject(tx.error); }); } finally { db.close(); }
+  }, { user, resourceId: RESOURCE, passageId: PASSAGE });
+  await navTo(page, "长难句");
+  await expect(loc(page,"source-checkbox").first()).toBeDisabled();
+  await loc(page,"count").selectOption("1");
+  await page.getByRole("checkbox", { name: /全选可用原句/ }).check();
+  for (const word of ["reinforce","constrain","adapt"]) await page.getByRole("checkbox", { name: new RegExp(word) }).check();
+  await page.getByRole("checkbox", { name: /assess/ }).click();
+  await expect(page.getByRole("checkbox", { name: /assess/ })).not.toBeChecked();
+  await expect(loc(page,"page")).toContainText("最多选择 3 个词或义项");
+  await page.screenshot({ path: "artifacts/long-sentence-ink-20261017/long-sentence-selection-desktop.png", fullPage:true });
+  await loc(page,"count").selectOption("2");
+  await page.getByRole("checkbox", { name: /assess/ }).check();
+  await loc(page,"count").selectOption("1");
+  await expect(loc(page,"generate")).toBeDisabled();
+  for (const word of ["reinforce","constrain","adapt","assess"]) await expect(page.getByRole("checkbox", { name: new RegExp(word) })).toBeChecked();
+  await page.setViewportSize({ width:390,height:844 });
+  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+  await page.screenshot({ path: "artifacts/long-sentence-ink-20261017/long-sentence-selection-mobile.png", fullPage:true });
 });

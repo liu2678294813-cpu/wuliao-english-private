@@ -30,7 +30,13 @@ export function normalizeSources(sources) {
 }
 export function normalizeWords(words = []) {
   if (!Array.isArray(words)) fail("invalid_words");
-  return words.map(word => typeof word === "string" ? { wordId: word.toLowerCase(), word } : { wordId: String(word.wordId || word.id || word.word || ""), word: String(word.word || word.text || "").trim() }).filter(word => word.wordId && word.word);
+  const normalized = words.map(word => typeof word === "string" ? { wordId: word.toLowerCase(), word } : {
+    wordId: String(word.wordId || word.id || word.word || ""), word: String(word.word || word.text || "").trim(),
+    ...(word.meaning ? { meaning: String(word.meaning) } : {}),
+    ...(word.contextSentence ? { contextSentence: String(word.contextSentence) } : {}),
+  }).filter(word => word.wordId && word.word);
+  if (new Set(normalized.map(word => word.wordId)).size !== normalized.length) fail("invalid_words", "所选词汇含有重复训练目标");
+  return normalized;
 }
 // A deterministic near-copy gate: substantial retained word order, even with
 // a few synonyms substituted, is not a new transfer exercise.
@@ -43,6 +49,40 @@ export function isNearCopy(left, right) {
   return row[b.length] / Math.min(a.length, b.length) >= 0.78;
 }
 function hasSurface(text, surface) { return (` ${normalize(text)} `).includes(` ${normalize(surface)} `); }
+export const containsWordSurface = hasSurface;
+const IRREGULAR_FORMS = {
+  be: ["am", "is", "are", "was", "were", "been", "being"], have: ["has", "had"], do: ["does", "did", "done"],
+  go: ["goes", "went", "gone"], come: ["came"], become: ["became"], get: ["got", "gotten"], make: ["made"],
+  take: ["took", "taken"], give: ["gave", "given"], see: ["saw", "seen"], know: ["knew", "known"],
+  think: ["thought"], find: ["found"], bring: ["brought"], buy: ["bought"], seek: ["sought"], teach: ["taught"],
+  write: ["wrote", "written"], speak: ["spoke", "spoken"], choose: ["chose", "chosen"], break: ["broke", "broken"],
+  begin: ["began", "begun"], grow: ["grew", "grown"], lead: ["led"], leave: ["left"], feel: ["felt"],
+  hold: ["held"], keep: ["kept"], build: ["built"], send: ["sent"], spend: ["spent"], lose: ["lost"],
+  rise: ["rose", "risen"], fall: ["fell", "fallen"], run: ["ran"], eat: ["ate", "eaten"], pay: ["paid"],
+  child: ["children"], person: ["people"], man: ["men"], woman: ["women"], foot: ["feet"], tooth: ["teeth"],
+  mouse: ["mice"], analysis: ["analyses"], phenomenon: ["phenomena"], criterion: ["criteria"],
+  good: ["better", "best"], well: ["better", "best"], bad: ["worse", "worst"], little: ["less", "least"],
+};
+export function isAllowedWordForm(word, form) {
+  const lemma = normalize(word), surface = normalize(form);
+  if (!lemma || !surface) return false;
+  if (lemma.includes(" ")) {
+    const [head, ...tail] = lemma.split(" "), parts = surface.split(" ");
+    return parts.length === tail.length + 1 && parts.slice(1).join(" ") === tail.join(" ") && isAllowedWordForm(head, parts[0]);
+  }
+  if (surface.includes(" ")) return false;
+  const forms = [lemma, ...(IRREGULAR_FORMS[lemma] || []), `${lemma}s`, `${lemma}es`, `${lemma}ed`, `${lemma}d`, `${lemma}ing`, `${lemma.replace(/e$/, "")}ing`, `${lemma.replace(/y$/, "i")}ed`, `${lemma.replace(/y$/, "ie")}s`, `${lemma}er`, `${lemma}est`, `${lemma.replace(/y$/, "i")}er`, `${lemma.replace(/y$/, "i")}est`];
+  if (/[aeiou][bcdfghjklmnpqrstvz]$/.test(lemma)) forms.push(`${lemma}${lemma.at(-1)}ed`, `${lemma}${lemma.at(-1)}ing`, `${lemma}${lemma.at(-1)}er`, `${lemma}${lemma.at(-1)}est`);
+  return forms.includes(surface);
+}
+export function selectedWordOccurrences(text, word) {
+  const tokens = normalize(text).split(" "), length = normalize(word).split(" ").length, result = [];
+  for (let start = 0; start + length <= tokens.length; start++) {
+    const surface = tokens.slice(start, start + length).join(" ");
+    if (isAllowedWordForm(word, surface)) result.push({ start, end: start + length, surface });
+  }
+  return result;
+}
 export function validateGeneratedItem(item, { sources, words = [], excludedSentences = [], excludedFingerprints = [], skill = null }) {
   exactKeys(item, ["text", "sourceReviewIds", "targetWordUses", "structureFingerprint", "difficultyPolicy", "difficultyMetadata"], "invalid_item_schema");
   if (!string(item.text) || item.text.length > 2400 || !/[a-zA-Z]/.test(item.text) || /[\u3400-\u9fff]/u.test(item.text)) fail("invalid_english");
@@ -62,10 +102,7 @@ export function validateGeneratedItem(item, { sources, words = [], excludedSente
     const selected = wordMap.get(use.wordId);
     if (!selected || normalize(selected.word) !== normalize(use.word) || !string(use.surfaceForm) || !hasSurface(item.text, use.surfaceForm) || used.has(use.wordId)) fail("invalid_word_usage");
     // Permit usual inflections, but not arbitrary words claimed as occurrences.
-    const lemma = normalize(use.word), surface = normalize(use.surfaceForm);
-    const stems = [lemma, `${lemma}s`, `${lemma}es`, `${lemma}ed`, `${lemma}d`, `${lemma}ing`, `${lemma.replace(/e$/, "")}ing`, `${lemma.replace(/y$/, "i")}ed`, `${lemma.replace(/y$/, "ie")}s`];
-    if (/[aeiou][bcdfghjklmnpqrstvz]$/.test(lemma)) stems.push(`${lemma}${lemma.at(-1)}ed`, `${lemma}${lemma.at(-1)}ing`);
-    if (!stems.includes(surface)) fail("invalid_word_usage");
+    if (!isAllowedWordForm(use.word, use.surfaceForm)) fail("invalid_word_usage");
     used.add(use.wordId);
   }
   // Declaring zero uses cannot conceal more than three selected words.

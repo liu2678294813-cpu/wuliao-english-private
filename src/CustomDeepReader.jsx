@@ -1492,6 +1492,33 @@ function drawTileHistory(tile, data) {
   for (const stroke of data.strokes) drawTileStroke(tile, stroke, data);
 }
 
+// Keep the existing bitmap visible while old WebViews replay history in small
+// slices. Only the completed, still-current result replaces the canvas.
+function drawTileHistoryProgressively(tile, data, isCurrent) {
+  const staging = document.createElement("canvas");
+  staging.width = tile.width; staging.height = tile.height;
+  let index = 0;
+  return new Promise(resolve => {
+    const finish = () => { staging.width = 0; staging.height = 0; resolve(); };
+    const step = () => {
+      if (!isCurrent()) { finish(); return; }
+      const started = performance.now();
+      while (index < data.strokes.length) {
+        drawTileStroke(staging, data.strokes[index++], data);
+        if (performance.now() - started >= 4) break;
+      }
+      if (index < data.strokes.length) { window.requestAnimationFrame(step); return; }
+      if (isCurrent()) {
+        const context = tile.getContext("2d", { alpha: true });
+        context.clearRect(0, 0, tile.width, tile.height);
+        context.drawImage(staging, 0, 0);
+      }
+      finish();
+    };
+    window.requestAnimationFrame(step);
+  });
+}
+
 function normalizedStrokeBounds(stroke) {
   const cached = strokeBoundsCache.get(stroke);
   if (cached) return cached;
@@ -1924,6 +1951,7 @@ export default function CustomDeepReader({
   const inkTileRendererRef = useRef(null);
   const inkTileGeometryRef = useRef(null);
   const inkTileBitmapCacheRef = useRef(null);
+  const inkPrewarmTimerRef = useRef(null);
   if (!inkTileBitmapCacheRef.current) {
     inkTileBitmapCacheRef.current = createInkTileBitmapCache(32 * 1024 * 1024, releaseInkTile);
   }
@@ -1938,6 +1966,21 @@ export default function CustomDeepReader({
   const inkRenderFrameRef = useRef(null);
   const inkGeometrySnapshotRef = useRef(null);
   const inkGeometryAdapterRef = useRef(null);
+  useEffect(() => {
+    if (!(import.meta.env.DEV || import.meta.env.VITE_E2E_PROBES === "1")) return undefined;
+    const inspect = () => {
+      let visibleBytes = 0;
+      for (const canvas of inkTilesRef.current.values()) visibleBytes += canvas.width * canvas.height * 4;
+      for (const canvas of [viewportPreviewCanvasRef.current, tailCanvasRef.current]) if (canvas) visibleBytes += canvas.width * canvas.height * 4;
+      const cachedBytes = inkTileBitmapCacheRef.current.bytes;
+      const scratchBytes = inkTileRendererRef.current?.scratchBytes || 0;
+      return { visibleBytes, cachedBytes, scratchBytes, estimatedBitmapBytes: visibleBytes + cachedBytes + scratchBytes,
+        visibleTiles: inkTilesRef.current.size, cachedTiles: inkTileBitmapCacheRef.current.size,
+        strokes: strokesRef.current.length, points: strokesRef.current.reduce((count, stroke) => count + (stroke.points?.length || 0), 0) };
+    };
+    window.__deepInkRenderStats = inspect;
+    return () => { if (window.__deepInkRenderStats === inspect) delete window.__deepInkRenderStats; };
+  }, [passage.id, storageUsername]);
   const inkStageRenderPendingRef = useRef(false);
   const strokesRef = useRef([]);
   const inkChanges = useMemo(() => createDeepInkChangeSource(), [resource.id, passage.id]);
@@ -2494,6 +2537,8 @@ export default function CustomDeepReader({
       inkRenderFrameRef.current = null;
       if (inkTileSyncFrameRef.current) window.cancelAnimationFrame(inkTileSyncFrameRef.current);
       inkTileSyncFrameRef.current = null;
+      if (inkPrewarmTimerRef.current) window.clearTimeout(inkPrewarmTimerRef.current);
+      inkPrewarmTimerRef.current = null;
       for (const [, tile] of [...inkTilesRef.current.entries()]) {
         tile.width = 0;
         tile.height = 0;
@@ -3215,12 +3260,23 @@ export default function CustomDeepReader({
 
   function persistStrokes(next, { skipTileRedraw = false, structural = false } = {}) {
     const previous = strokesRef.current;
+    const appendOnly = skipTileRedraw && !structural && next.length === previous.length + 1;
+    const previousDisplayed = appendOnly ? displayedStageInk(previous) : null;
     strokesRef.current = next;
-    inkTileBitmapCacheRef.current.clear();
-    const previousSet = new Set(previous);
-    const nextSet = new Set(next);
-    const added = next.filter((stroke) => !previousSet.has(stroke));
-    const removed = previous.filter((stroke) => !nextSet.has(stroke));
+    let added, removed;
+    if (appendOnly) { added = [next.at(-1)]; removed = []; }
+    else {
+      const previousSet = new Set(previous), nextSet = new Set(next);
+      added = next.filter(stroke => !previousSet.has(stroke));
+      removed = previous.filter(stroke => !nextSet.has(stroke));
+    }
+    const info = currentInkTileWindow();
+    invalidateInkTileHistory([...added, ...removed], info);
+    // An append in the final displayed stage preserves compositing order.
+    // Earlier-stage changes keep the established full index rebuild path.
+    if (appendOnly && info && (previous.length ? previousDisplayed.at(-1) === previous.at(-1) : !previousDisplayed.length)) {
+      inkTileIndexRef.current.append(previousDisplayed, displayedStageInk(next), added, info, inkGeometrySnapshotRef.current?.byId);
+    }
     // Only units whose ink presence changes need a React update. The full
     // immutable history belongs to the canvas/save refs, not workbook state.
     startTransition(() => {
@@ -3822,13 +3878,14 @@ export default function CustomDeepReader({
       inkTileRendererRef.current = createInkTileRenderer({
         createWorker: () => typeof Worker === "function" && typeof OffscreenCanvas === "function"
           ? new Worker(new URL("./ink/inkTileWorker.js", import.meta.url), { type: "module" }) : null,
-        drawFallback: drawTileHistory,
+        drawFallback: drawTileHistoryProgressively,
         drawOverlay: drawTileStroke,
       });
     }
     inkTileRendererRef.current.paint(tile, {
       strokes: candidates.map((record) => record.stroke), width: info.contentWidth, height: info.contentHeight,
       ratio: info.ratio, offsetY: index * INK_TILE_HEIGHT, pixelWidth: tile.width, pixelHeight: tile.height,
+      priority: Math.abs(index * INK_TILE_HEIGHT + INK_TILE_HEIGHT / 2 - ((info.start + info.end + 1) * INK_TILE_HEIGHT / 2)),
     });
   }
 
@@ -3919,7 +3976,44 @@ export default function CustomDeepReader({
         drawInkTile(tile, index, renderedStrokes, info);
       }
     }
+    queueInkPrewarm(info);
     return true;
+  }
+
+  function queueInkPrewarm(info) {
+    if (inkPrewarmTimerRef.current) window.clearTimeout(inkPrewarmTimerRef.current);
+    inkPrewarmTimerRef.current = window.setTimeout(() => {
+      inkPrewarmTimerRef.current = null;
+      if (activeInkRef.current || !committedInkLayerRef.current) return;
+      const geometry = inkGeometrySnapshotRef.current?.byId;
+      const strokes = displayedStageInk();
+      inkTileIndexRef.current.sync(strokes, info, geometry);
+      const center = (info.start + info.end) / 2;
+      const candidates = inkTileIndexRef.current.indices().filter(index => !inkTilesRef.current.has(index) && !inkTileBitmapCacheRef.current.has(index))
+        .sort((left, right) => Math.abs(left - center) - Math.abs(right - center));
+      const next = () => {
+        inkPrewarmTimerRef.current = null;
+        if (activeInkRef.current || geometry !== inkGeometrySnapshotRef.current?.byId || !committedInkLayerRef.current) return;
+        const index = candidates.shift();
+        if (index == null) return;
+        let visibleBytes = 0;
+        for (const tile of inkTilesRef.current.values()) visibleBytes += tile.width * tile.height * 4;
+        for (const tile of [viewportPreviewCanvasRef.current, tailCanvasRef.current]) if (tile) visibleBytes += tile.width * tile.height * 4;
+        const width = Math.max(1, Math.floor(info.contentWidth * info.ratio));
+        const height = Math.max(1, Math.floor(tileHeightFor(index, info.contentHeight) * info.ratio));
+        // Prepainting must not evict previous pages or multiply the memory cap.
+        if (visibleBytes + inkTileBitmapCacheRef.current.bytes + (inkTileRendererRef.current?.scratchBytes || 0)
+          + width * height * 12 > inkTileBitmapCacheRef.current.maxBytes) return;
+        if (!inkTilesRef.current.has(index) && !inkTileBitmapCacheRef.current.has(index)) {
+          const tile = document.createElement("canvas");
+          resizeInkCanvas(tile, info.contentWidth, tileHeightFor(index, info.contentHeight), info.ratio);
+          inkTileBitmapCacheRef.current.put(index, tile);
+          drawInkTile(tile, index, strokes, info);
+        }
+        if (candidates.length) inkPrewarmTimerRef.current = window.setTimeout(next, 32);
+      };
+      next();
+    }, 160);
   }
 
   function redrawTilesForStroke(stroke, withExtra = false) {
@@ -3994,6 +4088,7 @@ export default function CustomDeepReader({
     const removed = previousStrokes.filter((stroke) => !nextSet.has(stroke));
     const changed = [...added, ...removed];
     if (!changed.length) return;
+    invalidateInkTileHistory(changed, info);
     syncInkTiles(false);
     const renderedStrokes = displayedStageInk();
     const affected = new Set();
@@ -4017,6 +4112,20 @@ export default function CustomDeepReader({
       if (!tile) continue;
       drawInkTile(tile, index, renderedStrokes, info, dirty);
     }
+  }
+
+  function invalidateInkTileHistory(changed, info) {
+    if (!changed.length) return;
+    if (!info) { inkTileBitmapCacheRef.current.clear(); return; }
+    const wholePage = { ...info, start: 0, end: Math.max(0, Math.ceil(info.contentHeight / INK_TILE_HEIGHT) - 1) };
+    const affected = new Set();
+    for (const stroke of changed) {
+      const bounds = normalizedStrokeBounds(projectInkStroke(stroke));
+      const padding = Math.max(INK_TILE_OVERLAP, (Number(stroke.width) || 3) * 2.2);
+      const range = tileRangeForStroke(bounds, wholePage, { tileHeight: INK_TILE_HEIGHT, overlap: padding });
+      if (range) for (let index = range.first; index <= range.last; index++) affected.add(index);
+    }
+    inkTileBitmapCacheRef.current.invalidate(affected);
   }
 
   function scheduleCommittedInkRender() {

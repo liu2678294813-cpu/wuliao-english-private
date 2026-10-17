@@ -137,12 +137,14 @@ export async function listLearnedSources({ resources = postgraduateResources, cu
   return output;
 }
 
-export function aggregateSelectedWords(records, sources, selectedSourceIds = sources.map((source) => source.sourceReviewId)) {
+export function aggregateSelectedWords(records, sources, selectedSourceIds = sources.map((source) => source.sourceReviewId), { bySense = false } = {}) {
   const selected = new Set(selectedSourceIds);
   const articleIds = new Set(sources.filter((source) => selected.has(source.sourceReviewId) && source.status === "resolved")
     .map((source) => JSON.stringify([source.resourceId, source.passageId])));
   const words = new Map();
-  for (const record of records || []) {
+  const candidates = bySense ? (records || []).flatMap(record => record.senses?.length
+    ? record.senses.map(sense => ({ ...record, meaning: sense.meaning || "", contextSentence: sense.sentence || "" })) : [record]) : (records || []);
+  for (const record of candidates) {
     if (!articleIds.has(JSON.stringify([record.resourceId, record.passageId]))) continue;
     const normalized = normalizeUnknownWord(record.normalizedWord || record.word);
     if (!normalized) continue;
@@ -154,16 +156,18 @@ export function aggregateSelectedWords(records, sources, selectedSourceIds = sou
       chapter: record.chapter || "",
       occurrences: [...new Set(Array.isArray(record.occurrences) ? record.occurrences : [])],
     };
-    const existing = words.get(normalized);
+    const key = bySense ? `${normalized}::sense:${sentenceTextFingerprint(record.meaning || record.contextSentence || normalized)}` : normalized;
+    const existing = words.get(key);
     if (existing) {
       existing.refs.push(ref);
       if (!existing.meaning && record.meaning) existing.meaning = record.meaning;
     } else {
-      words.set(normalized, {
-        wordId: normalized,
+      words.set(key, {
+        wordId: key,
         word: record.word || normalized,
         normalizedWord: normalized,
         meaning: record.meaning || "",
+        ...(record.contextSentence ? { contextSentence: record.contextSentence } : {}),
         refs: [ref],
       });
     }

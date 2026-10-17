@@ -143,7 +143,7 @@ test("unsupported workers use the existing renderer, and bitmap cache has a hard
 const reader = readFileSync(new URL("../src/CustomDeepReader.jsx", import.meta.url), "utf8");
 
 test("tiles leaving the viewport during a layout change are discarded instead of cached", () => {
-  const body = reader.slice(reader.indexOf("  function syncInkTiles("), reader.indexOf("  function redrawTilesForStroke("));
+  const body = reader.slice(reader.indexOf("  function syncInkTiles("), reader.indexOf("  function queueInkPrewarm("));
   for (const emptyViewport of [false, true]) {
     const retired = { width: 900, height: 512, remove() {} };
     const kept = { width: 900, height: 512 };
@@ -160,6 +160,7 @@ test("tiles leaving the viewport during a layout change are discarded instead of
       releaseInkTile: tile => released.push(tile),
       tileHeightFor: () => 512, resizeInkCanvas() {}, displayedStageInk: () => [],
       drawInkTile: tile => redrawn.push(tile), INK_TILE_HEIGHT: 512,
+      queueInkPrewarm() {},
     };
     const sync = new Function(...Object.keys(deps), `${body}; return syncInkTiles;`)(...Object.values(deps));
     sync();

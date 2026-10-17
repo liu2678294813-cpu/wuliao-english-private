@@ -190,6 +190,26 @@ function fresh() {
 const SOURCE = { sourceReviewId: '["r","p","s"]', resourceId: "r", passageId: "p", sentenceKey: "s",
   text: "Although the report was delayed, the board approved it.", textFingerprint: "fp", status: "resolved" };
 
+test("v2 commits only fully covered batches and replacement preserves the old item's targets atomically", async () => {
+  const db = fresh();
+  const requirement = { id: `${SOURCE.sourceReviewId}::requirement:1`, sourceReviewId: SOURCE.sourceReviewId,
+    description: "让步关系", evidence: [SOURCE.text], relation: "让步与结论", commonPitfall: "误解因果" };
+  const sourceAnalysis = { version: 2, sources: [{ sourceReviewId: SOURCE.sourceReviewId, difficulty: 2, text: SOURCE.text, requirements: [requirement] }] };
+  const session = await repo.createSession({ sources: [SOURCE], words: [{ wordId: "report", word: "report" }], count: 1, coverageVersion: 2, sourceAnalysis });
+  const item = { text: "Although researchers had revised the report, its conclusions remained uncertain.", sourceReviewIds: [SOURCE.sourceReviewId], structureFingerprint: "concession", targetWordUses: [{ wordId: "report", word: "report", surfaceForm: "report" }], trainingRequirements: [requirement], coverageReport: { version: 2, complete: true } };
+  await assert.rejects(repo.saveGeneratedItems({ sessionId: session.id, requestVersion: 0, items: [item] }), /覆盖/);
+  assert.equal(db.stores.get(S.items).records.size, 0);
+  const saved = await repo.saveGeneratedItems({ sessionId: session.id, requestVersion: 0, items: [item], coverage: { version: 2, complete: true } });
+  assert.equal(saved.session.status, "ready");
+  await repo.updateSession({ sessionId: session.id, expectedRequestVersion: 0, patch: { requestVersion: 1 } });
+  await assert.rejects(repo.saveGeneratedItems({ sessionId: session.id, requestVersion: 1, replaceItemId: saved.items[0].id,
+    items: [{ ...item, text: "This replacement drops the selected vocabulary.", targetWordUses: [] }], coverage: { version: 2, complete: true } }), /替换句/);
+  const unchanged = await repo.loadSession(session.id);
+  assert.equal(unchanged.items[0].id, saved.items[0].id);
+  assert.equal(db.stores.get(S.items).records.size, 1);
+  assert.equal(db.stores.get(S.attempts).records.size, 1);
+});
+
 test("due skill index paginates beyond the first 500 and enforces account/date bounds", async () => {
   const db = fresh();
   const skills = db.stores.get(S.skills).records;
