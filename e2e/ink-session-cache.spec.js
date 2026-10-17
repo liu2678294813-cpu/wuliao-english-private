@@ -8,6 +8,12 @@ async function reopen(page) {
   await page.evaluate(() => { window.Capacitor.getPlatform = () => "android"; });
   await page.locator(".resource-card", { hasText: title }).first().locator(".resource-open").click();
   await expect(page.locator("#deep-translation")).toBeVisible();
+  await page.locator(".deep-reader-content").evaluate(element => {
+    element.dispatchEvent(new Event("reader-paper-will-layout"));
+    element.style.minHeight = "9000px";
+    element.dispatchEvent(new Event("reader-paper-layout"));
+    window.dispatchEvent(new Event("resize"));
+  });
 }
 async function prepare(page, count, fallback) {
   const username = await createAccount(page);
@@ -38,6 +44,15 @@ for (const { count, fallback } of [{ count: 500 }, { count: 2000 }, { count: 500
     const username = await prepare(page, count, fallback);
     await page.locator("#deep-translation .translation-paragraph").first().scrollIntoViewIfNeeded();
     await expect.poll(() => page.evaluate(() => window.__deepInkRenderStats().scratchBytes)).toBe(0);
+    // Use two explicit paper positions. The reader can restore scroll after
+    // opening; a paragraph that is already visible does not guarantee a remote
+    // viewport has ever existed, especially during dense-history startup.
+    const requestedY = await page.locator(".deep-reader-content").evaluate(element => Math.round(Math.min(
+      scrollY + element.getBoundingClientRect().top + Math.min(3500, Math.max(0, element.offsetHeight - 800)),
+      document.documentElement.scrollHeight - innerHeight)));
+    await page.evaluate(top => window.scrollTo(0, top), requestedY);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(requestedY);
+    await page.waitForTimeout(350);
     await page.evaluate(() => {
       window.__cacheClears = new Map(); window.__cacheParses = 0;
       const clear = CanvasRenderingContext2D.prototype.clearRect;
@@ -56,6 +71,7 @@ for (const { count, fallback } of [{ count: 500 }, { count: 2000 }, { count: 500
       await page.evaluate(top => window.scrollTo(0,top), top);
       await page.waitForTimeout(350);
       await expect.poll(() => page.evaluate(() => window.__deepInkRenderStats().scratchBytes)).toBe(0);
+      if (top !== warmY) await page.evaluate(() => { window.__priorInkTiles = [...document.querySelectorAll(".deep-ink-tile")]; });
     }
     const before = await page.evaluate(() => ({ parses: window.__cacheParses,
       clears: [...window.__cacheClears.values()].reduce((sum,n)=>sum+n,0), stats: window.__deepInkRenderStats() }));
@@ -66,11 +82,16 @@ for (const { count, fallback } of [{ count: 500 }, { count: 2000 }, { count: 500
       clears: [...window.__cacheClears.values()].reduce((sum,n)=>sum+n,0), stats: window.__deepInkRenderStats() }));
     expect(after.parses).toBe(before.parses);
     expect(after.clears).toBe(before.clears);
-    await page.locator(".deep-reader-content").evaluate(element => {
+    const retained = await page.locator(".deep-reader-content").evaluate(element => {
       const rect = element.getBoundingClientRect(), x = rect.left + 42, y = Math.max(260,rect.top + 100);
+      const localY = (y - rect.top) * element.offsetHeight / rect.height;
+      const unaffected = (window.__priorInkTiles || []).filter(canvas => !canvas.isConnected && Math.abs(parseFloat(canvas.style.top) - localY) > 1600);
       for (const [type, dy] of [["pointerdown",0],["pointermove",15],["pointermove",30],["pointerup",30]]) element.dispatchEvent(new PointerEvent(type,
         { bubbles:true,cancelable:true,pointerId:917,pointerType:"pen",isPrimary:true,button:0,buttons:type==="pointerup"?0:1,pressure:.5,clientX:x,clientY:y+dy }));
+      return { tested: unaffected.length, preserved: unaffected.filter(canvas => canvas.width > 0 && canvas.height > 0).length };
     });
+    expect(retained.tested).toBeGreaterThan(0);
+    expect(retained.preserved).toBe(retained.tested);
     await expect.poll(() => page.evaluate(() => window.__deepInkRenderStats().strokes)).toBe(count + 1);
     await page.waitForTimeout(150);
     await page.screenshot({ path: testInfo.outputPath("reader-ink.png") });
@@ -78,6 +99,8 @@ for (const { count, fallback } of [{ count: 500 }, { count: 2000 }, { count: 500
     await reopen(page);
     await expect.poll(() => page.evaluate(() => window.__deepInkRenderStats().strokes)).toBe(count + 1);
     expect(errors).toEqual([]);
-    await writeFile(testInfo.outputPath("cache-result.json"), JSON.stringify({ username, count, fallback: Boolean(fallback), before, after, restartCount: count + 1, errors },null,2));
+    const evidence = JSON.stringify({ username, count, fallback: Boolean(fallback), warmY, before, after, retained, restartCount: count + 1, errors },null,2);
+    await writeFile(testInfo.outputPath("cache-result.json"), evidence);
+    await writeFile(`artifacts/long-sentence-ink-20261017/ink-${count}${fallback ? "-fallback" : ""}.json`, evidence);
   });
 }

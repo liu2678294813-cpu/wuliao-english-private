@@ -286,6 +286,8 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
     const replacedItem = replacement ? value.items[session.currentItemIndex || 0] : null;
     const needed = replacement ? 1 : session.count;
     const requiredWords = replacedItem ? session.words.filter(word => replacedItem.targetWordUses.some(use => use.wordId === word.wordId)) : session.words;
+    const generationIsCurrent = () => alive.current && getCurrentUsername() === username
+      && bundleRef.current?.session.id === session.id && bundleRef.current.session.requestVersion === requestVersion;
     let savedBatches = 0;
     let result;
     try { result = await service.generate({ sessionId: session.id, requestVersion, coverageVersion: 2,
@@ -295,7 +297,7 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
       onProgress: setGenerationProgress,
       onSourceAnalysis: async sourceAnalysis => {
         const updated = await repository.updateSession({ sessionId: session.id, expectedRequestVersion: requestVersion, patch: { sourceAnalysis } });
-        if (alive.current) applyBundle({ ...bundleRef.current, session: updated });
+        if (generationIsCurrent()) applyBundle({ ...bundleRef.current, session: updated });
       },
       excludedSentences: [...session.sources.map(source => source.text), ...history.map(item => item.text), ...(currentSkill?.sentenceHistory || []), ...value.items.map(item => item.text)], excludedFingerprints: currentSkill?.sentenceHistoryFingerprints || [],
       onValidatedItems: async (items, metadata) => {
@@ -303,24 +305,27 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
         savedBatches += 1;
         await queue.current;
         const saved = await repository.loadSession(session.id);
+        if (!generationIsCurrent()) return;
         applyBundle(saved);
         const item = saved.items[saved.session.currentItemIndex || 0];
         translationRef.current = saved.attempts.find(attempt => attempt.id === item?.attemptId)?.userTranslation || "";
         setTranslation(translationRef.current);
       },
-      isCurrent: () => alive.current && getCurrentUsername() === username && bundleRef.current?.session.id === session.id && bundleRef.current.session.requestVersion === requestVersion });
+      isCurrent: generationIsCurrent });
     } catch (reason) {
-      if (alive.current && getCurrentUsername() === username && bundleRef.current?.session.requestVersion === requestVersion) {
+      if (generationIsCurrent()) {
         const updated = await repository.updateSession({ sessionId: session.id, expectedRequestVersion: requestVersion,
           patch: { status: value.items.length ? "ready" : "error", lastError: reason.message,
             ...(reason.draftItems ? { generationDraft: reason.draftItems } : {}) } });
-        applyBundle({ ...bundleRef.current, session: updated });
+        if (generationIsCurrent()) applyBundle({ ...bundleRef.current, session: updated });
       }
       throw reason;
     }
     if (!result.items.length) throw new Error("本次没有通过质量校验的句子，来源和草稿已保留，可手动重试。");
     await queue.current;
-    applyBundle(await repository.loadSession(session.id));
+    const completed = await repository.loadSession(session.id);
+    if (!generationIsCurrent()) return;
+    applyBundle(completed);
     setNotice(`整批已通过 AI 覆盖复核：${requiredWords.length} 个目标词、${result.coverage.requirementCount} 项难点。结构判断仍可反馈有误。`);
   }
 
