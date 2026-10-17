@@ -346,6 +346,16 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
     await repository.appendEvaluation({ sessionId: value.session.id, itemId: item.id, attemptId: attempt.id, evaluationVersion, submissionVersion: attempt.submissionVersion, evaluation: result.evaluation, rawOutput: result });
     applyBundle(await repository.loadSession(value.session.id));
   }
+
+  async function rebuildFromSources() {
+    await flush();
+    const previous = bundleRef.current.session;
+    const session = await repository.createSession({ sources: previous.sources, words: previous.words, count: previous.count,
+      coverageVersion: 2, originContext: previous.originContext, skillId: previous.skillId, extraPractice: previous.extraPractice });
+    applyBundle({ session, items: [], attempts: [], evaluations: [] });
+    await onOpenSession(session.id);
+    await generate({ supplement: true, forceSourceAnalysis: true });
+  }
   async function switchItem(index) {
     await flush();
     const value = bundleRef.current;
@@ -417,7 +427,7 @@ export default function LongSentencePage({ sessionId, onOpenSession, onCloseSess
         {bundle.session.generationDraft?.length > 0 && <p>已保留 {bundle.session.generationDraft.length} 条未通过的候选草稿，不计入正式练习。</p>}
         {bundle.session.coverageVersion === 2 ? <div className="ls-actions"><button type="button" disabled={busy || !available} onClick={() => run(() => generate({ supplement: true }))}>重试生成</button><button type="button" disabled={busy || !available} onClick={() => run(() => generate({ supplement: true, forceSourceAnalysis: true }))}>来源分析有误，重新分析并生成</button></div> : <p>这是旧版记录，请返回训练列表重新配置新版训练。已有作答仍可查看。</p>}
       </section>}
-      {bundle.session.sourceAnalysis && <details className="ls-card"><summary>本次来源难点（AI 分析）</summary><p>以下是原句结构的常见易错点，不代表你曾犯过这些错误。生成句的参考解析在提交后显示。</p>{bundle.session.sourceAnalysis.sources.map(source => <div key={source.sourceReviewId}><p lang="en">{source.text}</p>{source.requirements.map(requirement => <p key={requirement.id}>{requirement.description}；需保留：{requirement.relation}。常见易错：{requirement.commonPitfall}</p>)}</div>)}</details>}
+      {bundle.session.sourceAnalysis && <details className="ls-card"><summary>本次来源难点（AI 分析）</summary><p>以下是原句结构的常见易错点，不代表你曾犯过这些错误。生成句的参考解析在提交后显示。</p>{bundle.session.sourceAnalysis.sources.map(source => <div key={source.sourceReviewId}><p lang="en">{source.text}</p>{source.requirements.map(requirement => <p key={requirement.id}>{requirement.description}；需保留：{requirement.relation}。常见易错：{requirement.commonPitfall}</p>)}</div>)}{currentItem && <button type="button" disabled={busy} onClick={() => run(rebuildFromSources)}>来源分析有误，重建训练（保留本次记录）</button>}</details>}
       {currentItem && currentAttempt && <>
         {currentItem.coverageReport && <p className="ls-notice">本句已通过 AI 复核：{currentItem.coverageReport.wordCount} 个目标词、{currentItem.coverageReport.requirementCount} 项结构难点。整批要求合计覆盖。</p>}<div className="ls-session-bar"><strong>第 {(bundle.session.currentItemIndex || 0) + 1} / {bundle.items.length} 句</strong><div className="ls-actions"><button type="button" disabled={busy || !(bundle.session.currentItemIndex || 0)} onClick={() => run(() => switchItem((bundle.session.currentItemIndex || 0) - 1))}>上一句</button><button type="button" disabled={busy || (bundle.session.currentItemIndex || 0) >= bundle.items.length - 1} onClick={() => run(() => switchItem((bundle.session.currentItemIndex || 0) + 1))}>下一句</button><button type="button" disabled={busy} onClick={() => run(() => generate({ replacement: true }))}>换一句</button></div></div>
         <div className="ls-source-caption">来源：{bundle.session.sources.map(source => `${source.resourceTitle || source.resourceId} · ${source.articleLabel || source.passageId}`).join("；")}</div>

@@ -177,6 +177,21 @@ test("坏项修复整批且验证通过后一次发布，不创建部分正式�
   await expect(loc(page, "page")).toContainText("通过 AI 覆盖复核");
 });
 
+test("来源分析有误时创建新训练，原题、译文草稿和记录保持完整", async ({ page }) => {
+  const user = await createAccount(page); await seedOriginalFacts(page, user);
+  const mock = await mockAi(page); await openGenerator(page);
+  const oldItem = (await rows(page, "long-sentence-items"))[0];
+  await loc(page, "translation").fill("保留这次未提交的译文草稿。");
+  await page.getByText("本次来源难点（AI 分析）", { exact: true }).click();
+  await page.getByRole("button", { name: "来源分析有误，重建训练（保留本次记录）", exact: true }).click();
+  await expect(loc(page, "sentence")).toHaveText(COVERED_SENTENCE_C);
+  const sessions = await rows(page, "long-sentence-sessions"), items = await rows(page, "long-sentence-items"), attempts = await rows(page, "long-sentence-attempts");
+  expect(sessions).toHaveLength(2); expect(items).toHaveLength(2);
+  expect(items.find(item => item.id === oldItem.id).text).toBe(TRAINING_SENTENCE_B);
+  expect(attempts.find(attempt => attempt.id === oldItem.attemptId).userTranslation).toBe("保留这次未提交的译文草稿。");
+  expect(mock.requests.filter(request => block(request.messages, "DATA_sources"))).toHaveLength(2);
+});
+
 test("覆盖修复失败不提前创建练习，刷新保留候选草稿与完整目标", async ({ page }) => {
   const user = await createAccount(page); await seedOriginalFacts(page, user);
   const mock = await mockAi(page, { badGenerationItem: true, holdSupplement: true });
