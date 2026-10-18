@@ -10,10 +10,16 @@
 
 </div>
 
-> **Android 最新下载：[1.0.98 含文章统一版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 本版采用暖白与灰白界面、淡灰选中态和白底深色字按钮，减少重复标题与多层外框，统一手写图标，并增加作文类型和题材筛选。原有学习流程、正文排版与学习数据结构沿用。平板与 GitHub 使用同一份含文章 APK，沿用既有签名、包名与覆盖更新机制。请直接覆盖安装，不要卸载或清除数据。本轮完成本地浏览器和构建验证，未进行真实平板验收；具体测试结果见本版 Release。
+> **Android 最新下载：[1.0.99 含文章统一版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 修复逐句翻译与段末英文的手指加词、平板文本框首次落笔及工具切换衔接。手机固定使用键盘输入，隐藏手写和笔、橡皮等工具，保留“陌生词”；平板与电脑恢复原工具顺序：先输入方式，再笔、橡皮、陌生词。保留内置文章、词库和原有学习工具，沿用既有签名、包名与存储来源。请直接覆盖安装，不要卸载或清除数据。本轮采用隔离 Chrome 验证页面与打包产物，未进行真实平板验收；详细结果见本版 Release。
 
 <details>
 <summary>查看新版界面</summary>
+
+![1.0.99 恢复原顺序的平板工具栏](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/download/v1.0.99-full-20261019/ui-reading-toolbar.png)
+
+![1.0.99 手机键盘输入与陌生词](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/download/v1.0.99-full-20261019/ui-phone-keyboard.png)
+
+![1.0.99 首笔书写与键盘译文保留](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/download/v1.0.99-full-20261019/ui-translation-pen.png)
 
 ![新版首页](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/download/v1.0.98-full-20261018/ui-home.png)
 
