@@ -36,7 +36,7 @@ body :is(.primary-button, .today-library-cta, .stage-advance-button,
   .translation-step-button.primary, .writing-button-primary, .writing-button-secondary,
   .long-sentence-page .ls-primary, .source-button, .export-pdf-button,
   .today-archive-link, .archive-hub-actions button) {
-  border: 1px solid var(--ds-line-strong); background: #fffefa !important;
+  border: 1px solid var(--ds-line-strong); border-color: var(--ds-line-strong) !important; background: #fffefa !important;
   color: var(--ds-ink) !important; box-shadow: none; border-radius: 6px;
 }
 body :is(.primary-button, .writing-button-primary, .writing-button-secondary, .source-button, .export-pdf-button):hover:not(:disabled) {
@@ -101,7 +101,7 @@ body :is(.library-intro > div:first-child, .writing-library-hero > div:first-chi
 .ds-shell .library-count { display: none; } /* The live filtered count remains beside the filters. */
 .ds-shell .library-main { padding-top: 0; }
 .ds-shell .library-tabs { margin-bottom: 12px; }
-.ds-shell .library-action-strip { margin-bottom: 10px; padding-block: 12px; background: transparent; border: 0; }
+.ds-shell .library-action-strip { margin-bottom: 10px; padding-block: 12px; background: var(--ds-canvas); border: 0; }
 .ds-shell .library-tools { margin-block: 12px; }
 .ds-shell .year-heading { padding-block: 12px; }
 .ds-shell .resource-card, .ds-shell .cloze-resource-card, .writing-library .writing-question-card {
@@ -125,6 +125,7 @@ body .resource-number { color: #a8aaa6; }
 .ds-shell .vocabulary-shell-header { min-height: 0; padding: 10px 20px; gap: 16px; background: transparent; border-color: var(--ds-line); }
 .ds-shell .vocabulary-shell-header:has(> .back-button):not(:has(.vocab-screening-modes)) { padding-block: 0; border: 0; }
 .ds-shell .vocab-screening-modes button[aria-pressed="true"] { background: var(--ds-teal-wash); color: var(--ds-ink); border-color: #bfc1ba; }
+.ds-shell .vocab-screening-modes { background: #f0efeb; }
 /* Reading: keep the reserved row heights and paper coordinate system. */
 body .reader-page, .ds-shell .cloze-reader-page { background: var(--ds-canvas); }
 body .reader-page .reader-title small { display: none; }
@@ -139,6 +140,7 @@ body :is(.reader-page, .cloze-reader-page, .writing-workspace, .long-sentence-pa
   background: var(--ds-teal-wash); color: var(--ds-ink); border-color: var(--ds-line-strong);
 }
 body .annotation-toolbar .toolbar-icon { flex-shrink: 0; color: currentColor; }
+body .vocab-handwriting .annotation-toolbar :is(button.active, .tool-mode-picker button.active) { background: var(--ds-teal-wash); color: var(--ds-ink); }
 body .annotation-toolbar .toolbar-usage-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 /* The visual thickness shrinks 5%; slider hit-box, values and X coordinate stay intact. */
 body .tool-size-control .tool-size-range-track { transform: scaleY(.95); }
@@ -203,7 +205,7 @@ body .settings-pin :is(h3, p, input, button) { color: var(--ds-ink); }
 body .settings-pin :is(input, button) { background: #fffefa; border-color: var(--ds-line-strong); }
 body .ai-provider-tabs { background: #f0efeb; border-color: var(--ds-line); }
 body .ai-api-hint { background: #f0efeb; color: var(--ds-ink-soft); }
-body .ai-api-modal .ai-provider-panel { border: 0; border-radius: 0; padding-inline: 0; }
+body .ai-api-modal .provider-settings { border: 0; border-radius: 0; padding-inline: 0; }
 body .account-gate { background: var(--ds-canvas); }
 body .unified-import { background: transparent; border: 0; border-bottom: 1px solid var(--ds-line); border-radius: 0; }
 body .unified-import.is-open { padding: 12px 0; }
@@ -212,7 +214,7 @@ body :is(.import-heading h2, .settings-header h2, .ai-api-modal h2, .archive-hub
 body :is(.settings-header small, .ai-api-modal header small, .archive-hub header small) { display: none; }
 @media (min-width: 1100px) {
   .ds-shell .library-action-strip { height: 0; padding: 0; top: 0; overflow: visible; }
-  .ds-shell .library-header-actions { position: absolute; top: 18px; right: 0; }
+  .ds-shell .library-header-actions { position: absolute; top: 18px; right: 0; padding-left: 16px; background: var(--ds-canvas); }
   .ds-shell .library-main { padding-top: 12px; }
   .ds-shell .library-tabs { padding-right: 150px; }
   .ds-shell .home-page .study-planner-budget { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
@@ -237,6 +239,7 @@ body :is(.settings-header small, .ai-api-modal header small, .archive-hub header
   .ds-shell .home-page .planner-task-side { align-items: flex-start; justify-content: flex-start; }
   .ds-shell .home-page .planner-task-actions { flex-wrap: wrap; gap: 10px; }
   .ds-shell .home-page .overview-metrics article:nth-child(n) { padding: 12px; border: 0; border-bottom: 1px solid var(--ds-line); }
+  .ds-shell .home-page .overview-metrics article.overview-score { margin-right: 0; }
   .ds-shell .vocabulary-shell-header { padding-inline: 12px; gap: 8px; flex-wrap: wrap; }
   .ds-shell .writing-library-hero-actions { flex-wrap: wrap; }
 }

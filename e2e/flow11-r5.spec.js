@@ -92,7 +92,7 @@ test("精读：收起顶部后完整工具保留、正文上移、可展开恢�
       icon: icon && { width: icon.getBoundingClientRect().width, height: icon.getBoundingClientRect().height },
       color: color && { width: color.getBoundingClientRect().width, height: color.getBoundingClientRect().height, paddingX, visible: color.getBoundingClientRect().width - paddingX * 2, activeInset: css(color, "::after").inset, hitInset: css(color, "::before").inset },
       size: size && { height: size.getBoundingClientRect().height, alignItems: css(size).alignItems },
-      track: track && { height: track.getBoundingClientRect().height, visibleHeight: css(track, "::before").height },
+      track: track && { height: track.getBoundingClientRect().height, visibleHeight: css(track, "::before").height, hitHeight: parseFloat(css(track, "::after").height) * .95 },
       noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
     };
   });
@@ -115,7 +115,8 @@ test("精读：收起顶部后完整工具保留、正文上移、可展开恢�
   expect(toolbarVisual.color.hitInset).toBe("-2px");
   expect(Math.round(toolbarVisual.size.height)).toBe(40);
   expect(toolbarVisual.size.alignItems).toBe("center");
-  expect(Math.round(toolbarVisual.track.height)).toBe(36);
+  expect(toolbarVisual.track.height).toBeCloseTo(36 * .95, 1);
+  expect(toolbarVisual.track.hitHeight).toBeGreaterThanOrEqual(44);
   expect(toolbarVisual.track.visibleHeight).toBe("4px");
   expect(toolbarVisual.noHorizontalOverflow).toBe(true);
 
