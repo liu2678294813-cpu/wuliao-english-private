@@ -15,6 +15,7 @@ async function openSettings(page) {
 test("备份：导出 → 恢复 → 幂等（独立 context 隔离）", async ({ browser }) => {
   // ---------- context A：造数据并导出 ----------
   const contextA = await browser.newContext();
+  await contextA.addInitScript(() => { window.showSaveFilePicker = undefined; });
   const pageA = await contextA.newPage();
   const userA = await createAccount(pageA);
   const today = await pageA.evaluate(() => {

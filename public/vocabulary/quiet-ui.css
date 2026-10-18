@@ -1,0 +1,86 @@
+/* Same quiet UI as the host app. Learning rows, masks and feedback remain functional. */
+:root {
+  --vocab-ink: #252b30; --vocab-navy: #30373c; --vocab-muted: #687078;
+  --vocab-teal: #6b7069; --vocab-teal-deep: #414740; --vocab-teal-soft: #ecebe7;
+  --vocab-gold: #777a73; --vocab-paper: #fffefa; --vocab-canvas: #faf9f5;
+  --vocab-line: #e2e0da; --vocab-shadow: none; --vocab-radius: 6px;
+  --quiet-font: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+html body, html #root { background: var(--vocab-canvas); background-image: none; }
+html body { font-family: var(--quiet-font); -webkit-font-smoothing: antialiased; }
+html :is(button, select, label, .status-row, .topbar) { font-family: var(--quiet-font); letter-spacing: normal; }
+html :is(button, select) { font-weight: 500; }
+html input:is([type="checkbox"], [type="radio"]) { accent-color: #656963; }
+html :is(button, a, input, select, textarea):focus-visible { outline: 2px solid #6c706b; outline-offset: 3px; box-shadow: none !important; }
+html .topbar, html #root header.h-14 { background: #f5f4ef; color: var(--vocab-ink); box-shadow: none; border-color: var(--vocab-line); }
+html .topbar :is(h1, .back-link, .account), html #root header.h-14 h1 { color: var(--vocab-ink); font-family: var(--quiet-font); }
+html #root main.flex-1 { padding: 16px 24px 28px; }
+html #root main :is(.bg-white, .rounded-lg, .rounded-xl, .rounded-2xl) { box-shadow: none; }
+html #root .bg-blue-600, html .mark-button, html .primary-action, html .primary-link,
+html .secondary, html .secondary-action, html .skip-button,
+html .memory-mode-switches button, html #embeddedVocabActions :is(button,a), html #embeddedDashboardLibrary {
+  background: #fffefa; color: var(--vocab-ink); border: 1px solid #d3d3cc; box-shadow: none; border-radius: 6px;
+}
+html .memory-mode-switches button[aria-pressed="true"] { background: #eae9e4; color: var(--vocab-ink); border-color: #babdb5; }
+html button:disabled { opacity: .48; }
+/* Keep destructive red buttons and quiz correct/wrong feedback semantically distinct. */
+html #root .bg-red-600 { background: #a43d35; color: white; box-shadow: none; }
+html :is(.controls, .word-viewport, .review-toolbar, .review-quiz, .import-card) {
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+html .controls { padding: 0 0 12px; gap: 16px; border-bottom: 1px solid var(--vocab-line); }
+html .memory-list-controls h2,
+html .memory-list-controls label > span,
+html body[data-app-route="dashboard"] #root main h2,
+html body[data-app-route="lists"] #root main h2,
+html body[data-app-route="export"] #root main h2,
+html body[data-app-route="confusion"] #root main h2 {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: -1px; padding: 0;
+}
+html .memory-list-controls { gap: 0; }
+html .memory-controls-right { gap: 10px; }
+html .status-row { margin: 0; padding: 10px 0; font-weight: 400; }
+html #todaySummary, html #reviewRule, html .resume-note { padding: 0; background: transparent; color: var(--vocab-muted); font-weight: 400; }
+html .word-viewport { border-top: 1px solid var(--vocab-line); }
+html .word-row, html .word-row.is-alternate, html .spacer, html .rows-layer { background: var(--vocab-canvas); border-color: var(--vocab-line); }
+html .review-page { max-width: 1180px; padding: 16px 24px; }
+html .review-toolbar { flex-wrap: wrap; align-items: center; justify-content: flex-start; padding: 0 0 12px; gap: 12px 20px; border-bottom: 1px solid var(--vocab-line); }
+html .review-toolbar > label:first-child { width: min(440px, 100%); }
+html .review-toolbar > label:first-child > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+html .review-toolbar .auto-speak-control { padding: 0; border: 0; background: transparent; font-size: 14px; font-weight: 400; }
+html #reviewRule { margin-left: auto; font-size: 12px; }
+html .review-quiz { padding: 0; margin-top: 12px; }
+html .review-progress-head { padding-bottom: 6px; gap: 12px; }
+html .review-progress-head .date-badge { display: none; } /* Full date is already in the live select. */
+html .review-word { margin-block: 18px 20px; }
+html .review-option { background: #fffefa; color: var(--vocab-ink); border-color: #d7d7d0; }
+html .review-option.correct { border-color: var(--vocab-success); background: #edf8f3; color: #0c684a; }
+html .review-option.wrong { border-color: var(--vocab-danger); background: #fff2ef; color: #9d352b; }
+html .review-state { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+html body[data-app-route="dashboard"] #root main .grid.grid-cols-2 { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+html body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white { min-height: 100px; padding: 18px; }
+html body[data-app-route="dashboard"] #root main .grid.grid-cols-2 > .bg-white > :first-child { font-family: var(--quiet-font); }
+html body[data-app-route="dashboard"] #root main .space-y-3 { border: 0; background: transparent; box-shadow: none; }
+html body[data-app-route="dashboard"] #root main .space-y-3 > button:nth-child(n) { min-height: 42px; border-color: #d3d3cc; background: #fffefa; color: var(--vocab-ink); font-weight: 500; }
+html body[data-app-route="dashboard"] #root main > .embedded-dashboard-heading { grid-template-columns: minmax(0, 1fr) auto; gap: 20px; }
+html body[data-app-route="dashboard"] #root main .embedded-dashboard-heading > .space-y-3 { grid-column: 1; grid-row: 1; margin: 0; gap: 10px; }
+html body[data-app-route="dashboard"] #root main .embedded-dashboard-heading > #embeddedVocabActions { grid-column: 2; grid-row: 1; margin: 0; }
+html body[data-app-route="dashboard"] #root main .embedded-dashboard-heading > .grid.grid-cols-2 { grid-column: 1 / -1; grid-row: 2; margin: 0; }
+html .memory-list-controls { align-self: flex-start; padding-top: 0; }
+html .memory-list-controls select, html #dateSelect { border-color: #d3d3cc; background: #fffefa; color: var(--vocab-ink); }
+html body[data-app-route="lists"] #root main .space-y-2 > .bg-white,
+html body[data-app-route="confusion"] #root main .bg-white { border: 0; border-bottom: 1px solid var(--vocab-line); border-radius: 0; background: transparent; }
+html body[data-app-route="export"] #root main .max-w-2xl > .bg-white { border: 0; background: transparent; }
+html .import-card { padding-block: 16px; border-bottom: 1px solid var(--vocab-line); }
+html .import-card h2 { font-family: var(--quiet-font); font-size: 18px; font-weight: 600; }
+html .eyebrow { display: none; }
+@media (max-width: 760px) {
+  html body[data-app-route="dashboard"] #root main > .embedded-dashboard-heading { grid-template-columns: 1fr; gap: 12px; }
+  html body[data-app-route="dashboard"] #root main .embedded-dashboard-heading > #embeddedVocabActions { grid-column: 1; grid-row: 1; }
+  html body[data-app-route="dashboard"] #root main .embedded-dashboard-heading > .space-y-3 { grid-column: 1; grid-row: 2; grid-template-columns: 1fr; }
+  html body[data-app-route="dashboard"] #root main .embedded-dashboard-heading > .grid.grid-cols-2 { grid-row: 3; }
+  html #root main.flex-1, html .review-page { padding: 12px; }
+  html .review-toolbar { gap: 10px; }
+  html #reviewRule { margin-left: 0; white-space: normal; }
+  html .controls { flex-wrap: wrap; }
+}

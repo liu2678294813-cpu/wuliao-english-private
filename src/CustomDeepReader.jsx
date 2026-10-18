@@ -4496,7 +4496,6 @@ export default function CustomDeepReader({
           {!timedReadingActive && !(reviewActive && !reviewCheckUnlocked) && (
             <button className="source-button" onClick={() => saveBeforeNavigation(() => setShowSource(true), storageUsername)}>查看原 PDF</button>
           )}
-          <div className="reader-status"><span /> 本地模式</div>
         </div>
       </header>
 
@@ -4542,10 +4541,6 @@ export default function CustomDeepReader({
             </>
           ) : (
             <>
-              <span className="flow-task-label">
-                <small>当前任务</small>
-                {STAGE_LABELS[flowCurrentStage] || flowCurrentStage} · 第 {flowStageGroupIndex + 1}/6 组
-              </span>
               <button type="button" onClick={() => jumpTo(flowCurrentStage)}>继续</button>
             </>
           )}

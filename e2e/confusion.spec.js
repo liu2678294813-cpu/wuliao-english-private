@@ -211,7 +211,10 @@ test('screening saves the exact pair, old entry is removed, and skip creates no 
 
 test('real backup export and restore preserve legacy pairs, pending events and learning data', async ({ browser }) => {
   mkdirSync(artifacts, { recursive: true });
-  const contextA = await browser.newContext(), pageA = await contextA.newPage();
+  const contextA = await browser.newContext();
+  // Exercise the browser download path; native OS save dialogs cannot be automated.
+  await contextA.addInitScript(() => { window.showSaveFilePicker = undefined; });
+  const pageA = await contextA.newPage();
   const { username } = await setup(pageA); const seeded = await seedMemory(pageA, username);
   await pageA.evaluate(async ({ username, key }) => {
     const m = await import('/vocabulary/confusion-records.js');

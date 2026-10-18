@@ -9,6 +9,7 @@ import "./redesign/pages.css";
 import "./redesign/reader.css";
 import "./redesign/home-approved-a.css";
 import "./redesign/study-approved-a.css";
+import "./redesign/quiet-ui.css";
 import { initTelemetry } from "./telemetry/telemetry";
 import { getAppInfo } from "./appInfo";
 

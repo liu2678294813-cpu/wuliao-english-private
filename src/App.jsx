@@ -479,14 +479,10 @@ function Home({ onRead, onOpenWritingLibrary, onOpenClozeLibrary, onOpenResource
     <div className="home-page">
       <main className="home-main">
         <header className="home-greeting">
-          <div>
-            <h1>今日学习</h1>
-            <p><strong>{username}</strong>，从今天的任务开始，稳步完成学习计划。</p>
-          </div>
+          <h1 className="visually-hidden">今日学习</h1>
+          <Suspense fallback={null}><UnifiedImport username={username} onOpenLibrary={(target) => target === "writing" ? onOpenWritingLibrary() : target === "cloze" ? onOpenClozeLibrary() : onRead()} /></Suspense>
           <time>{formatLocalDate()}</time>
         </header>
-
-        <Suspense fallback={null}><UnifiedImport username={username} onOpenLibrary={(target) => target === "writing" ? onOpenWritingLibrary() : target === "cloze" ? onOpenClozeLibrary() : onRead()} /></Suspense>
 
         <TodayTasks
           onReady={onReady}

@@ -123,6 +123,7 @@ test("真实备份恢复全部 legacy exam 数据后静默保留，schema 与运
     return { entries, ink, schema };
   }, username);
   await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page.evaluate(() => { window.showSaveFilePicker = undefined; });
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "导出备份", exact: true }).click();
   const download = await downloading, chunks = [];

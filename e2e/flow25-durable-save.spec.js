@@ -183,6 +183,7 @@ test("IndexedDB ink remains compatible with backup v1 export and merge restore",
   await expect(page.locator(".library-page")).toBeVisible();
   const original = await ink(page, username);
   await page.getByRole("button", { name: "设置", exact: true }).click();
+  await page.evaluate(() => { window.showSaveFilePicker = undefined; });
   const downloadTask = page.waitForEvent("download");
   await page.getByRole("button", { name: "导出备份", exact: true }).click();
   const download = await downloadTask;

@@ -43,7 +43,8 @@ test('例句：范文拖选、收藏、重启、搜索、来源与删除；桌�
   const examples = page.getByRole('button', { name: '例句', exact: true });
   await expect(examples).toBeVisible();
   const a = await examples.boundingBox(), b = await page.getByRole('button', { name: '浏览历年真题', exact: true }).boundingBox();
-  expect(a.y + a.height).toBeLessThanOrEqual(b.y);
+  expect(Math.abs(a.y + a.height / 2 - b.y - b.height / 2)).toBeLessThanOrEqual(2);
+  expect(a.x + a.width).toBeLessThanOrEqual(b.x);
   await page.getByRole('button', { name: '查看 2023 年小作文 · Writing A' }).click();
   await page.getByRole('button', { name: '使用随应用范文', exact: true }).click();
   await expect(page.locator('.writing-reading-sheet')).toBeVisible();

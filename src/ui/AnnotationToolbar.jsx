@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import Icon from "./Icon";
 
 // 共享笔工具栏（唯一 source of truth）。
 // 精读 / 普通完形必须使用同一份实现与同一份视觉契约。
@@ -284,7 +285,7 @@ export function AnnotationToolbar({
       {onToggleNoteMode && (
         <div className="input-mode-picker" aria-label="输入方式">
           <button className={!noteMode ? "active" : ""} onClick={() => { if (noteMode) onToggleNoteMode(); }}><span className="toolbar-icon" aria-hidden="true">⌨</span>键盘输入</button>
-          <button className={noteMode ? "active" : ""} onClick={() => { if (!noteMode) onToggleNoteMode(); }}><span className="toolbar-icon" aria-hidden="true">✍</span>手写批注</button>
+          <button className={noteMode ? "active" : ""} onClick={() => { if (!noteMode) onToggleNoteMode(); }}><Icon name="handwriting" size={18} className="toolbar-icon" />手写批注</button>
         </div>
       )}
       <button type="button" className={tool === "pen" && handwritingMode ? "active" : ""} onClick={() => onTool("pen")}><span className="toolbar-icon" aria-hidden="true">✎</span>笔</button>
@@ -320,7 +321,7 @@ export function AnnotationToolbar({
       {!compactPenOnly && <span className="toolbar-divider" />}
       {!compactPenOnly && <button onClick={onUndo} disabled={canUndo === undefined ? !annotations.length : !canUndo}><span className="toolbar-icon" aria-hidden="true">↶</span>撤销</button>}
       {!compactPenOnly && showClear && <button onClick={onClear} disabled={clearDisabled}>{clearLabel}</button>}
-      {!compactPenOnly && <small>{!handwritingMode ? "键盘输入模式：横线文本框接收文字" : tool === "unknown" ? "用笔点按或划过英文单词，自动加入陌生词库" : tool === "eraser" && eraserMode === "lasso" ? "虚线随笔尖移动，松笔后删除真实圈选范围" : tool === "pen" && penMode === "fountain" ? "钢笔直接跟随笔尖并保留笔压；长按临时套索" : tool === "pen" ? "圆珠笔直接跟随笔尖并保持固定粗细；长按临时套索" : "普通橡皮；手指仍可上下滑动"}</small>}
+      {!compactPenOnly && handwritingMode && <small className="toolbar-usage-hint">{tool === "unknown" ? "用笔点按或划过英文单词，自动加入陌生词库" : tool === "eraser" && eraserMode === "lasso" ? "虚线随笔尖移动，松笔后删除真实圈选范围" : tool === "pen" && penMode === "fountain" ? "钢笔直接跟随笔尖并保留笔压；长按临时套索" : tool === "pen" ? "圆珠笔直接跟随笔尖并保持固定粗细；长按临时套索" : "普通橡皮；手指仍可上下滑动"}</small>}
         </>
       )}
     </div>

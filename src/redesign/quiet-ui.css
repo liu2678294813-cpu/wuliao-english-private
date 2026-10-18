@@ -1,0 +1,242 @@
+/* Approved 2026-10-18 UI. Presentation only: never change workbook geometry,
+   ink coordinates, learning content typography, persisted IDs or route handlers. */
+:root:root {
+  --ds-ink: #252b30;
+  --ds-ink-soft: #636971;
+  --ds-teal: #626660;
+  --ds-teal-deep: #353a3d;
+  --ds-teal-wash: #ecebe7;
+  --ds-gold: #7b7972;
+  --ds-paper: #fffefa;
+  --ds-canvas: #faf9f5;
+  --ds-line: #e2e0da;
+  --ds-line-strong: #c9c8c2;
+  --ds-surface-elevated: #fffefa;
+  --ds-surface-muted: #f0efeb;
+  --ds-sans: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --ds-shadow: 0 8px 28px rgb(35 39 37 / 7%);
+  --study-a-canvas: var(--ds-canvas);
+  --study-a-paper: var(--ds-paper);
+  --study-a-border: var(--ds-line);
+  --study-a-active: var(--ds-teal-wash);
+}
+body { -webkit-font-smoothing: antialiased; }
+/* Explicit chrome selectors keep article, question, translation and ink fonts intact. */
+body :is(button, select, .ds-brand strong, .ds-mobile-brand strong, .reader-title strong,
+  .section-heading, .library-intro, .year-heading, .resource-open strong,
+  .writing-library h1, .writing-library h2, .writing-stage-header h1,
+  .settings-panel h2, .ai-api-modal h2, .archive-hub h2, .account-card h1) {
+  font-family: var(--ds-sans); letter-spacing: normal;
+}
+body :is(button, select) { font-weight: 500; }
+body :is(button, select, input):focus-visible { outline: 2px solid #6c706b; outline-offset: 3px; }
+body input:is([type="checkbox"], [type="radio"]) { accent-color: #656963; }
+/* Only action families: ink swatches, answers and semantic danger/success stay distinct. */
+body :is(.primary-button, .today-library-cta, .stage-advance-button,
+  .translation-step-button.primary, .writing-button-primary, .writing-button-secondary,
+  .long-sentence-page .ls-primary, .source-button, .export-pdf-button,
+  .today-archive-link, .archive-hub-actions button) {
+  border: 1px solid var(--ds-line-strong); background: #fffefa !important;
+  color: var(--ds-ink) !important; box-shadow: none; border-radius: 6px;
+}
+body :is(.primary-button, .writing-button-primary, .writing-button-secondary, .source-button, .export-pdf-button):hover:not(:disabled) {
+  background: #efeee9 !important; border-color: #b5b6b0; color: var(--ds-ink);
+}
+body :is(.primary-button, .writing-button-primary, .writing-button-secondary):disabled { opacity: .48; cursor: not-allowed; }
+/* Navigation retains its desktop, collapsed and mobile behaviors. */
+.ds-shell .ds-rail { color: var(--ds-ink); }
+.ds-shell .ds-rail::before { background: #f5f4ef; box-shadow: none; border-right: 1px solid var(--ds-line); }
+.ds-shell .ds-brand small, .ds-shell .ds-nav-group { color: #777b7b; letter-spacing: .04em; }
+.ds-shell .ds-brand img, .ds-mobile-brand img, .account-mark { filter: grayscale(1); }
+.ds-shell .ds-nav > button { color: #454b50; font-weight: 500; }
+.ds-shell .ds-nav > button:is(:hover, .is-active) { background: #eae9e4; border-color: transparent; color: #20282c; }
+.ds-shell :is(.ds-settings, .ds-ai-api) { border-color: transparent; background: transparent; color: #454b50; }
+.ds-shell :is(.ds-settings, .ds-ai-api) strong { color: #454b50; font-size: 14px; font-weight: 500; letter-spacing: normal; }
+.ds-shell :is(.ds-settings, .ds-ai-api) small { color: #797e80; }
+.ds-shell .ds-rail-footer { padding-top: 12px; border-top: 1px solid var(--ds-line); }
+.ds-shell .ds-bottom-nav { background: #faf9f5; border-color: var(--ds-line); }
+.ds-shell .ds-bottom-nav button { color: #636971; }
+.ds-shell .ds-bottom-nav button.is-active { color: #252b30; background: #eae9e4; }
+/* Home: a single aligned utility row, then flat planner and metrics. */
+.ds-shell .home-page { background: var(--ds-canvas); }
+.ds-shell .home-main { padding-top: 24px; gap: 20px; }
+.ds-shell .home-greeting { min-height: 44px; align-items: flex-start; gap: 12px; }
+.ds-shell .home-greeting time { display: flex; min-height: 40px; align-items: center; margin-left: auto; margin-right: 148px; font-size: 14px; white-space: nowrap; }
+.ds-shell .home-page .today-archive-link { top: 24px; min-height: 40px; background: #fffefa; border-color: var(--ds-line-strong); }
+.ds-shell .home-greeting .unified-import { margin: 0; }
+.ds-shell .home-greeting:has(.unified-import.is-open) { flex-wrap: wrap; }
+.ds-shell .home-greeting .unified-import.is-open { width: 100%; order: 1; }
+.ds-shell .home-page :is(.today-tasks, .home-overview, .recent-section) { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.ds-shell .home-page :is(.study-planner-heading, .home-overview-title) { padding-bottom: 12px; border-bottom: 1px solid var(--ds-line); }
+.ds-shell .home-page :is(.study-planner-heading h2, .home-overview-title, .recent-section h2) { font-size: 18px; font-weight: 600; }
+.ds-shell .home-page .study-planner-budget { padding: 4px 0 14px; border: 0; border-bottom: 1px solid var(--ds-line); border-radius: 0; }
+.ds-shell .home-page .study-planner-budget-options button { background: #fffefa; color: var(--ds-ink); border-color: var(--ds-line); }
+.ds-shell .home-page .study-planner-budget-options button.active { background: var(--ds-teal-wash); border-color: #bfc1ba; color: var(--ds-ink); }
+.ds-shell .home-page .planner-task-row, .ds-shell .home-page .planner-continue-card { min-height: 88px; padding: 16px 0; border: 0; border-top: 1px solid var(--ds-line); border-bottom: 1px solid var(--ds-line); border-radius: 0; background: transparent; }
+.ds-shell .home-page .planner-task-side { display: flex; flex-direction: row; align-items: center; gap: 20px; }
+.ds-shell .home-page .planner-task-actions { flex-direction: row; align-items: center; gap: 16px; }
+.ds-shell .home-page .planner-task-actions .primary-button, .ds-shell .home-page .planner-continue-side .primary-button { background: #fffefa; color: var(--ds-ink); border-color: var(--ds-line-strong); }
+.ds-shell .home-page .overview-metrics { min-height: 170px; grid-template-rows: repeat(2,minmax(75px,auto)); }
+.ds-shell .home-page .overview-metrics article:nth-child(n) { padding: 12px 20px; border: 0; border-left: 1px solid var(--ds-line); border-radius: 0; background: transparent; }
+.ds-shell .home-page .overview-metrics article.overview-score { margin-right: 10px; border-left: 0; padding-left: 12px; }
+.ds-shell .home-page .overview-metrics article:nth-child(n+5) { border-top: 1px solid var(--ds-line); }
+.ds-shell .home-page .overview-metrics article > strong { font-size: 32px; }
+.ds-shell .home-page .overview-metrics article > span { font-size: 14px; }
+.ds-shell .home-page .planner-task-actions { display: flex; }
+.ds-shell .home-page .planner-task-side { width: auto; min-width: 0; flex: 0 0 auto; }
+.ds-shell .home-page .planner-task-actions { width: auto; min-width: 0; }
+.ds-shell .home-page :is(.planner-defer-button, .planner-skip-button, .planner-task-estimate) { white-space: nowrap; flex-shrink: 0; }
+.ds-shell .home-page .study-planner-date { font-size: 12px; }
+.ds-shell .home-page :is(.planner-task-subtitle, .study-planner-summary) { font-size: 14px; }
+.ds-shell .home-page :is(.import-launcher, .study-planner-budget-options button, .today-archive-link) { font-size: 14px; }
+.overview-score-progress::-webkit-progress-bar { background: #e4e3df; }
+.overview-score-progress::-webkit-progress-value { background: #747972; }
+/* Redundant page headings remain accessible without consuming reading space. */
+body :is(.library-intro > div:first-child, .writing-library-hero > div:first-child,
+  .writing-question-bank-header > div, .vocabulary-shell-title, .ls-heading > div:first-child) {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.ds-shell .library-intro { min-height: 0; margin: 0; padding: 0; }
+.ds-shell .library-count { display: none; } /* The live filtered count remains beside the filters. */
+.ds-shell .library-main { padding-top: 0; }
+.ds-shell .library-tabs { margin-bottom: 12px; }
+.ds-shell .library-action-strip { margin-bottom: 10px; padding-block: 12px; background: transparent; border: 0; }
+.ds-shell .library-tools { margin-block: 12px; }
+.ds-shell .year-heading { padding-block: 12px; }
+.ds-shell .resource-card, .ds-shell .cloze-resource-card, .writing-library .writing-question-card {
+  border: 0; border-bottom: 1px solid var(--ds-line); border-radius: 0; background: transparent; box-shadow: none;
+}
+.ds-shell .resource-card:hover, .writing-library .writing-question-card:hover { background: #f2f1ec; box-shadow: none; transform: none; }
+body .resource-badge { background: #ecebe6; color: #454b50; border-color: transparent; }
+body .resource-number { color: #a8aaa6; }
+.ds-shell .resource-open strong { font-weight: 600; }
+.ds-shell :is(.resource-open strong, .resource-number, .year-heading strong, .reader-title strong) { font-family: var(--ds-sans) !important; letter-spacing: normal; }
+.ds-shell .resource-badge { background: #ecebe6; color: #454b50; }
+.ds-shell .resource-number { color: #a8aaa6; }
+.ds-shell .resource-card .progress-track { background: #e5e4df; }
+.ds-shell .year-heading::before { background: #92968f; }
+.ds-shell .library-tabs button span { background: #ecebe6; }
+.ds-shell .library-action-strip { padding-block: 8px; margin-bottom: 0; }
+.ds-shell .library-tabs { margin-top: 0; }
+.ds-shell .library-header-actions .unknown-library-button { border-color: var(--ds-line-strong); background: #fffefa; color: var(--ds-ink); }
+.ds-shell .vocabulary-frame-wrap { border: 0; border-radius: 0; box-shadow: none; }
+.ds-shell .vocabulary-frame { border: 0; border-radius: 0; box-shadow: none; background: var(--ds-canvas); }
+.ds-shell .vocabulary-shell-header { min-height: 0; padding: 10px 20px; gap: 16px; background: transparent; border-color: var(--ds-line); }
+.ds-shell .vocabulary-shell-header:has(> .back-button):not(:has(.vocab-screening-modes)) { padding-block: 0; border: 0; }
+.ds-shell .vocab-screening-modes button[aria-pressed="true"] { background: var(--ds-teal-wash); color: var(--ds-ink); border-color: #bfc1ba; }
+/* Reading: keep the reserved row heights and paper coordinate system. */
+body .reader-page, .ds-shell .cloze-reader-page { background: var(--ds-canvas); }
+body .reader-page .reader-title small { display: none; }
+body .reader-page .reader-title strong { font-weight: 600; }
+body .reader-page > .reader-header .reader-title strong { font-family: var(--ds-sans); font-size: 16px; }
+body .reader-page > .reader-header :is(.source-button, .export-pdf-button) { border-color: var(--ds-line-strong); }
+body .reader-page .flow-task-chip { padding-left: 12px; background: transparent; border-color: var(--ds-line); }
+body .reader-page .flow-task-chip button { background: #fffefa; color: var(--ds-ink); border: 1px solid var(--ds-line); }
+body .reader-page .stage-nav button.active, body .cloze-reader-page .cloze-stage-nav button.active { background: var(--ds-teal-wash); color: var(--ds-ink); border-color: var(--ds-line-strong); }
+body :is(.reader-page, .cloze-reader-page, .writing-workspace, .long-sentence-page) .annotation-toolbar:not(.collapsed) > button.active,
+body :is(.reader-page, .cloze-reader-page, .writing-workspace, .long-sentence-page) .annotation-toolbar:not(.collapsed) :is(.input-mode-picker, .tool-mode-picker) button.active {
+  background: var(--ds-teal-wash); color: var(--ds-ink); border-color: var(--ds-line-strong);
+}
+body .annotation-toolbar .toolbar-icon { flex-shrink: 0; color: currentColor; }
+body .annotation-toolbar .toolbar-usage-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+/* The visual thickness shrinks 5%; slider hit-box, values and X coordinate stay intact. */
+body .tool-size-control .tool-size-range-track { transform: scaleY(.95); }
+body .annotation-toolbar .tool-size-control .tool-size-range-fill { background: #9b9f99 !important; }
+body .annotation-toolbar .tool-size-control .tool-size-range-thumb { border-color: #777d76 !important; background: #fffefa !important; box-shadow: 0 1px 4px rgb(35 39 37 / 12%); }
+body .tool-size-control .tool-size-range-track::after {
+  position: absolute; content: ""; inset: 50% 0 auto;
+  height: 46.32px; transform: translateY(-50%); /* 46.32 × .95 >= 44 px */
+}
+/* Writing and long sentences: retain every stage and actionable section. */
+.ds-shell .writing-library { position: relative; background: var(--ds-canvas); padding-top: 20px; }
+.ds-shell .writing-library-hero { min-height: 40px; padding: 0; border: 0; justify-content: flex-end; margin-bottom: 8px; }
+.ds-shell .writing-library-hero-actions { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+.ds-shell .writing-question-bank { margin-top: 0; }
+.ds-shell .writing-question-bank-header { padding: 0; min-height: 0; border: 0; }
+.ds-shell .writing-question-bank-header > span { display: none; }
+.writing-question-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; padding: 10px 0 12px; border-bottom: 1px solid var(--ds-line); }
+.writing-question-filters > div { display: flex; gap: 8px; }
+.writing-question-filters :is(button, select) { min-height: 40px; padding: 0 16px; border: 1px solid var(--ds-line); border-radius: 6px; background: #fffefa; color: var(--ds-ink); font: 500 14px/1.4 var(--ds-sans); }
+.writing-question-filters button[aria-pressed="true"] { background: var(--ds-teal-wash); border-color: var(--ds-line-strong); }
+.ds-shell .writing-library-heading small { display: none; }
+.ds-shell .writing-library-empty { padding: 16px 0; border: 0; background: transparent; }
+.ds-shell .writing-library-section { margin-top: 24px; }
+body .writing-workspace, body .writing-workspace-frame { background: var(--ds-canvas); }
+body .writing-stage-header { padding-bottom: 12px; }
+body .writing-stage-header h1 { font-size: 18px; font-weight: 600; margin-block: 0; }
+body .writing-stage-header .writing-kicker, body .writing-stage-description { display: none; }
+body .writing-progress { margin-block: 12px 18px; }
+body .writing-stage-header-actions .primary-button { border-color: var(--ds-line-strong); }
+body :is(.writing-input-modes, .writing-view-modes) button.is-active { background: var(--ds-teal-wash); color: var(--ds-ink); box-shadow: none; }
+body .writing-progress .is-current b { box-shadow: 0 0 0 4px #e7e7e1; }
+/* Flatten paper outlines without changing their existing ink coordinate boxes. */
+body :is(.writing-prompt-card, .writing-reading-sheet) { border-color: transparent; border-radius: 0; box-shadow: none; }
+body .writing-prompt-card { border-bottom-color: var(--ds-line); }
+body .vocab-handwriting { background: var(--ds-canvas); color: var(--ds-ink); }
+body .vocab-handwriting-controls > button { background: #fffefa; color: var(--ds-ink); border-color: var(--ds-line-strong); }
+body .vocab-handwriting-scroll { border-color: var(--ds-line); border-radius: 0; }
+.ds-shell .long-sentence-page { color: var(--ds-ink); padding-top: 20px; }
+.ds-shell .ls-heading { margin-bottom: 0; gap: 0; }
+.ds-shell .ls-heading:has(.ls-actions > button) { margin-bottom: 12px; }
+.ds-shell .ls-tabs { margin-bottom: 12px; padding: 0; }
+.ds-shell .ls-tabs [aria-selected="true"] { background: var(--ds-teal-wash); color: var(--ds-ink); border-color: var(--ds-line-strong); }
+.ds-shell .ls-card { padding: 16px 0; border: 0; border-radius: 0; background: transparent; }
+.ds-shell .ls-setup { border-bottom: 1px solid var(--ds-line); margin-bottom: 4px; }
+.ds-shell .ls-count { justify-content: flex-start; margin: 0; }
+.ds-shell .ls-setup { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.ds-shell .ls-setup > p { flex-basis: 100%; margin-block: 0; }
+.ds-shell .ls-setup > button { margin: 0; }
+.ds-shell .long-sentence-page :is(button, select, input[type="search"]) { border-color: var(--ds-line-strong); }
+.ds-shell .long-sentence-page .ls-muted { color: var(--ds-ink-soft); }
+.ds-shell .ls-generate-grid > .ls-card + .ls-card { padding-left: 24px; border-left: 1px solid var(--ds-line); }
+.ds-shell .ls-generate-grid fieldset { border: 0; padding: 0; }
+.ds-shell .ls-generate-grid legend { font-size: 19px; font-weight: 600; margin-bottom: 12px; }
+body :is(.settings-panel, .ai-api-modal, .account-card, .archive-hub) { background: var(--ds-paper); border-color: var(--ds-line); }
+body .settings-panel { color: var(--ds-ink); }
+body .settings-panel :is(h2, h3, .settings-row > strong) { color: var(--ds-ink); }
+body .settings-panel :is(.settings-row > span, .settings-note, .settings-version small) { color: var(--ds-ink-soft); }
+body .settings-panel :is(.settings-header, .settings-section, .settings-row) { border-color: var(--ds-line); }
+body .settings-panel :is(.settings-version, .settings-action, .settings-action.primary) { background: #fffefa; color: var(--ds-ink); border-color: var(--ds-line-strong); }
+body .settings-pin { background: var(--ds-paper); color: var(--ds-ink); border-color: var(--ds-line); }
+body .settings-pin :is(h3, p, input, button) { color: var(--ds-ink); }
+body .settings-pin :is(input, button) { background: #fffefa; border-color: var(--ds-line-strong); }
+body .ai-provider-tabs { background: #f0efeb; border-color: var(--ds-line); }
+body .ai-api-hint { background: #f0efeb; color: var(--ds-ink-soft); }
+body .ai-api-modal .ai-provider-panel { border: 0; border-radius: 0; padding-inline: 0; }
+body .account-gate { background: var(--ds-canvas); }
+body .unified-import { background: transparent; border: 0; border-bottom: 1px solid var(--ds-line); border-radius: 0; }
+body .unified-import.is-open { padding: 12px 0; }
+body :is(.unified-import, .material-answer-manager, .writing-imported-materials) button { background: #fffefa; color: var(--ds-ink); border-color: var(--ds-line-strong); }
+body :is(.import-heading h2, .settings-header h2, .ai-api-modal h2, .archive-hub h2) { font-size: 18px; font-weight: 600; }
+body :is(.settings-header small, .ai-api-modal header small, .archive-hub header small) { display: none; }
+@media (min-width: 1100px) {
+  .ds-shell .library-action-strip { height: 0; padding: 0; top: 0; overflow: visible; }
+  .ds-shell .library-header-actions { position: absolute; top: 18px; right: 0; }
+  .ds-shell .library-main { padding-top: 12px; }
+  .ds-shell .library-tabs { padding-right: 150px; }
+  .ds-shell .home-page .study-planner-budget { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .ds-shell .home-page .study-planner-budget-line { margin: 0; }
+  .ds-shell .writing-library-hero { position: absolute; right: 32px; top: 20px; }
+  .ds-shell .writing-question-tools { padding-right: 270px; min-height: 40px; }
+}
+@media (max-width: 1000px) {
+  .ds-shell .home-page .planner-task-side { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+}
+@media (max-width: 800px) {
+  .ds-shell .ls-generate-grid > .ls-card + .ls-card { padding-left: 0; border-left: 0; border-top: 1px solid var(--ds-line); }
+}
+@media (max-width: 760px) {
+  .ds-shell .home-main { padding-top: 16px; }
+  .ds-shell .home-greeting { flex-direction: row; align-items: center; }
+  .ds-shell .home-greeting .unified-import:not(.is-open) { width: auto; flex: 0 0 auto; }
+  .ds-shell .home-greeting time { margin-right: 0; font-size: 12px; }
+  .ds-shell .home-page .today-archive-link { position: static; }
+  .ds-shell .home-page .today-support-links { padding: 0; border: 0; background: transparent; }
+  .ds-shell .home-page .planner-task-row { gap: 12px; }
+  .ds-shell .home-page .planner-task-side { align-items: flex-start; justify-content: flex-start; }
+  .ds-shell .home-page .planner-task-actions { flex-wrap: wrap; gap: 10px; }
+  .ds-shell .home-page .overview-metrics article:nth-child(n) { padding: 12px; border: 0; border-bottom: 1px solid var(--ds-line); }
+  .ds-shell .vocabulary-shell-header { padding-inline: 12px; gap: 8px; flex-wrap: wrap; }
+  .ds-shell .writing-library-hero-actions { flex-wrap: wrap; }
+}

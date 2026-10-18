@@ -61,6 +61,8 @@ function QuestionBank({ services, onOpenSession, onConfigureTextAi }) {
   const years = services?.questionBank?.listYears?.() || [];
   const [year, setYear] = useState("all");
   const [query, setQuery] = useState("");
+  const [part, setPart] = useState("all");
+  const [kind, setKind] = useState("all");
   const [selectedId, setSelectedId] = useState("");
   const [availableSamples, setAvailableSamples] = useState([]);
   const [startState, setStartState] = useState({ status: "idle", questionId: "", sampleSource: "", error: "", code: "" });
@@ -69,10 +71,14 @@ function QuestionBank({ services, onOpenSession, onConfigureTextAi }) {
     const normalizedQuery = query.trim().toLowerCase();
     return (services?.questionBank?.list?.() || []).filter((question) => {
       if (year !== "all" && question.year !== Number(year)) return false;
+      if (part !== "all" && !question.taskType.endsWith(`-${part}`)) return false;
+      if (kind !== "all" && question.promptKind !== kind) return false;
       if (!normalizedQuery) return true;
       return `${question.year} ${taskLabel(question.taskType)} ${question.promptText}`.toLowerCase().includes(normalizedQuery);
     });
-  }, [query, services, year]);
+  }, [query, services, year, part, kind]);
+  const kinds = [...new Set((services?.questionBank?.list?.() || []).map(question => question.promptKind).filter(Boolean))];
+  const kindLabel = value => ({ notice: "通知", email: "邮件", letter: "书信", picture: "图画作文", chart: "图表作文" })[value] || value;
   const grouped = useMemo(() => questions.reduce((result, question) => {
     (result[question.year] ||= []).push(question);
     return result;
@@ -122,6 +128,10 @@ function QuestionBank({ services, onOpenSession, onConfigureTextAi }) {
           {years.map((item) => <option key={item} value={item}>{item} 年</option>)}
         </select>
         <span className="result-count">{questions.length} 篇</span>
+      </div>
+      <div className="writing-question-filters" aria-label="作文分类">
+        <div role="group" aria-label="作文类型">{[["all", "全部"], ["a", "小作文"], ["b", "大作文"]].map(([value, label]) => <button key={value} type="button" aria-pressed={part === value} onClick={() => { setPart(value); setSelectedId(""); }}>{label}</button>)}</div>
+        <select aria-label="按作文题材筛选" value={kind} onChange={event => { setKind(event.target.value); setSelectedId(""); }}><option value="all">全部题材</option>{kinds.map(value => <option key={value} value={value}>{kindLabel(value)}</option>)}</select>
       </div>
       <div className="year-groups writing-question-years">
         {Object.entries(grouped).sort(([left], [right]) => Number(right) - Number(left)).map(([groupYear, yearQuestions]) => (

@@ -66,6 +66,7 @@ test("首次备份后手写数据库仍可正常保存", async ({ page }) => {
   await setup(page);
   await page.locator(".ds-mobile-settings, .ds-settings").first().click();
   await expect(page.locator(".settings-panel")).toBeVisible();
+  await page.evaluate(() => { window.showSaveFilePicker = undefined; });
   const downloaded = page.waitForEvent("download");
   await page.locator(".settings-action", { hasText: "导出备份" }).click();
   await downloaded;
