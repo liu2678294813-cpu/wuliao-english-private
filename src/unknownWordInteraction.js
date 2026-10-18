@@ -97,7 +97,7 @@ export function unknownTouchWordFromPoint(clientX, clientY, root, anchorToken = 
       Math.max(rect.top - clientY, 0, clientY - rect.bottom));
   }));
   const hits = [];
-  for (const scope of root.querySelectorAll(".sentence-source [data-unknown-scope]")) {
+  for (const scope of root.querySelectorAll(".sentence-source [data-unknown-scope], .paragraph-source-repeat [data-unknown-scope]")) {
     if (distanceToRects(scope.getClientRects()) > radius || !visible(scope)) continue;
     for (const token of unknownWordRanges(scope)) {
       const distance = distanceToRects(token.range.getClientRects());

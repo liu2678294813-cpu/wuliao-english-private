@@ -1876,9 +1876,12 @@ export default function CustomDeepReader({
   const unknownAiControllersRef = useRef(new Set());
   const mountedRef = useRef(true);
   const hintTimerRef = useRef(null);
-  useEffect(() => () => {
-    mountedRef.current = false;
-    if (hintTimerRef.current) window.clearTimeout(hintTimerRef.current);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (hintTimerRef.current) window.clearTimeout(hintTimerRef.current);
+    };
   }, []);
   const passage = analysis.passages[passageIndex];
   const ocrContextKey = `${storageUsername}:${resource.id}:${passage.id}:${inkStageId}`;
@@ -4258,13 +4261,40 @@ export default function CustomDeepReader({
 
   function redirectPenFromTextField(event) {
     if (!androidApp || event.pointerType !== "pen" || !isTextEntryTarget(event.target)) return;
+    event.preventDefault();
     event.target.blur?.();
-    if (!noteMode) {
+    if (!noteModeRef.current) {
+      // The same pointerdown must start a stroke before React renders the
+      // read-only writing field and synchronizes the input-mode state.
+      noteModeRef.current = true;
+      toolRef.current = "pen";
+      setTool("pen");
       setNoteMode(true);
       inkController.clearPreview();
-      setHint("检测到手写笔，已切换为原始笔迹；请继续书写");
+      setHint("检测到手写笔，已切换为原始笔迹");
       window.setTimeout(() => setHint(""), 1800);
     }
+  }
+
+  function chooseAnnotationTool(value) {
+    inkController.finishActiveForGeometryChange();
+    directUnknownTap.reset();
+    unknownSelectionRef.current = null;
+    globalThis.CSS?.highlights?.delete(ACTIVE_UNKNOWN_HIGHLIGHT);
+    toolRef.current = value;
+    noteModeRef.current = true;
+    setTool(value);
+    setNoteMode(true);
+  }
+
+  function toggleNoteMode() {
+    inkController.finishActiveForGeometryChange();
+    directUnknownTap.reset();
+    unknownSelectionRef.current = null;
+    globalThis.CSS?.highlights?.delete(ACTIVE_UNKNOWN_HIGHLIGHT);
+    noteModeRef.current = !noteModeRef.current;
+    setNoteMode(noteModeRef.current);
+    inkController.clearPreview();
   }
 
   function chooseEraserMode(value) {
@@ -4575,9 +4605,9 @@ export default function CustomDeepReader({
           color={color}
           canUndo={hasActiveInk}
           noteMode={noteMode}
-          onToggleNoteMode={() => { setNoteMode((current) => !current); inkController.clearPreview(); }}
-          onTool={(value) => { setTool(value); setNoteMode(true); }}
-          onColor={(value) => { setColor(value); setTool("pen"); setNoteMode(true); }}
+          onToggleNoteMode={toggleNoteMode}
+          onTool={chooseAnnotationTool}
+          onColor={(value) => { colorRef.current = value; setColor(value); chooseAnnotationTool("pen"); }}
           penSize={penSize}
           penMode={penMode}
           eraserMode={eraserMode}

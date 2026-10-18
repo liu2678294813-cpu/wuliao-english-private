@@ -124,6 +124,18 @@ test("finger geometry accepts a 4px vertical miss and 6px boundary, rejects far/
   } finally { f.restore(); }
 });
 
+test("finger can add from the repeated English sentence within the translation module", () => {
+  const f = touchGeometryFixture();
+  try {
+    f.scope.parentElement.className = "paragraph-source-repeat";
+    f.scope.dataset.unknownScope = "repeat:p1:s1";
+    f.scope.dataset.sentenceScope = "repeat:p1:s1";
+    const token = unknownTouchWordFromPoint(105, 108, f.root);
+    assert.equal(token?.word, "of");
+    assert.equal(unknownSentenceContextFromToken(token, "passage").contextKey, "passage:p1:s1");
+  } finally { f.restore(); }
+});
+
 test("finger up keeps the down word in whitespace but rejects an actual neighboring glyph", () => {
   const f = touchGeometryFixture();
   try {

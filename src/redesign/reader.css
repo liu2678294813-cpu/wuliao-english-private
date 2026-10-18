@@ -1434,3 +1434,11 @@
 @media (max-height: 680px) {
   .evidence-editor-bar:has(.evidence-sentence-editor) { top: 8px; max-height: min(58vh, 360px); overflow-y: auto; }
 }
+
+/* Keep the primary ink tools visible before the scrolling input/settings controls. */
+@media (max-width: 480px) {
+  body :is(.reader-page, .cloze-reader-page) > .annotation-toolbar:not(.collapsed):not(.is-compact-pen-only) > button {
+    padding-inline: 8px;
+    gap: 3px;
+  }
+}

@@ -282,15 +282,15 @@ export function AnnotationToolbar({
           其余控件全部不渲染（不得依赖 CSS 压缩隐藏，WebView 下会残留）。 */}
       {!pillCollapsed && (
         <>
+      <button type="button" className={tool === "pen" && handwritingMode ? "active" : ""} onClick={() => onTool("pen")}><span className="toolbar-icon" aria-hidden="true">✎</span>笔</button>
+      {!compactPenOnly && <button type="button" className={tool === "eraser" && handwritingMode ? "active" : ""} onClick={() => onTool("eraser")}><span className="toolbar-icon" aria-hidden="true">◇</span>橡皮</button>}
+      {!compactPenOnly && unknownEnabled && <button type="button" className={tool === "unknown" && handwritingMode ? "active" : ""} onClick={() => onTool("unknown")}>陌生词</button>}
       {onToggleNoteMode && (
         <div className="input-mode-picker" aria-label="输入方式">
           <button className={!noteMode ? "active" : ""} onClick={() => { if (noteMode) onToggleNoteMode(); }}><span className="toolbar-icon" aria-hidden="true">⌨</span>键盘输入</button>
           <button className={noteMode ? "active" : ""} onClick={() => { if (!noteMode) onToggleNoteMode(); }}><Icon name="handwriting" size={18} className="toolbar-icon" />手写批注</button>
         </div>
       )}
-      <button type="button" className={tool === "pen" && handwritingMode ? "active" : ""} onClick={() => onTool("pen")}><span className="toolbar-icon" aria-hidden="true">✎</span>笔</button>
-      {!compactPenOnly && <button type="button" className={tool === "eraser" && handwritingMode ? "active" : ""} onClick={() => onTool("eraser")}><span className="toolbar-icon" aria-hidden="true">◇</span>橡皮</button>}
-      {!compactPenOnly && unknownEnabled && <button type="button" className={tool === "unknown" && handwritingMode ? "active" : ""} onClick={() => onTool("unknown")}>陌生词</button>}
       {tool === "pen" && (
         <>
           <label className="tool-size-control">粗细
