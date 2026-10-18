@@ -148,7 +148,7 @@ body .annotation-toolbar .tool-size-control .tool-size-range-fill { background: 
 body .annotation-toolbar .tool-size-control .tool-size-range-thumb { border-color: #777d76 !important; background: #fffefa !important; box-shadow: 0 1px 4px rgb(35 39 37 / 12%); }
 body .tool-size-control .tool-size-range-track::after {
   position: absolute; content: ""; inset: 50% 0 auto;
-  height: 46.32px; transform: translateY(-50%); /* 46.32 × .95 >= 44 px */
+  height: 48px; transform: translateY(-50%); /* 48 × .95 = 45.6 px, including browser subpixel rounding. */
 }
 /* Writing and long sentences: retain every stage and actionable section. */
 .ds-shell .writing-library { position: relative; background: var(--ds-canvas); padding-top: 20px; }
