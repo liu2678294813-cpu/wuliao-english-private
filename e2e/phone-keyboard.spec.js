@@ -145,6 +145,7 @@ for (const [name, userAgent, android] of [["Android phone UI", ANDROID_PHONE, tr
     await expect(field).toBeEditable();
     expect(await unknowns(page, username)).toHaveLength(1);
     expect(await savedStrokes(page, username)).toHaveLength(0);
+    await field.scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath("phone-keyboard.png") });
   });
 }
@@ -181,18 +182,22 @@ test("Android phone UI: cloze unknown-word tap works without enabling ink", asyn
     timedAttempt: { phase: "done", elapsedMs: 1000, startedAt: null, pausedAt: null, completedAt: now },
   });
   await page.reload();
-  await page.locator(".library-page").waitFor();
+  await page.locator(".cloze-reader-page").waitFor();
   await platform(page, true);
-  await page.locator(".cloze-resource-card", { hasText: "2007" }).first().locator(".resource-open").click();
   await page.locator(".cloze-passage").waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
   await assertKeyboardToolbar(page, 390);
   const closePanel = page.locator(".cloze-panel-close");
   if (await closePanel.isVisible()) await closePanel.click();
+  // Cloze keeps its existing manual meaning prompt when the offline dictionary
+  // does not contain this word. Exercise that keyboard fallback explicitly.
+  page.on("dialog", dialog => dialog.accept("测试人工补充释义"));
   await page.locator(".annotation-toolbar").getByRole("button", { name: "陌生词", exact: true }).click();
   const point = await wordPoint(page, ".cloze-passage [data-unknown-scope]");
   await tap(page, point);
   await expect.poll(async () => (await unknowns(page, username)).length).toBe(1);
   expect((await unknowns(page, username))[0].sourceType).toBe("cloze");
+  await tap(page, point);
+  await expect.poll(async () => (await unknowns(page, username)).length).toBe(0);
   expect(await savedStrokes(page, username)).toHaveLength(0);
 });

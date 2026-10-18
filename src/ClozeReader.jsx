@@ -538,7 +538,7 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
     maxTouchDuration: 450,
     onCommit: commitClozeUnknownSelection,
     onError: (reason) => showHint(`陌生词保存失败：${reason?.message || reason}`),
-  }), [keyboardOnly, unknownWordsVisible, inkTool, referenceMode, sentenceModel, storageUsername]);
+  }), [keyboardOnly, unknownWordsVisible, inkTool, referenceMode, sentenceModel, storageUsername, resource, unknownWords]);
   useEffect(() => {
     if (!keyboardOnly) return undefined;
     const cancel = () => phoneUnknownTap.cancel();
