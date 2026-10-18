@@ -833,10 +833,10 @@ test("W2 tablet workspace：双模式、顶部提交、共享中线、独立滚�
       activeStyles: textButtons.filter((button) => button.classList.contains("active")).map((button) => ({ color: getComputedStyle(button).color, background: getComputedStyle(button).backgroundColor })),
     };
   });
-  expect(toolbarColors.background).toBe("rgb(251, 250, 246)");
-  expect(new Set(toolbarColors.inactiveForegrounds)).toEqual(new Set(["rgb(8, 43, 58)"]));
-  // Existing study-approved-a.css gives selected tools a teal fill and contrasting white label.
-  expect(toolbarColors.activeStyles).toEqual([{ color: "rgb(255, 255, 255)", background: "rgb(23, 111, 121)" }]);
+  expect(toolbarColors.background).toBe("rgb(255, 254, 250)");
+  expect(new Set(toolbarColors.inactiveForegrounds)).toEqual(new Set(["rgb(37, 43, 48)"]));
+  // The approved quiet UI uses the same pale-gray selection as the reader.
+  expect(toolbarColors.activeStyles).toEqual([{ color: "rgb(37, 43, 48)", background: "rgb(236, 235, 231)" }]);
   const compactChrome = await page.evaluate(() => {
     const rect = (selector) => {
       const value = document.querySelector(selector)?.getBoundingClientRect();

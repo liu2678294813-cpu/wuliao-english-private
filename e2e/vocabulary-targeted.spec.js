@@ -227,7 +227,7 @@ test("大区间只渲染可见行，刷新后仍为 3/3", async ({ page }) => {
   await expect(row).toHaveClass(/masked/);
 });
 
-test("背诵控制区移动标题并删除四个入口，复习与发音资料仍可访问", async ({ page }) => {
+test("背诵控制区收起重复标题，复习与发音资料仍可访问", async ({ page }) => {
   await openMemorize(page);
   for (const viewport of [{ width: 832, height: 544 }, { width: 544, height: 832 }]) {
     await page.setViewportSize(viewport);
@@ -235,9 +235,11 @@ test("背诵控制区移动标题并删除四个入口，复习与发音资料�
     const geometry = await page.evaluate(() => {
       const rect = (selector) => document.querySelector(selector).getBoundingClientRect();
       const title = rect(".memory-list-controls h2"), list = rect("#listSelect"), modes = rect(".memory-mode-switches");
-      return { titleAboveList: title.bottom < list.top, noOverlap: title.right <= modes.left || title.bottom <= modes.top, overflow: document.documentElement.scrollWidth - innerWidth };
+      return { titleHeight: title.height, titleClip: getComputedStyle(document.querySelector('.memory-list-controls h2')).clipPath,
+        noOverlap: list.right <= modes.left || list.bottom <= modes.top || modes.bottom <= list.top, overflow: document.documentElement.scrollWidth - innerWidth };
     });
-    expect(geometry.titleAboveList).toBe(true);
+    expect(geometry.titleHeight).toBeLessThanOrEqual(1);
+    expect(geometry.titleClip).toBe('inset(50%)');
     expect(geometry.noOverlap).toBe(true);
     expect(geometry.overflow).toBeLessThanOrEqual(1);
   }
@@ -297,9 +299,11 @@ test("App 内跨页返回和 iframe 重建保留背诵位置与标题布局", as
       const title = element.querySelector("h2").getBoundingClientRect();
       const list = element.querySelector("#listSelect").getBoundingClientRect();
       const modes = element.querySelector(".memory-mode-switches").getBoundingClientRect();
-      return { titleBeforeList: title.bottom < list.top, noOverlap: title.right <= modes.left || title.bottom <= modes.top, overflow: document.documentElement.scrollWidth - innerWidth };
+      return { titleHeight: title.height, titleClip: getComputedStyle(element.querySelector('h2')).clipPath,
+        noOverlap: list.right <= modes.left || list.bottom <= modes.top || modes.bottom <= list.top, overflow: document.documentElement.scrollWidth - innerWidth };
     });
-    expect(geometry.titleBeforeList).toBe(true);
+    expect(geometry.titleHeight).toBeLessThanOrEqual(1);
+    expect(geometry.titleClip).toBe('inset(50%)');
     expect(geometry.noOverlap).toBe(true);
     expect(geometry.overflow).toBeLessThanOrEqual(1);
     await page.screenshot({ path: `output/vocabulary-title-${size.width}x${size.height}.png` });

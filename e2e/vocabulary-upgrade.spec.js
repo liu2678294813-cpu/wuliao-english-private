@@ -70,14 +70,16 @@ test("首次备份后手写数据库仍可正常保存", async ({ page }) => {
   const downloaded = page.waitForEvent("download");
   await page.locator(".settings-action", { hasText: "导出备份" }).click();
   await downloaded;
+  // A read-only backup must not create an empty database for an unused feature.
+  expect(await page.evaluate(async () => (await indexedDB.databases()).some(db => db.name === 'WuliaoVocabHandwritingDB'))).toBe(false);
+  await page.reload();
+  await handwriting(page);
   const stores = await page.evaluate(() => new Promise((resolve, reject) => {
     const request = indexedDB.open("WuliaoVocabHandwritingDB");
     request.onsuccess = () => { const db = request.result; resolve([...db.objectStoreNames]); db.close(); };
     request.onerror = () => reject(request.error);
   }));
   expect(stores).toEqual(["answers", "sessions"]);
-  await page.reload();
-  await handwriting(page);
   await page.locator(".vocab-ink-row textarea").first().fill("备份后仍可写入");
   await page.waitForTimeout(500);
   await page.reload();

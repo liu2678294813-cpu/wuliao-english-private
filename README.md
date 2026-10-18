@@ -10,7 +10,16 @@
 
 </div>
 
-> **Android 最新下载：[1.0.97 含文章统一版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 本版限制整页手势缩放，确保筛选的 12 个中文选项无完全重复，新增加作文划选收藏“例句”，并将备份导出与恢复改为分块处理。平板与 GitHub 使用同一份含文章 APK，沿用既有签名、包名与覆盖更新机制。请直接覆盖安装，不要卸载或清除数据。本轮完成本地浏览器和构建验证，未进行真实平板验收。
+> **Android 最新下载：[1.0.98 含文章统一版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 本版采用暖白与灰白界面、淡灰选中态和白底深色字按钮，减少重复标题与多层外框，统一手写图标，并增加作文类型和题材筛选。原有学习流程、正文排版与学习数据结构沿用。平板与 GitHub 使用同一份含文章 APK，沿用既有签名、包名与覆盖更新机制。请直接覆盖安装，不要卸载或清除数据。本轮完成本地浏览器和构建验证，未进行真实平板验收；具体测试结果见本版 Release。
+
+<details>
+<summary>查看新版界面</summary>
+
+![新版首页](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/download/v1.0.98-full-20261018/ui-home.png)
+
+![新版日期复习](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/download/v1.0.98-full-20261018/ui-review.png)
+
+</details>
 
 
 ---
