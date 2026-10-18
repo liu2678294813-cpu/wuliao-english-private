@@ -16,6 +16,7 @@ import {
   resizeInkCanvas,
 } from "./annotationTools";
 import { isAndroidApp } from "./platform";
+import { isPhoneDevice } from "./inputDevicePolicy.js";
 import { ReaderStageMarker } from "./ui/ReaderChrome";
 import { installPenScrollGuard } from "./inkEngine";
 import { useStructuredInk } from "./ink/useStructuredInk";
@@ -306,7 +307,8 @@ export default function PdfReader({ resource, onClose }) {
   const [error, setError] = useState("");
   const [containerWidth, setContainerWidth] = useState(900);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0, ratio: 1, inkRatio: 1 });
-  const [noteMode, setNoteMode] = useState(() => androidApp);
+  const keyboardOnly = isPhoneDevice();
+  const [noteMode, setNoteMode] = useState(() => androidApp && !keyboardOnly);
   const [tool, setTool] = useState("pen");
   const [penSize, setPenSize] = useState(() => normalizePenSize(getUserItem(PEN_SIZE_STORAGE_KEY)));
   const [penMode, setPenMode] = useState(() => normalizePenMode(getUserItem(PEN_MODE_STORAGE_KEY)));
@@ -385,7 +387,7 @@ export default function PdfReader({ resource, onClose }) {
   // 共享 Ink Runtime：与精读 / 普通完形 / 模拟考试使用同一份笔系统实现。
   // PdfReader 使用单 committed canvas 策略（append-only 提交 + 结构性整层重绘）。
   const inkController = useStructuredInk({
-    canInteract: () => noteModeRef.current,
+    canInteract: () => !keyboardOnly && noteModeRef.current,
     surfaceRef: inkCanvasRef,
     previewCanvasRef: inkPreviewCanvasRef,
     tailCanvasRef,
@@ -658,8 +660,8 @@ export default function PdfReader({ resource, onClose }) {
         color={color}
         annotations={annotations}
         noteMode={noteMode}
-        onToggleNoteMode={() => setNoteMode((current) => !current)}
-        onTool={(value) => { setTool(value); setNoteMode(true); }}
+        onToggleNoteMode={() => { if (!keyboardOnly) setNoteMode((current) => !current); }}
+        onTool={(value) => { setTool(value); setNoteMode(!keyboardOnly); }}
         onColor={(value) => { setColor(value); setTool("pen"); setNoteMode(true); }}
         penSize={penSize}
         penMode={penMode}

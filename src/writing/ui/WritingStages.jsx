@@ -1,4 +1,5 @@
 import { ImportedAsset } from "./ImportedWritingLibrary.jsx";
+import { isPhoneDevice } from "../../inputDevicePolicy.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   WritingInputMethod,
@@ -155,7 +156,7 @@ function FrozenTranslationSource({ username, sessionId, snapshot, InkSurface = W
 function InputModePicker({ value, onChange, disabled = false }) {
   return (
     <div className="writing-input-modes" role="group" aria-label="输入方式">
-      {INPUT_MODES.map(([mode, label]) => (
+      {INPUT_MODES.filter(([mode]) => !isPhoneDevice() || mode === WritingInputMethod.TYPED).map(([mode, label]) => (
         <button
           type="button"
           key={mode}
@@ -172,6 +173,7 @@ function InputModePicker({ value, onChange, disabled = false }) {
 }
 
 function visibleInputMethod(inputMethod, typedText = "") {
+  if (isPhoneDevice()) return WritingInputMethod.TYPED;
   if (inputMethod === WritingInputMethod.HANDWRITING) return WritingInputMethod.HANDWRITING;
   if (inputMethod === WritingInputMethod.MIXED) return typedText.trim() ? WritingInputMethod.TYPED : WritingInputMethod.HANDWRITING;
   return WritingInputMethod.TYPED;
@@ -306,7 +308,7 @@ export function W2TranslationStage({ vm, commandContext, services, username, cre
   const snapshotId = useStableValue(() => createId("translation-snapshot"));
   const createdAt = useStableValue(() => Date.now());
   const [typedText, setTypedText] = useState(() => translationDocument(current?.units));
-  const [inputMethod, setInputMethod] = useState(() => current?.units?.some((unit) => unit.inputMethod === WritingInputMethod.HANDWRITING)
+  const [inputMethod, setInputMethod] = useState(() => !isPhoneDevice() && current?.units?.some((unit) => unit.inputMethod === WritingInputMethod.HANDWRITING)
     ? WritingInputMethod.HANDWRITING
     : WritingInputMethod.TYPED);
   const [latestInkRef, setLatestInkRef] = useState(vm.translationInkRef || null);
@@ -765,7 +767,7 @@ export function W5SkeletonStage({ vm, commandContext, services, username, create
   const [blocks, setBlocks] = useState(() => current?.blocks?.length
     ? current.blocks.map((block) => ({ ...block }))
     : [{ order: 0, kind: "idea", text: "" }]);
-  const [showInk, setShowInk] = useState(Boolean(current?.inkRef));
+  const [showInk, setShowInk] = useState(() => !isPhoneDevice() && Boolean(current?.inkRef));
   const [pendingChoice, setPendingChoice] = useState(null);
   const [latestInkRef, setLatestInkRef] = useState(current?.inkRef || null);
   const [draftChangeToken, setDraftChangeToken] = useState(0);
@@ -890,7 +892,7 @@ export function W5SkeletonStage({ vm, commandContext, services, username, create
             </article>
           ))}
         </div>
-        <label className="writing-ink-toggle"><input type="checkbox" checked={showInk} onChange={(event) => { setShowInk(event.target.checked); setDraftChangeToken((token) => token + 1); }} /><span>同时保留手写补充</span></label>
+        {!isPhoneDevice() && <label className="writing-ink-toggle"><input type="checkbox" checked={showInk} onChange={(event) => { setShowInk(event.target.checked); setDraftChangeToken((token) => token + 1); }} /><span>同时保留手写补充</span></label>}
       </section>
       {showInk ? (
         <InkComposer

@@ -649,6 +649,51 @@ test("handwriting toolbar portals into compact top chrome and keyboard mode leav
   assert.equal(container.querySelector(".writing-compact-toolbar-center").textContent, "");
 });
 
+test("phone W2 restores keyboard text and retains the existing ink reference when saving", async (t) => {
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { userAgent: "Android Mobile" } });
+  t.after(() => Object.defineProperty(globalThis, "navigator", { configurable: true, value: dom.window.navigator }));
+  const inkRef = { surfaceId: "w2:translation:translation-fixed", ownerRecordId: "translation-fixed", fingerprint: "existing-ink" };
+  const revision = { revisionId: "translation-fixed", revision: 3, createdAt: 100,
+    units: [{ unitId: "u1", typedText: "原来的键盘译文", inputMethod: WritingInputMethod.HANDWRITING, inkRef }] };
+  const original = structuredClone(revision);
+  let barrier, saved;
+  const container = await render(React.createElement(W2TranslationStage, {
+    vm: stageVm(WritingStage.W2_EN_ZH, { sampleSegments: [{ unitId: "u1", text: "Reference" }], currentTranslationRevision: revision, translationInkRef: inkRef }),
+    commandContext: commandContext(), username: USERNAME, createId: idFactory,
+    services: { commands: { saveTranslationDraft: async (args) => { saved = args; return { translationRevision: args.translationRevision }; } } },
+    registerExitBarrier: (value) => { barrier = value; }, busyAction: "", onAction: immediateAction, onBack: () => {}, InkComposer: InkProbe,
+  }));
+  assert.equal(buttonByText(container, "手写"), undefined);
+  assert.equal(container.querySelector("[data-testid=ink-probe]"), null);
+  assert.equal(container.querySelector("textarea").value, "原来的键盘译文");
+  await setText(container.querySelector("textarea"), "手机上继续键盘输入");
+  await act(async () => { await barrier(); });
+  assert.equal(saved.flushInk, false);
+  assert.equal(saved.translationRevision.units[0].typedText, "手机上继续键盘输入");
+  assert.deepEqual(saved.translationRevision.units[0].inkRef, inkRef);
+  assert.deepEqual(revision, original);
+});
+
+test("phone Writing stages reopen handwriting drafts as editable keyboard inputs", async (t) => {
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { userAgentData: { mobile: true } } });
+  t.after(() => Object.defineProperty(globalThis, "navigator", { configurable: true, value: dom.window.navigator }));
+  for (const [Component, stage, key] of [
+    [W3BackTranslationStage, WritingStage.W3_BACK_TRANSLATION, "currentBackTranslationAttempt"],
+    [W6ReconstructionStage, WritingStage.W6_RECONSTRUCTION, "currentReconstructionAttempt"],
+    [W7IndependentStage, WritingStage.W7_INDEPENDENT, "currentIndependentAttempt"],
+  ]) {
+    const container = await render(React.createElement(Component, {
+      vm: stageVm(stage, { promptSnapshot: promptSnapshot(), translationSnapshot: { units: [] }, currentSkeletonRevision: { blocks: [] },
+        [key]: { attemptId: "phone-existing", inputMethod: WritingInputMethod.HANDWRITING, typedText: "existing keyboard draft", inkRef: { fingerprint: "retained" } } }),
+      commandContext: commandContext(), services: { commands: {} }, username: USERNAME, createId: idFactory,
+      busyAction: "", onAction: immediateAction, onBack: () => {}, InkComposer: InkProbe,
+    }));
+    assert.equal(buttonByText(container, "手写"), undefined);
+    assert.equal(container.querySelector("[data-testid=ink-probe]"), null);
+    assert.equal([...container.querySelectorAll("textarea")].some(area => !area.readOnly && area.value === "existing keyboard draft"), true);
+  }
+});
+
 test("W2 Back barrier persists typed and handwriting drafts, then remount restores the same identity", async () => {
   const bridge = createWritingInkFlushBridge();
   let exitBarrier = null;

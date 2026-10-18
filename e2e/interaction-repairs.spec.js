@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
 import { createAccount, uniqueUsername, openOfficialResource, clickStageAdvance, readDurableInkEntries } from "./helpers.js";
 
 const TITLE = "2007 英语（一）Text 1";
@@ -20,7 +21,9 @@ test.afterEach(async ({ page }, info) => {
     errorOverlays: await page.locator("vite-error-overlay").count(),
     ...browserLogs.get(page),
   };
-  await info.attach("browser-health", { body: JSON.stringify(health, null, 2), contentType: "application/json" });
+  const healthPath = info.outputPath("browser-health.json");
+  await writeFile(healthPath, JSON.stringify(health, null, 2));
+  await info.attach("browser-health", { path: healthPath, contentType: "application/json" });
   expect(new URL(health.url).hostname).toBe("127.0.0.1");
   expect(health.title).toContain("无聊英语");
   expect(health.readerVisible).toBe(true);
@@ -136,20 +139,31 @@ for (const android of [false, true]) {
     expect(f.errors).toEqual([]);
   });
 
-  test(`${profile}: pen, eraser and unknown controls are in view on narrow screens`, async ({ page }, info) => {
+  test(`${profile}: original input/tool order is preserved and controls remain reachable`, async ({ page }, info) => {
     const f = await fixture(page, android);
     const bar = page.locator(".annotation-toolbar");
     for (const width of [390, 320, 544, 820, 1280]) {
       await page.setViewportSize({ width, height: 844 });
       await bar.evaluate(element => { element.scrollLeft = 0; });
+      expect(await bar.getByRole("button").allTextContents()).toEqual(expect.arrayContaining([expect.stringContaining("键盘输入"), expect.stringContaining("手写批注"), expect.stringContaining("陌生词")]));
+      const labels = await bar.getByRole("button").allTextContents();
+      const index = name => labels.findIndex(label => label.trim().endsWith(name));
+      expect(index("键盘输入")).toBeLessThan(index("手写批注"));
+      expect(index("手写批注")).toBeLessThan(index("笔"));
+      expect(index("笔")).toBeLessThan(index("橡皮"));
+      expect(index("橡皮")).toBeLessThan(index("陌生词"));
       for (const name of ["笔", "橡皮", "陌生词"]) {
         const button = bar.getByRole("button", { name, exact: true });
+        await button.scrollIntoViewIfNeeded();
         await expect(button).toBeVisible();
         const rect = await button.boundingBox();
         expect(rect.x, `${name} at ${width}px`).toBeGreaterThanOrEqual(0);
         expect(rect.x + rect.width, `${name} at ${width}px`).toBeLessThanOrEqual(width + 1);
       }
-      if (width === 390) await page.screenshot({ path: info.outputPath("toolbar-390.png") });
+      if (width === 1280) {
+        await bar.evaluate(element => { element.scrollLeft = 0; });
+        await page.screenshot({ path: info.outputPath("toolbar-restored.png") });
+      }
     }
     expect(f.errors).toEqual([]);
   });

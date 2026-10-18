@@ -5,6 +5,7 @@ import { drawInkStroke, inkPixelRatio, renderInkLayer, resizeInkCanvas } from ".
 import { installPenScrollGuard } from "../inkEngine";
 import { useStructuredInk } from "../ink/useStructuredInk";
 import { isAndroidApp } from "../platform";
+import { isPhoneDevice } from "../inputDevicePolicy.js";
 import {
   createWritingInkAdapter,
   WritingInkSurfaceError,
@@ -60,7 +61,7 @@ export default function WritingInkSurface({
   ownerRecordId,
   sourceFingerprint,
   disabled = false,
-  readOnly = false,
+  readOnly: readOnlyProp = false,
   tool = "pen",
   color = "#173a62",
   penSize = 2.6,
@@ -82,6 +83,7 @@ export default function WritingInkSurface({
   onHint,
   children,
 }) {
+  const readOnly = readOnlyProp || isPhoneDevice();
   const rootRef = useRef(null);
   const contentRef = useRef(null);
   const committedCanvasRef = useRef(null);

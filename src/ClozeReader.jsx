@@ -103,8 +103,10 @@ import {
   ACTIVE_UNKNOWN_HIGHLIGHT,
   SAVED_UNKNOWN_HIGHLIGHT,
   collectUnknownTokenInto,
+  createDirectUnknownTap,
   createUnknownSelectionHooks,
   highlightSavedUnknownWords,
+  unknownWordFromPoint,
 } from "./unknownWordInteraction";
 import { getAiApiKey, lookupWordMeaningWithAi } from "./ai";
 import { AnnotationToolbar } from "./ui/AnnotationToolbar";
@@ -117,6 +119,7 @@ import {
 } from "./annotationTools";
 import { getUserItem, setUserItem } from "./userData";
 import { isAndroidApp } from "./platform";
+import { isPhoneDevice } from "./inputDevicePolicy.js";
 
 const SAVE_DELAY_MS = 320;
 
@@ -172,9 +175,11 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
   // 共享笔工具栏状态：工具偏好与精读共用同一批 storage key（Tool preferences = shared）。
   const [inkTool, setInkTool] = useState("pen");
   const [inkColor, setInkColor] = useState("#173a62");
-  // 输入模式与精读同一语义：Android 默认手写批注，可切键盘输入；
+  // 输入模式与精读同一语义：Android 平板默认手写批注，手机固定键盘输入；
   // 切换只影响交互截获，不清笔迹 / 不 reload / 不改 activeBlank 与答案。
-  const [inkNoteMode, setInkNoteMode] = useState(() => isAndroidApp());
+  const keyboardOnly = isPhoneDevice();
+  const phonePassageRef = useRef(null);
+  const [inkNoteMode, setInkNoteMode] = useState(() => isAndroidApp() && !keyboardOnly);
   const [inkPenSize, setInkPenSize] = useState(() => normalizePenSize(getUserItem(PEN_SIZE_STORAGE_KEY)));
   const [inkPenMode, setInkPenMode] = useState(() => normalizePenMode(getUserItem(PEN_MODE_STORAGE_KEY)));
   const [inkEraserMode, setInkEraserMode] = useState(() => getUserItem("wuliao:pref:eraser-mode") || "normal");
@@ -521,6 +526,35 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
   // 陌生词两态门控（产品决策）：禁止查词的阶段（初做/复查/订正）整个入口隐藏；
   // 允许的阶段（逐空精析/全文回读）100% 使用精读完整能力。不存在 mark-only 中间态。
   const unknownWordsVisible = isAnalysisStage(stageId) || isFinalReadStage(stageId);
+  const phoneUnknownTap = useMemo(() => createDirectUnknownTap({
+    canHandle: (event) => keyboardOnly && unknownWordsVisible && inkTool === "unknown"
+      && !referenceMode && ["touch", "mouse", "pen"].includes(event.pointerType)
+      && (event.pointerType !== "mouse" || event.button === 0)
+      && !event.target?.closest?.("button, input, textarea, [data-unknown-ignore]"),
+    hitTest: (x, y) => {
+      const token = unknownWordFromPoint(x, y);
+      return token && phonePassageRef.current?.contains(token.scope) ? token : null;
+    },
+    maxTouchDuration: 450,
+    onCommit: commitClozeUnknownSelection,
+    onError: (reason) => showHint(`陌生词保存失败：${reason?.message || reason}`),
+  }), [keyboardOnly, unknownWordsVisible, inkTool, referenceMode, sentenceModel, storageUsername]);
+  useEffect(() => {
+    if (!keyboardOnly) return undefined;
+    const cancel = () => phoneUnknownTap.cancel();
+    const outsideUp = (event) => {
+      if (!phonePassageRef.current?.querySelector(".cloze-ink-content")?.contains(event.target)) phoneUnknownTap.reset();
+    };
+    window.addEventListener("scroll", cancel, true);
+    window.addEventListener("blur", cancel);
+    window.addEventListener("pointerup", outsideUp, true);
+    return () => {
+      phoneUnknownTap.reset();
+      window.removeEventListener("scroll", cancel, true);
+      window.removeEventListener("blur", cancel);
+      window.removeEventListener("pointerup", outsideUp, true);
+    };
+  }, [phoneUnknownTap, keyboardOnly]);
   const unknownWordOccurrences = useMemo(
     () => new Set(unknownWords.flatMap((item) => item.occurrences || [])),
     [unknownWords],
@@ -875,8 +909,8 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
         color={inkColor}
         annotations={clozeInkStrokes}
         noteMode={inkNoteMode}
-        onToggleNoteMode={() => { setInkNoteMode((value) => !value); }}
-        onTool={(value) => { setInkTool(value); setInkNoteMode(true); }}
+        onToggleNoteMode={() => { if (!keyboardOnly) setInkNoteMode((value) => !value); }}
+        onTool={(value) => { setInkTool(value); setInkNoteMode(!keyboardOnly); }}
         onColor={(value) => { setInkColor(value); setInkTool("pen"); setInkNoteMode(true); }}
         penSize={inkPenSize}
         penMode={inkPenMode}
@@ -898,7 +932,14 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
         tabletInk={isAndroidApp()}
       />
 
-      <main className="cloze-reader-main">
+      <main className="cloze-reader-main" ref={phonePassageRef}
+        onClickCapture={keyboardOnly ? (event) => {
+          if (unknownWordsVisible && inkTool === "unknown" && !referenceMode
+            && event.target.closest?.("[data-unknown-scope]")
+            && !event.target.closest?.("button, [data-unknown-ignore]")) {
+            event.preventDefault(); event.stopPropagation();
+          }
+        } : undefined}>
         <div className={`cloze-reader-layout ${panelOpen ? "" : "panel-collapsed"}`}>
           <section className="cloze-passage-pane" aria-label="完形正文">
             {isFinalReadStage(stageId) ? (
@@ -964,7 +1005,8 @@ export default function ClozeReader({ resource, onClose, onShowLearningSummary =
             <ClozeInkSurface
               resourceId={resource.id}
               clozeId={clozeId}
-              enabled={stageId !== "cloze-cover" && inkNoteMode}
+              directUnknownTap={keyboardOnly ? phoneUnknownTap : null}
+              enabled={!keyboardOnly && stageId !== "cloze-cover" && inkNoteMode}
               tool={inkTool}
               color={inkColor}
               penSize={inkPenSize}

@@ -48,6 +48,7 @@ import {
   renderInkLayer,
 } from "./annotationTools";
 import { isAndroidApp } from "./platform";
+import { isPhoneDevice } from "./inputDevicePolicy.js";
 import { createDebouncedStorageWriter } from "./debouncedStorage";
 import {
   passageClearableKeys,
@@ -1805,6 +1806,7 @@ export default function CustomDeepReader({
   const storageUsername = useRef(getCurrentUsername()).current;
   const setUserItem = (key, value) => writeOwnedUserItem(key, value, storageUsername);
   const androidApp = isAndroidApp();
+  const keyboardOnly = isPhoneDevice();
   const analysis = resource.analysis;
   const restoredOrigin = restoreContext?.resourceId === resource.id ? restoreContext : null;
   const initialPosition = restoredOrigin || loadJson(positionKey(resource.id), {});
@@ -1834,7 +1836,7 @@ export default function CustomDeepReader({
     return loadEvidenceStore(resource.id, initialPassage?.id || "");
   });
   const [timerNow, setTimerNow] = useState(() => Date.now());
-  const [noteMode, setNoteMode] = useState(() => androidApp);
+  const [noteMode, setNoteMode] = useState(() => androidApp && !keyboardOnly);
   const [tool, setTool] = useState("pen");
   const [penSize, setPenSize] = useState(() => normalizePenSize(getUserItem(PEN_SIZE_STORAGE_KEY)));
   const [penMode, setPenMode] = useState(() => normalizePenMode(getUserItem(PEN_MODE_STORAGE_KEY)));
@@ -2067,7 +2069,7 @@ export default function CustomDeepReader({
   // 共享 Ink Runtime：精读 / 普通完形 / 模拟考试使用同一份笔系统实现。
   // 精读在同一纸张层内使用固定笔迹分块与可视范围预览带。
   const inkController = useStructuredInk({
-    canInteract: () => !evidenceEditorRef.current && noteModeRef.current
+    canInteract: () => !keyboardOnly && !evidenceEditorRef.current && noteModeRef.current
       && !(timedReadingActiveRef.current && toolRef.current === "unknown"),
     surfaceRef: contentRef,
     previewCanvasRef: viewportPreviewCanvasRef,
@@ -4260,7 +4262,7 @@ export default function CustomDeepReader({
   }
 
   function redirectPenFromTextField(event) {
-    if (!androidApp || event.pointerType !== "pen" || !isTextEntryTarget(event.target)) return;
+    if (keyboardOnly || !androidApp || event.pointerType !== "pen" || !isTextEntryTarget(event.target)) return;
     event.preventDefault();
     event.target.blur?.();
     if (!noteModeRef.current) {
@@ -4282,12 +4284,13 @@ export default function CustomDeepReader({
     unknownSelectionRef.current = null;
     globalThis.CSS?.highlights?.delete(ACTIVE_UNKNOWN_HIGHLIGHT);
     toolRef.current = value;
-    noteModeRef.current = true;
+    noteModeRef.current = !keyboardOnly;
     setTool(value);
-    setNoteMode(true);
+    setNoteMode(!keyboardOnly);
   }
 
   function toggleNoteMode() {
+    if (keyboardOnly) return;
     inkController.finishActiveForGeometryChange();
     directUnknownTap.reset();
     unknownSelectionRef.current = null;

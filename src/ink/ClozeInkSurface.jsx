@@ -35,6 +35,7 @@ export default function ClozeInkSurface({
   beforeInkDown = null,
   beforeInkMove = null,
   beforeInkFinish = null,
+  directUnknownTap = null,
   children,
 }) {
   const rootRef = useRef(null);
@@ -229,11 +230,11 @@ export default function ClozeInkSurface({
       <div
         ref={contentRef}
         className="cloze-ink-content"
-        onPointerDownCapture={inkController.handlePointerDown}
-        onPointerMoveCapture={inkController.handlePointerMove}
-        onPointerUpCapture={inkController.handlePointerUp}
-        onPointerCancelCapture={inkController.handlePointerCancel}
-        onLostPointerCapture={inkController.handlePointerUp}
+        onPointerDownCapture={directUnknownTap?.down || inkController.handlePointerDown}
+        onPointerMoveCapture={directUnknownTap?.move || inkController.handlePointerMove}
+        onPointerUpCapture={directUnknownTap?.finish || inkController.handlePointerUp}
+        onPointerCancelCapture={directUnknownTap?.finish || inkController.handlePointerCancel}
+        onLostPointerCapture={directUnknownTap?.finish || inkController.handlePointerUp}
       >
         {children}
         <canvas ref={committedCanvasRef} className="cloze-ink-canvas" aria-hidden="true" />
