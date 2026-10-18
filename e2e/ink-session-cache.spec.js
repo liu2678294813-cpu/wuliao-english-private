@@ -42,6 +42,9 @@ for (const { count, fallback } of [{ count: 500 }, { count: 2000 }, { count: 500
   test(`ink session: ${count} strokes, cached scroll and new ink survive restart${fallback ? " without Worker" : ""}`, async ({ page }, testInfo) => {
     const errors = []; page.on("pageerror", error => errors.push(error.message));
     const username = await prepare(page, count, fallback);
+    // The reader reapplies its saved position after 420ms. In the faster
+    // no-Worker path, that restore must finish before warming remote tiles.
+    await page.waitForTimeout(500);
     await page.locator("#deep-translation .translation-paragraph").first().scrollIntoViewIfNeeded();
     await expect.poll(() => page.evaluate(() => window.__deepInkRenderStats().scratchBytes)).toBe(0);
     // Use two explicit paper positions. The reader can restore scroll after
@@ -88,8 +91,10 @@ for (const { count, fallback } of [{ count: 500 }, { count: 2000 }, { count: 500
       const unaffected = (window.__priorInkTiles || []).filter(canvas => !canvas.isConnected && Math.abs(parseFloat(canvas.style.top) - localY) > 1600);
       for (const [type, dy] of [["pointerdown",0],["pointermove",15],["pointermove",30],["pointerup",30]]) element.dispatchEvent(new PointerEvent(type,
         { bubbles:true,cancelable:true,pointerId:917,pointerType:"pen",isPrimary:true,button:0,buttons:type==="pointerup"?0:1,pressure:.5,clientX:x,clientY:y+dy }));
-      return { tested: unaffected.length, preserved: unaffected.filter(canvas => canvas.width > 0 && canvas.height > 0).length };
+      return { tested: unaffected.length, preserved: unaffected.filter(canvas => canvas.width > 0 && canvas.height > 0).length,
+        localY, priorTiles: (window.__priorInkTiles || []).map(canvas => ({ top: parseFloat(canvas.style.top), connected: canvas.isConnected })) };
     });
+    await writeFile(testInfo.outputPath("cache-probe.json"), JSON.stringify({ warmY, before, after, retained }, null, 2));
     expect(retained.tested).toBeGreaterThan(0);
     expect(retained.preserved).toBe(retained.tested);
     await expect.poll(() => page.evaluate(() => window.__deepInkRenderStats().strokes)).toBe(count + 1);
