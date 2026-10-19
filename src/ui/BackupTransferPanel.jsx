@@ -115,7 +115,7 @@ export default function BackupTransferPanel({ username, appVersion }) {
       <label>接收地址<select value={host} onChange={e => setHost(e.target.value)}>{connection.hosts.map(h => <option key={h} value={h}>{h}:{connection.port}</option>)}</select></label>
       <label>一次性连接码<textarea readOnly aria-label="本机连接码" value={connectionCode(connection, host)} onFocus={e => e.target.select()} /></label>
       <button className="settings-action" onClick={() => run(async () => { await navigator.clipboard.writeText(connectionCode(connection, host)); setMessage('连接码已复制，请仅发送给你的另一台设备。'); })}>复制连接码</button>
-      {offer && <p>发送设备：{offer.platform} · 账号 {offer.username}<button className="settings-action primary" disabled={busy} onClick={() => run(async () => { await transferCommand('accept'); setOffer(null); setMessage('已确认，等待发送端生成并传送备份…'); })}>确认接收</button></p>}
+      {offer && <p>发送设备：{offer.platform === 'android' ? '安卓设备' : 'Windows 下载版'} · 账号 {offer.username}<button className="settings-action primary" disabled={busy} onClick={() => run(async () => { await transferCommand('accept'); setOffer(null); setMessage('已确认，等待发送端生成并传送备份…'); })}>确认接收</button></p>}
       <p className="settings-note">连接码包含本次加密密钥，仅交给你的设备；页面关闭后失效。</p>
     </div> : <div className="backup-transfer-card">
       <label>另一设备的连接码<textarea aria-label="另一设备的连接码" value={input} disabled={busy} onChange={e => setInput(e.target.value)} placeholder="先在另一设备打开接收，再粘贴完整 WL1 连接码" /></label>
