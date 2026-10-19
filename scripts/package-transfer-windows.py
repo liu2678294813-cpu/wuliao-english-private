@@ -3,6 +3,7 @@ from pathlib import Path
 import shutil
 import zipfile
 import subprocess
+import os
 from urllib.request import urlopen
 from uuid import uuid4
 
@@ -10,7 +11,12 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output/backup-transfer-20261019'
 PACKAGE = OUT / ('windows-stage-' + uuid4().hex[:12])
 PACKAGE.mkdir(parents=True, exist_ok=True)
-shutil.copytree(ROOT / 'dist', PACKAGE / 'dist', dirs_exist_ok=True)
+def stage_file(source, destination):
+    try: os.link(source, destination)
+    except OSError: shutil.copy2(source, destination)
+    return destination
+
+shutil.copytree(ROOT / 'dist', PACKAGE / 'dist', copy_function=stage_file)
 (PACKAGE / 'scripts').mkdir(exist_ok=True)
 for name in ['start.mjs', 'device-transfer-server.mjs']:
     shutil.copy2(ROOT / 'scripts' / name, PACKAGE / 'scripts' / name)
