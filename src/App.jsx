@@ -34,6 +34,8 @@ import {
   writingRouteFromHost,
   longSentenceRouteFromHost,
   longSentenceHostHash,
+  sentenceReviewRouteFromHost,
+  sentenceReviewHostHash,
 } from "./navigation";
 import { getAiApiKey } from "./ai";
 import { PDF_PARSER_VERSION } from "./pdfParserVersion.js";
@@ -59,6 +61,7 @@ const DeveloperLab = lazy(() => import("./ui/DeveloperLab"));
 const WritingLibrary = lazy(() => import("./writing/ui/WritingLibrary.jsx"));
 const WritingWorkspace = lazy(() => import("./writing/ui/WritingWorkspace.jsx"));
 const LongSentencePage = lazy(() => import("./longSentence/LongSentencePage.jsx"));
+const SentenceReviewPage = lazy(() => import("./sentenceReview/SentenceReviewPage.jsx"));
 const UnifiedImport = lazy(() => import("./import/UnifiedImport.jsx"));
 const ExamImportEditor = lazy(() => import("./ExamImportEditor"));
 
@@ -644,7 +647,7 @@ function ClozeLibrary(props) {
   return <Library {...props} mode="cloze" />;
 }
 
-function Library({ onBack, onOpen, onOpenCloze, onOpenClozeSummary = null, onUnknownWords, mode }) {
+function Library({ onBack, onOpen, onOpenCloze, onOpenClozeSummary = null, onUnknownWords, onSentenceLibrary, mode }) {
   const [tab, setTab] = useState(hasBundledArticles ? (mode === "cloze" ? "official" : "postgraduate") : "custom");
   const [query, setQuery] = useState("");
   const [year, setYear] = useState("all");
@@ -932,6 +935,7 @@ function Library({ onBack, onOpen, onOpenCloze, onOpenClozeSummary = null, onUnk
       </header>
       <div className="library-action-strip">
         <div className="library-header-actions">
+          <button className="unknown-library-button" onClick={onSentenceLibrary}><Icon name="book" size={17} />重难句仓库</button>
           <button className="unknown-library-button" onClick={onUnknownWords}><Icon name="vocabulary" size={17} />陌生词库</button>
 
         </div>
@@ -1184,6 +1188,10 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
   const initialReadingRoute = readingRouteFromHost();
   const initialWritingRoute = writingRouteFromHost();
   const initialLongSentenceRoute = longSentenceRouteFromHost();
+  const initialSentenceReviewRoute = sentenceReviewRouteFromHost();
+  const [sentenceReviewSourceId, setSentenceReviewSourceId] = useState(initialSentenceReviewRoute?.sourceId || "");
+  const sentenceReviewSourceRef = useRef(sentenceReviewSourceId);
+  sentenceReviewSourceRef.current = sentenceReviewSourceId;
   const [longSentenceTrainingEnabled, setLongSentenceEnabled] = useState(getLongSentenceTrainingEnabled);
   const [nav, setNav] = useState(() => {
     if (isLegacyExamHash()) {
@@ -1191,7 +1199,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       return { view: "home", stack: [] };
     }
     return {
-      view: initialWritingRoute?.view || initialReadingRoute?.view
+      view: initialSentenceReviewRoute?.view || initialWritingRoute?.view || initialReadingRoute?.view
         || (getLongSentenceTrainingEnabled() ? initialLongSentenceRoute?.view : "")
         || (initialVocabularyRoute ? "vocabulary" : "home"),
       stack: [],
@@ -1289,6 +1297,15 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
           ? current
           : { view: next, stack: [...current.stack, current.view] }
       ));
+    });
+  }
+
+  function openSentenceLibrary(sourceId = "") {
+    return leaveAfterSave(() => {
+      setSentenceReviewSourceId(sourceId);
+      sentenceReviewSourceRef.current = sourceId;
+      setNav(current => current.view === "sentence-library" ? current : { view: "sentence-library", stack: [...current.stack, current.view] });
+      window.history.pushState(window.history.state, "", sentenceReviewHostHash(sourceId));
     });
   }
 
@@ -1421,7 +1438,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
     } else if (writingRouteFromHost() && !String(destination).startsWith("writing-")) {
       window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
-    } else if (longSentenceRouteFromHost()) {
+    } else if (longSentenceRouteFromHost() || sentenceReviewRouteFromHost()) {
       window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
     }
     setNav(current.stack.length
@@ -1681,7 +1698,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       startTransition(() => setNav({ view, stack: [] }));
       return;
     }
-    if (vocabularyRouteFromHost() || longSentenceRouteFromHost()) {
+    if (vocabularyRouteFromHost() || longSentenceRouteFromHost() || sentenceReviewRouteFromHost()) {
       window.history.replaceState(
         window.history.state,
         "",
@@ -1857,12 +1874,25 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         window.history.replaceState(window.history.state, "", longSentenceHostHash(longSentenceSessionIdRef.current));
         return;
       }
+      if (currentView === "sentence-library") {
+        window.history.replaceState(window.history.state, "", sentenceReviewHostHash(sentenceReviewSourceRef.current));
+        return;
+      }
       if (readingRouteFromHost() || writingRouteFromHost() || vocabularyRouteFromHost() || longSentenceRouteFromHost()) {
         window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
       }
     }
 
     const restoreHostNavigation = (saved = false) => {
+      if (navRef.current.view === "sentence-library" && saved !== true) {
+        const requestedHash = window.location.hash;
+        restoreCurrentHostLocation();
+        leaveAfterSave(() => {
+          window.history.replaceState(window.history.state, "", requestedHash);
+          restoreHostNavigation(true);
+        });
+        return;
+      }
       if (isLegacyExamHash()) {
         restoreCurrentHostLocation();
         leaveAfterSave(() => {
@@ -1871,7 +1901,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         });
         return;
       }
-      if (backControllerRef.current.handle()) {
+      if (navRef.current.view !== "sentence-library" && backControllerRef.current.handle()) {
         restoreCurrentHostLocation();
         return;
       }
@@ -1898,6 +1928,13 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       const reading = readingRouteFromHost();
       const writing = writingRouteFromHost();
       const longSentence = longSentenceRouteFromHost();
+      const sentenceReview = sentenceReviewRouteFromHost();
+      if (sentenceReview) {
+        setSentenceReviewSourceId(sentenceReview.sourceId);
+        sentenceReviewSourceRef.current = sentenceReview.sourceId;
+        setNav(current => ({ view: "sentence-library", stack: current.view === "sentence-library" ? current.stack : ["library"] }));
+        return;
+      }
       if (longSentence && getLongSentenceTrainingEnabled()) {
         setLongSentenceSessionId(longSentence.sessionId || "");
         setNav((current) => ({ view: "long-sentence", stack: current.view === "long-sentence" ? current.stack : ["home"] }));
@@ -1928,7 +1965,8 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       setNav({ view: "home", stack: [] });
     };
     const onHashChange = () => {
-      if (isLegacyExamHash() || navRef.current.view === "long-sentence" || longSentenceRouteFromHost()) restoreHostNavigation();
+      if (isLegacyExamHash() || navRef.current.view === "long-sentence" || longSentenceRouteFromHost()
+        || navRef.current.view === "sentence-library" || sentenceReviewRouteFromHost()) restoreHostNavigation();
     };
     window.addEventListener("popstate", restoreHostNavigation);
     window.addEventListener("hashchange", onHashChange);
@@ -1943,7 +1981,9 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
   }, []);
 
   let content = null;
-  if (nav.view === "long-sentence" && longSentenceTrainingEnabled) {
+  if (nav.view === "sentence-library") {
+    content = <SentenceReviewPage username={username} sourceId={sentenceReviewSourceId} onOpenSource={openSentenceLibrary} onBack={goBack} />;
+  } else if (nav.view === "long-sentence" && longSentenceTrainingEnabled) {
     content = <LongSentencePage
       username={username}
       sessionId={longSentenceSessionId}
@@ -1995,6 +2035,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         onOpenCloze={openCloze}
         onOpenClozeSummary={openClozeSummaryForResource}
         onUnknownWords={() => navigateTo("unknown-words")}
+        onSentenceLibrary={() => openSentenceLibrary()}
       />
     );
   } else if (nav.view === "cloze-library") {
@@ -2005,6 +2046,7 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
         onOpenCloze={openCloze}
         onOpenClozeSummary={openClozeSummaryForResource}
         onUnknownWords={() => navigateTo("unknown-words")}
+        onSentenceLibrary={() => openSentenceLibrary()}
       />
     );
   } else if (nav.view === "unknown-words") {

@@ -396,7 +396,7 @@ test("v7 upgrade retains old data and includes all long sentence stores in backu
   const indexedDb = new FakeIndexedDb(db);
   const opened = await openWuliaoEnglishDatabase(indexedDb);
   opened.close();
-  assert.equal(WULIAO_ENGLISH_DB_VERSION, 9);
+  assert.equal(WULIAO_ENGLISH_DB_VERSION, 10);
   assert.equal(db.version, WULIAO_ENGLISH_DB_VERSION);
   assert.equal(db.stores.get("unknown-words").records.get("keep").word, "keep");
   for (const name of Object.values(S)) {

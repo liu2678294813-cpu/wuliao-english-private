@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
 import { createAccount, navTo, setScopedJson } from "./helpers.js";
 
 async function open(page) {
@@ -40,6 +41,13 @@ test("manual references reveal only written words; AI processes offscreen rows 1
     const blocks = route.request().postDataJSON().messages.at(-1).content;
     const count = blocks.filter(block => block.type === "image_url").length; visionWords += count;
     expect(count).toBeGreaterThan(0);
+    const image = blocks.find(block => block.type === "image_url").image_url.url;
+    await writeFile(info.outputPath("recognized-edge-ink.png"), Buffer.from(image.split(",")[1], "base64"));
+    const imageSize = await page.evaluate(src => new Promise(resolve => {
+      const img = new Image(); img.onload = () => resolve({ width: img.width, height: img.height }); img.src = src;
+    }), image);
+    // The first word has strokes near both vertical edges, not just the middle.
+    expect(imageSize.height).toBeGreaterThan(imageSize.width);
     await route.fulfill({ json: { choices: [{ message: { content: JSON.stringify({ items: Array.from({ length: count }, (_, i) => ({ id: String(i), text: "手写中文", unsure: false })) }) } }] } });
   });
   await page.route("https://api.deepseek.com/**", async route => {
@@ -47,6 +55,8 @@ test("manual references reveal only written words; AI processes offscreen rows 1
     await route.fulfill({ json: { choices: [{ message: { content: JSON.stringify({ items: rows.map(row => ({ id: row.id, verdict: "correct", reason: "语义一致" })) }) } }] } });
   });
   for (const index of [0, 34, 79]) await draw(page, await at(page, index));
+  const first = await at(page, 0);
+  await draw(page, first, 4); await draw(page, first, 105);
   await expect.poll(async () => (await ink(page)).filter(row => row.strokes.length).length).toBe(3);
   expect(visionWords).toBe(0); expect(judgedWords).toBe(0);
   await page.getByRole("button", { name: "对照", exact: true }).click();
@@ -72,6 +82,122 @@ test("manual references reveal only written words; AI processes offscreen rows 1
   await expect.poll(() => page.locator(".vocab-handwriting-scroll").evaluate(el => el.scrollTop)).toBe(top);
   for (const index of [0, 34, 79]) await expect((await at(page, index)).locator("textarea")).toHaveValue("手写中文");
   expect(errors).toEqual([]);
+});
+
+test("handwriting covers row edges without moving controls and survives remount, mode switch and reload", async ({ page }, info) => {
+  const errors = [], logs = []; page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => { if (["error", "warning"].includes(message.type())) logs.push({ level: message.type(), text: message.text() }); });
+  await open(page);
+  expect(new URL(page.url()).hostname).toBe("127.0.0.1");
+  await expect(page).toHaveTitle(/无聊英语/);
+  await expect(page.locator("vite-error-overlay")).toHaveCount(0);
+  const row = await at(page, 0);
+  await expect(row.locator(".writing-ink-surface")).not.toHaveClass(/is-disabled/);
+  const measure = () => row.evaluate(el => {
+    const rect = element => { const b = element.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; };
+    return Object.fromEntries([["row", el], ...[".vocab-ink-row-main", ".vocab-ink-english", ".vocab-ink-transcript", ".vocab-ink-row-actions", ".vocab-ink-paper", ".writing-ink-content"].map(s => [s, el.querySelector(s)])].map(([key, element]) => [key, rect(element)]));
+  });
+  const initial = await measure();
+  await info.attach("initial-geometry", { body: JSON.stringify(initial, null, 2), contentType: "application/json" });
+  await page.screenshot({ path: info.outputPath("initial-layout.png") });
+  expect(initial.row.height).toBe(120);
+  expect(initial[".vocab-ink-row-main"].height).toBe(78);
+  expect(initial[".vocab-ink-paper"].height).toBeGreaterThanOrEqual(113);
+  expect(initial[".vocab-ink-paper"].height).toBeLessThanOrEqual(114);
+  expect(initial[".writing-ink-content"]).toEqual(initial[".vocab-ink-paper"]);
+  expect(initial[".vocab-ink-paper"].y - initial.row.y).toBeCloseTo(3, 0);
+
+  const cdp = await page.context().newCDPSession(page);
+  const line = async (x, y) => {
+    const b = await row.locator(".vocab-ink-paper").boundingBox();
+    for (const [type, dx] of [["mousePressed", 0], ["mouseMoved", 22], ["mouseReleased", 22]]) {
+      await cdp.send("Input.dispatchMouseEvent", { type, x: b.x + x + dx, y: b.y + y,
+        button: type === "mouseMoved" ? "none" : "left", buttons: type === "mouseReleased" ? 0 : 1,
+        force: type === "mouseReleased" ? 0 : 0.6, clickCount: 1, pointerType: "pen" });
+    }
+  };
+  const b = initial[".vocab-ink-paper"];
+  for (const [x, y] of [[6, 5], [b.width - 30, 5], [b.width / 2, b.height / 2], [6, b.height - 5], [b.width - 30, b.height - 5]]) await line(x, y);
+  await expect.poll(async () => (await ink(page))[0]?.strokes.length).toBe(5);
+  const saved = (await ink(page))[0];
+  expect(saved.strokes.every(s => s.coordinateSpace === "writing-page-v1" && s.writingAnchor.pageId === "answer")).toBe(true);
+  expect(saved.strokes.every(s => Math.max(...s.points.map(p => p.x)) - Math.min(...s.points.map(p => p.x)) > 0.04)).toBe(true);
+  const ys = saved.strokes.flatMap(s => s.points.map(p => p.writingLocal.y));
+  expect(Math.min(...ys)).toBeLessThan(0.06); expect(Math.max(...ys)).toBeGreaterThan(0.94);
+  await page.getByRole("button", { name: "对照", exact: true }).click();
+  await expect(row.locator(".vocab-ink-reference")).toBeVisible();
+  const withReference = await measure();
+  expect(withReference).toEqual(initial);
+  expect(await row.locator(".vocab-ink-paper").evaluate(el => {
+    const b = el.getBoundingClientRect(); return el.contains(document.elementFromPoint(b.x + b.width / 2, b.bottom - 5));
+  })).toBe(true);
+  await page.screenshot({ path: info.outputPath("edge-ink-and-reference.png") });
+
+  await at(page, 34); await at(page, 0);
+  await page.getByRole("button", { name: "选择模式", exact: true }).click();
+  await page.getByRole("button", { name: "手写模式", exact: true }).click();
+  await expect(row).toBeVisible();
+  await page.reload(); await navTo(page, "筛查");
+  await page.getByRole("button", { name: "手写模式", exact: true }).click();
+  await expect(row.locator(".writing-ink-surface")).not.toHaveClass(/is-disabled/);
+  expect((await ink(page))[0]).toEqual(saved);
+
+  for (const [width, height, zoom] of [[1280, 840, 1], [1100, 720, 1], [1280, 840, 0.8], [1280, 840, 1.25]]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(value => { document.documentElement.style.zoom = value; }, zoom);
+    await expect.poll(async () => (await measure())[".vocab-ink-paper"].height / zoom).toBeCloseTo(114, 0);
+    const layout = await measure();
+    expect(layout.row.height / zoom).toBeCloseTo(120, 0);
+    expect(layout[".writing-ink-content"]).toEqual(layout[".vocab-ink-paper"]);
+    await page.screenshot({ path: info.outputPath(`layout-${width}-${zoom}.png`) });
+  }
+  expect((await ink(page))[0]).toEqual(saved);
+  await page.evaluate(() => { document.documentElement.style.zoom = 1; });
+  await row.getByRole("button", { name: "遮挡", exact: true }).click();
+  await expect(row.locator(".vocab-ink-paper")).toBeHidden();
+  await expect(row.locator(".vocab-ink-reference")).toBeVisible();
+  await row.getByRole("button", { name: "揭开", exact: true }).click();
+  await row.locator("textarea").fill("键盘中文");
+  await row.locator("select").selectOption("wrong");
+  await expect(row.locator(".vocab-verdict")).toContainText("错误");
+  await row.locator("select").selectOption("correct");
+  await expect(row.locator(".vocab-verdict")).toContainText("正确");
+  expect((await ink(page))[0]).toEqual(saved);
+  await page.getByRole("button", { name: "橡皮", exact: true }).click();
+  await line(6, 5);
+  await expect.poll(async () => (await ink(page))[0]?.strokes.at(-1)?.tool).toBe("eraser");
+  await page.getByRole("button", { name: "撤销", exact: true }).click();
+  await expect.poll(async () => (await ink(page))[0]?.strokes).toEqual(saved.strokes);
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "清空当前单词笔迹", exact: true }).click();
+  await expect.poll(async () => (await ink(page))[0]?.strokes.length).toBe(0);
+  expect((await ink(page)).filter(snapshot => snapshot.strokes.length)).toEqual([]);
+  await expect(page.locator(".vocab-handwriting-message")).not.toContainText("logical page");
+  await info.attach("browser-health", { body: JSON.stringify({ url: page.url(), title: await page.title(), errors, logs }), contentType: "application/json" });
+  expect(errors).toEqual([]);
+  expect(logs).toEqual([]);
+});
+
+test("existing 64px handwriting adapts without rewriting its stored snapshot", async ({ page }) => {
+  await open(page); const row = await at(page, 0);
+  await expect(row.locator(".writing-ink-surface")).not.toHaveClass(/is-disabled/);
+  // Create a real saved stroke at the old paper size, then restore today's layout.
+  const oldLayout = await page.addStyleTag({ content: ".vocab-ink-pad { top: 7px !important; height: 64px !important; }" });
+  await expect.poll(async () => (await row.locator(".vocab-ink-paper").boundingBox()).height).toBe(64);
+  await draw(page, row);
+  await expect.poll(async () => (await ink(page))[0]?.strokes.length).toBe(1);
+  const saved = (await ink(page))[0];
+  await oldLayout.evaluate(el => el.remove());
+  await expect.poll(async () => (await row.locator(".vocab-ink-paper").boundingBox()).height).toBe(114);
+  await page.getByRole("button", { name: "选择模式", exact: true }).click();
+  await page.getByRole("button", { name: "手写模式", exact: true }).click();
+  await expect(row.locator(".writing-ink-surface")).not.toHaveClass(/is-disabled/);
+  expect((await ink(page))[0]).toEqual(saved);
+  await page.reload(); await navTo(page, "筛查");
+  await page.getByRole("button", { name: "手写模式", exact: true }).click();
+  await expect(row.locator(".writing-ink-surface")).not.toHaveClass(/is-disabled/);
+  expect((await ink(page))[0]).toEqual(saved);
+  await expect(page.locator(".vocab-handwriting-message")).not.toContainText("logical page");
 });
 
 test("pen long press circles one stroke, resumes writing, undo works; finger scroll creates no answer revision", async ({ page }, info) => {

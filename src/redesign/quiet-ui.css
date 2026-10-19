@@ -216,7 +216,7 @@ body :is(.settings-header small, .ai-api-modal header small, .archive-hub header
   .ds-shell .library-action-strip { height: 0; padding: 0; top: 0; overflow: visible; }
   .ds-shell .library-header-actions { position: absolute; top: 18px; right: 0; padding-left: 16px; background: var(--ds-canvas); }
   .ds-shell .library-main { padding-top: 12px; }
-  .ds-shell .library-tabs { padding-right: 150px; }
+  .ds-shell .library-tabs { padding-right: 300px; }
   .ds-shell .home-page .study-planner-budget { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
   .ds-shell .home-page .study-planner-budget-line { margin: 0; }
   .ds-shell .writing-library-hero { position: absolute; right: 32px; top: 20px; }

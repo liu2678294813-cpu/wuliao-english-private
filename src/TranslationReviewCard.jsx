@@ -237,9 +237,9 @@ export default function TranslationReviewCard({
         <button type="button" className="ai-review-action" onClick={handleCopy} disabled={!result.minimalRevision}>
           {copied ? "已复制" : "复制最小修改版"}
         </button>
-        <button type="button" className="ai-review-action" onClick={() => onRegenerate?.()}>
+        {onRegenerate && <button type="button" className="ai-review-action" onClick={() => onRegenerate?.()}>
           {cached ? "重新生成（重新请求 AI）" : "重新生成"}
-        </button>
+        </button>}
       </div>
     </div>
   );

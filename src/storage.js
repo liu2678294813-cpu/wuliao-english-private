@@ -6,7 +6,8 @@ import { normalizeUnknownTerm } from "./unknownWords.js";
 import { IMPORT_STORES } from "./import/contracts.js";
 
 export const WULIAO_ENGLISH_DB_NAME = "wuliao-english";
-export const WULIAO_ENGLISH_DB_VERSION = 9;
+export const WULIAO_ENGLISH_DB_VERSION = 10;
+export const SENTENCE_REVIEW_STORES = ["sentence-review-attempts", "sentence-review-ink"];
 const STORE = "custom-pdfs";
 const UNKNOWN_STORE = "unknown-words";
 const CACHE_STORE = "pdf-parse-cache";
@@ -108,6 +109,12 @@ export function openWuliaoEnglishDatabase(indexedDb = globalThis.indexedDB) {
         const store = request.result.createObjectStore(DEVICE_PRIVATE_WRITING_SAMPLE_STORE, { keyPath: "id" });
         store.createIndex("username", "username", { unique: false });
         store.createIndex("usernameQuestion", ["username", "questionId"], { unique: true });
+      }
+      for (const name of SENTENCE_REVIEW_STORES) {
+        if (request.result.objectStoreNames.contains(name)) continue;
+        const store = request.result.createObjectStore(name, { keyPath: "id" });
+        store.createIndex("username", "username", { unique: false });
+        store.createIndex("usernameSource", ["username", "sourceReviewId"], { unique: false });
       }
       for (const name of LONG_SENTENCE_STORES) {
         if (request.result.objectStoreNames.contains(name)) continue;

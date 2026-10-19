@@ -631,6 +631,29 @@ export function ensureSentenceRecheckTask({
   return { ...result, task: result.ok ? task : null };
 }
 
+// A warehouse attempt owns a single-sentence task. Never reset an article's
+// existing multi-sentence task just because this sentence is opened/retried.
+export function ensureWarehouseReviewTask({ source, attemptId, followup = false, now = Date.now(), username = getCurrentUsername() }) {
+  if (username !== getCurrentUsername()) return { ok: false, error: "账号已切换，请重新打开复盘" };
+  if (!source?.resourceId || !source.passageId || !source.sentenceKey || !attemptId) return { ok: false, error: "原句身份不完整" };
+  const taskKey = `review:sentence_recheck:warehouse:${encodeURIComponent(attemptId)}${followup ? ":followup" : ""}`;
+  const existing = loadReviewTask(taskKey, username);
+  if (existing) {
+    if (existing.resourceId !== source.resourceId || existing.passageId !== source.passageId || existing.sentenceKeys[0] !== source.sentenceKey) {
+      return { ok: false, error: "复盘任务与原句不一致" };
+    }
+    return { ok: true, task: existing };
+  }
+  const sourceDate = localDateKey(now);
+  const task = { schemaVersion: REVIEW_SCHEMA_VERSION, taskKey, type: TASK_TYPE_SENTENCE_RECHECK,
+    resourceId: source.resourceId, passageId: source.passageId, sourceDate,
+    dueDate: followup ? addCalendarDays(sourceDate, 3) : sourceDate,
+    createdAt: now, startedAt: followup ? null : now, completedAt: null, skippedAt: null,
+    sentenceKeys: [source.sentenceKey], session: emptySession(TASK_TYPE_SENTENCE_RECHECK, now) };
+  const saved = saveReviewTask(task, username);
+  return { ...saved, task: saved.ok ? task : null };
+}
+
 export function wrongQuestionKeys({
   resourceId = "",
   passageId = "",

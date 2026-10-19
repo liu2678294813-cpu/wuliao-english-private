@@ -54,7 +54,7 @@ const InkRow = memo(function InkRow({ word, index, context, answer, pen, active,
   const verdict = answer?.stale ? "pending" : answer?.verdict;
   const labels = { correct: "正确 · 已加入熟知词", wrong: "错误 · 已加入生词表", unsure: "待复核", pending: "待识别 / 判断" };
   return <div className={`vocab-ink-row ${active ? "is-active" : ""} ${masked ? "is-masked" : ""}`} data-word-id={word.wordId} data-index={index}
-    style={{ transform: `translateY(${index * ROW_HEIGHT}px)` }} onFocusCapture={() => select(word.wordId)}>
+    style={{ "--vocab-ink-row-height": `${ROW_HEIGHT}px`, transform: `translateY(${index * ROW_HEIGHT}px)` }} onFocusCapture={() => select(word.wordId)}>
     <div className="vocab-ink-row-main">
       <div className="vocab-ink-answer-area">
         <button className="vocab-ink-english" disabled={masked} aria-hidden={masked || undefined} onClick={() => {
@@ -74,6 +74,7 @@ const InkRow = memo(function InkRow({ word, index, context, answer, pen, active,
             <div ref={pageRef} className="vocab-ink-paper" aria-label={`${word.english} 手写区域`} />
           </WritingInkSurface>
         </div>
+        {answer?.referenceVisible && <div className="vocab-ink-reference" aria-label={`${word.english} 标准汉语`}><strong>标准汉语</strong> {word.chinese || "词库暂无释义"}</div>}
       </div>
       <div className="vocab-ink-row-actions">
         <button onClick={() => change(word.wordId, { masked: !masked })}>{masked ? "揭开" : "遮挡"}</button>
@@ -82,7 +83,6 @@ const InkRow = memo(function InkRow({ word, index, context, answer, pen, active,
         </select>
       </div>
     </div>
-    {answer?.referenceVisible && <div className="vocab-ink-reference" aria-label={`${word.english} 标准汉语`}><strong>标准汉语</strong> {word.chinese || "词库暂无释义"}</div>}
   </div>;
 });
 

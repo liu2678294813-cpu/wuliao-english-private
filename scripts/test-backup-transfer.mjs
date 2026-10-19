@@ -65,6 +65,22 @@ async function planFor(sources) {
   ], databases: [] }, serialize: false });
   return createRestorePlan({ manifest, username: 'alice', sources });
 }
+test('sentence warehouse attempts, ink, task receipts and preferences share one reading restore group', async () => {
+  const a = adapters();
+  const { manifest } = await createBackup({ username: 'alice', sources: { entries: [
+    { key: 'wuliao:user:alice:wuliao:review-task:review:sentence_recheck:warehouse:sr-test', value: '{"taskKey":"receipt"}' },
+    { key: 'wuliao:user:alice:wuliao:pref:sentence-review-layout:v1', value: 'stacked' },
+  ], databases: [{ name: 'wuliao-english', stores: [
+    { name: 'sentence-review-attempts', records: [{ key: 'sr-test', value: { id: 'sr-test', username: 'alice', sourceReviewId: 'writing-source' } }] },
+    { name: 'sentence-review-ink', records: [{ key: 'alice::vocabulary-source::sentence-review:sr-test', value: { id: 'ink', username: 'alice', fingerprint: 'preserved-ink' } }] },
+  ] }] }, serialize: false });
+  const plan = await createRestorePlan({ manifest, username: 'alice', sources: a.sources });
+  try {
+    assert.equal(plan.groups.length, 1);
+    assert.equal(plan.groups[0].id, 'reading');
+    assert.equal(plan.counts.added, 4);
+  } finally { await plan.dispose(); }
+});
 test('restore previews every conflict; default preserves local; explicit replacement and repeat are idempotent', async () => {
   const a = adapters(), plan = await planFor(a.sources);
   assert.deepEqual(plan.counts, { added: 1, same: 0, conflict: 1 });

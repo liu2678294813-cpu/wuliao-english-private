@@ -69,6 +69,8 @@ export const IDB_INCLUDED = {
     "unknown-words": {},
     "exam-ink": { mergeByFingerprint: true },
     "writing-ink": { mergeByFingerprint: true },
+    "sentence-review-attempts": {},
+    "sentence-review-ink": { mergeByFingerprint: true },
     "long-sentence-sessions": {},
     "long-sentence-items": {},
     "long-sentence-attempts": {},
@@ -616,7 +618,7 @@ export async function restoreBackup({
               message: "Existing fingerprinted ink snapshot differs; local data was preserved",
             });
           }
-        } else if (write.db === "wuliao-english" && (write.store.startsWith("long-sentence-") || FORMAL_IMPORT_STORES.includes(write.store) || write.store === "custom-pdfs" && write.value.importVersion)) {
+        } else if (write.db === "wuliao-english" && (write.store.startsWith("long-sentence-") || write.store.startsWith("sentence-review-") || FORMAL_IMPORT_STORES.includes(write.store) || write.store === "custom-pdfs" && write.value.importVersion)) {
           const existing = await idb.get?.(write.db, write.store, write.key);
           const stable = (value) => JSON.stringify(value, function (_key, item) {
             if (!item || typeof item !== "object" || Array.isArray(item)) return item;

@@ -32,7 +32,11 @@ export default function WritingSplitWorkspace({
   workActions,
   workPane,
   layout = "split",
+  preferencePrefix = "wuliao:pref:writing",
+  documentHeight = null,
 }) {
+  const splitStorageKey = `${preferencePrefix}-split-ratio:v1`;
+  const stackedStorageKey = `${preferencePrefix}-stacked-ratio:v1`;
   const rootRef = useRef(null);
   const sourceScrollRef = useRef(null);
   const workScrollRef = useRef(null);
@@ -40,14 +44,14 @@ export default function WritingSplitWorkspace({
   const gestureFrameRef = useRef(0);
   const detachGestureListenersRef = useRef(() => {});
   const [inkDocumentHeight, setInkDocumentHeight] = useState(430);
-  const [splitRatio, setSplitRatio] = useState(() => storedRatio(WRITING_SPLIT_RATIO_STORAGE_KEY, username, DEFAULT_SPLIT_RATIO));
-  const [stackedRatio, setStackedRatio] = useState(() => storedRatio(WRITING_STACKED_RATIO_STORAGE_KEY, username, DEFAULT_STACKED_RATIO));
+  const [splitRatio, setSplitRatio] = useState(() => storedRatio(splitStorageKey, username, DEFAULT_SPLIT_RATIO));
+  const [stackedRatio, setStackedRatio] = useState(() => storedRatio(stackedStorageKey, username, DEFAULT_STACKED_RATIO));
   const [resizing, setResizing] = useState(false);
 
   useEffect(() => {
-    setSplitRatio(storedRatio(WRITING_SPLIT_RATIO_STORAGE_KEY, username, DEFAULT_SPLIT_RATIO));
-    setStackedRatio(storedRatio(WRITING_STACKED_RATIO_STORAGE_KEY, username, DEFAULT_STACKED_RATIO));
-  }, [username]);
+    setSplitRatio(storedRatio(splitStorageKey, username, DEFAULT_SPLIT_RATIO));
+    setStackedRatio(storedRatio(stackedStorageKey, username, DEFAULT_STACKED_RATIO));
+  }, [username, splitStorageKey, stackedStorageKey]);
 
   useLayoutEffect(() => {
     const sourceScroll = sourceScrollRef.current;
@@ -115,13 +119,13 @@ export default function WritingSplitWorkspace({
         setStackedRatio(finalRatio);
       }
       if (!cancelled) {
-        const key = gesture.layout === "split" ? WRITING_SPLIT_RATIO_STORAGE_KEY : WRITING_STACKED_RATIO_STORAGE_KEY;
+        const key = gesture.layout === "split" ? splitStorageKey : stackedStorageKey;
         setUserItem(key, String(finalRatio), username);
       }
     }
     gestureRef.current = null;
     setResizing(false);
-  }, [username]);
+  }, [username, splitStorageKey, stackedStorageKey]);
 
   const moveGesture = useCallback((event) => {
     const gesture = gestureRef.current;
@@ -221,7 +225,7 @@ export default function WritingSplitWorkspace({
       data-split-ratio={splitRatio.toFixed(4)}
       data-stacked-ratio={stackedRatio.toFixed(4)}
       style={{
-        "--writing-ink-document-height": `${inkDocumentHeight}px`,
+        "--writing-ink-document-height": `${documentHeight ?? inkDocumentHeight}px`,
         "--writing-split-source-fr": `${splitRatio * 100}fr`,
         "--writing-split-work-fr": `${(1 - splitRatio) * 100}fr`,
         "--writing-stacked-source-fr": `${stackedRatio * 100}fr`,

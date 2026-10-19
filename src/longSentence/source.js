@@ -65,6 +65,11 @@ export async function listDifficultSources({ resources = postgraduateResources, 
   const owner = getCurrentUsername();
   const all = [...resources, ...customs.filter((resource) => !resource.username || resource.username === owner)];
   const progressByResource = difficultProgressByResource();
+  for (const resourceId of progressByResource.keys()) {
+    if (!all.some(resource => String(resource.id) === resourceId)) {
+      all.push({ id: resourceId, title: "来源暂不可用", kind: "custom", conversionStatus: "missing" });
+    }
+  }
   const output = [];
   for (const resource of all) {
     if (signal?.aborted) throw signal.reason || new Error("已取消来源读取");
@@ -84,6 +89,7 @@ export async function listDifficultSources({ resources = postgraduateResources, 
           ...base,
           articleLabel: passage?.label || passage?.title || passageId,
           articleText: passage ? articleTextFor(passage) : "",
+          paragraphText: passage?.paragraphs?.find(paragraph => paragraph.number === item.paragraphNumber)?.sentences?.join(" ") || "",
           status,
           error: status === "resolved" ? "" : error || "原句在当前文章中无法定位，原文可能已变化",
           text: status === "resolved" ? item.sentenceText : "",
@@ -129,6 +135,9 @@ export async function listLearnedSources({ resources = postgraduateResources, cu
       articleLabel: passage?.label || passage?.title || passageId,
       articleText: passage ? articleTextFor(passage) : "",
       text: sameText ? resolved.sentenceText : entry.sourceSnapshot?.text || "",
+      paragraphNumber: resolved?.paragraphNumber ?? entry.sourceSnapshot?.paragraphNumber ?? null,
+      sentenceIndex: resolved?.sentenceIndex ?? entry.sourceSnapshot?.sentenceIndex ?? null,
+      paragraphText: passage?.paragraphs?.find(paragraph => paragraph.number === resolved?.paragraphNumber)?.sentences?.join(" ") || "",
       textFingerprint: sameText ? sentenceTextFingerprint(resolved.sentenceText) : "",
       status: sameText ? "resolved" : loaded.error ? "source_unavailable" : "text_changed",
       error: sameText ? "" : loaded.error || "当前资料中的原句已变化",

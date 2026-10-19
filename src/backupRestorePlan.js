@@ -28,6 +28,7 @@ export async function recordFingerprint(value) {
 }
 function groupFor(record) {
   const text = record.key + ' ' + (record.store || '');
+  if (record.store?.startsWith('sentence-review-') || /wuliao:(?:pref:)?sentence-review|review:sentence_recheck:warehouse:/.test(record.key)) return ['reading', '阅读、完形、翻译与笔迹'];
   if (record.db?.startsWith('Kaoyan') || /vocab|memory|screening|memorize/i.test(text)) return ['vocabulary', '单词与词库（关联记录一起选择）'];
   if (FORMAL_IMPORT_STORES.includes(record.store) || record.store === 'custom-pdfs' || record.store === 'writing-materials') return ['materials', '导入资料、附件与答案（关联记录一起选择）'];
   if (/writing/.test(text)) return ['writing', '作文与作文笔迹'];

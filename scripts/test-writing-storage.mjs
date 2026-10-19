@@ -6,6 +6,7 @@ await import("./test-hooks.mjs");
 const {
   DEVICE_PRIVATE_WRITING_SAMPLE_STORE,
   LONG_SENTENCE_STORES,
+  SENTENCE_REVIEW_STORES,
   WRITING_INK_STORE,
   WULIAO_ENGLISH_DB_VERSION,
   openWuliaoEnglishDatabase,
@@ -976,11 +977,16 @@ function createV4Database() {
   return indexedDb;
 }
 
-test("L IndexedDB v4→v9 is additive; old data survives and new training indexes are exact", async () => {
+test("L IndexedDB v4→v10 is additive; old data survives and new training indexes are exact", async () => {
   const indexedDb = createV4Database();
   const database = await openWuliaoEnglishDatabase(indexedDb);
   assert.equal(database.version, WULIAO_ENGLISH_DB_VERSION);
-  assert.equal(WULIAO_ENGLISH_DB_VERSION, 9);
+  assert.equal(WULIAO_ENGLISH_DB_VERSION, 10);
+  for (const name of SENTENCE_REVIEW_STORES) {
+    const store = database.stores.get(name);
+    assert.equal(store.keyPath, "id");
+    assert.deepEqual([...store.indexes].sort(), ["username", "usernameSource"]);
+  }
   for (const name of ["custom-pdfs", "unknown-words", "pdf-parse-cache", "exam-ink"]) {
     assert.equal(database.objectStoreNames.contains(name), true);
     assert.equal(database.stores.get(name).records.values().next().value.value, `keep-${name}`);

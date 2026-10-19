@@ -124,6 +124,23 @@ export function readingRouteFromHost() {
   return { view: "cloze-library", resourceId: "" };
 }
 
+export function sentenceReviewRouteFromHost() {
+  const hash = String(window.location.hash || "");
+  if (hash === "#/sentence-library") return { view: "sentence-library", sourceId: "" };
+  const match = /^#\/sentence-library\/([^/?#]+)$/.exec(hash);
+  if (!match) return null;
+  try {
+    const sourceId = decodeURIComponent(match[1]);
+    const ref = JSON.parse(sourceId);
+    return Array.isArray(ref) && ref.length === 3 && ref.every(value => typeof value === "string" && value)
+      ? { view: "sentence-library", sourceId } : null;
+  } catch { return null; }
+}
+
+export function sentenceReviewHostHash(sourceId = "") {
+  return sourceId ? `#/sentence-library/${encodeURIComponent(sourceId)}` : "#/sentence-library";
+}
+
 export function readingHostHash(route) {
   if (route?.view === "cloze") return `#/reading/cloze/${encodeURIComponent(route.resourceId || "")}`;
   if (route?.view === "cloze-library") return "#/reading/cloze";
