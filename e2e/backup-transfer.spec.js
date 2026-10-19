@@ -39,6 +39,7 @@ test('file preview, explicit replacement, repeated import, recovery and later le
 });
 
 test('mismatched primary key is rejected without changing the other existing PDF', async ({ page }) => {
+  await mkdir(folder, { recursive: true });
   const user = await createAccount(page);
   await page.evaluate(async username => {
     const db = await new Promise((r, j) => { const q = indexedDB.open('wuliao-english'); q.onsuccess = () => r(q.result); q.onerror = () => j(q.error); });
