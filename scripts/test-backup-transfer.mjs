@@ -11,6 +11,8 @@ test('connection codes reject public targets and AEAD rejects tampering / wrong 
   const info = await makeConnection(async () => ({ id: 'a'.repeat(48), token: 'b'.repeat(48), hosts: ['192.168.1.2'], port: 12345 }));
   assert.deepEqual(parseConnection(connectionCode(info, info.hosts[0])).host, '192.168.1.2');
   assert.throws(() => parseConnection(connectionCode(info, '8.8.8.8')), /连接码/);
+  assert.throws(() => parseConnection(connectionCode(info, '010.8.8.8')), /连接码/);
+  assert.equal(privateHost('010.8.8.8'), false);
   assert.equal(privateHost('192.168.1.2'), true); assert.equal(privateHost('192.168.1.999'), false);
   const cipher = await transferCipher(info), bytes = new TextEncoder().encode('学习😀');
   const data = await cipher.encrypt(1, bytes);

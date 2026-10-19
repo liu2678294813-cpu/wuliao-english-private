@@ -7,7 +7,7 @@ import { networkInterfaces } from 'node:os';
 
 export function privateHost(host) {
   const p = String(host).split('.').map(Number);
-  return /^\d+\.\d+\.\d+\.\d+$/.test(host) && p.every(n => n >= 0 && n <= 255)
+  return /^\d+\.\d+\.\d+\.\d+$/.test(host) && p.join('.') === host && p.every(n => n >= 0 && n <= 255)
     && (p[0] === 10 || p[0] === 192 && p[1] === 168 || p[0] === 172 && p[1] >= 16 && p[1] <= 31 || host === '127.0.0.1');
 }
 const random = () => randomBytes(24).toString('hex');

@@ -34,7 +34,7 @@ export function parseConnection(code) {
     if (!code.trim().startsWith('WL1.')) throw Error();
     const info = JSON.parse(atob(code.trim().slice(4)));
     const p = String(info.host).split('.').map(Number);
-    if (!/^\d+\.\d+\.\d+\.\d+$/.test(info.host) || !p.every(n => n >= 0 && n <= 255) || !(p[0] === 10 || p[0] === 192 && p[1] === 168 || p[0] === 172 && p[1] >= 16 && p[1] <= 31 || info.host === '127.0.0.1')
+    if (!/^\d+\.\d+\.\d+\.\d+$/.test(info.host) || p.join('.') !== info.host || !p.every(n => n >= 0 && n <= 255) || !(p[0] === 10 || p[0] === 192 && p[1] === 168 || p[0] === 172 && p[1] >= 16 && p[1] <= 31 || info.host === '127.0.0.1')
       || !Number.isInteger(info.port) || info.port < 1 || info.port > 65535 || !/^[a-f0-9]{48}$/.test(info.id) || !/^[a-f0-9]{48}$/.test(info.token)
       || fromBase64(info.secret).length !== 32) throw Error();
     return info;

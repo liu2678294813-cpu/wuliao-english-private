@@ -37,6 +37,7 @@ public class DeviceTransferPlugin extends Plugin {
         String[] p = host.split("\\."); int[] a = new int[4];
         try { for (int i = 0; i < 4; i++) { a[i] = Integer.parseInt(p[i]); if (a[i] < 0 || a[i] > 255) return false; } }
         catch (Exception e) { return false; }
+        if (!host.equals(a[0] + "." + a[1] + "." + a[2] + "." + a[3])) return false;
         return a[0] == 10 || a[0] == 192 && a[1] == 168 || a[0] == 172 && a[1] >= 16 && a[1] <= 31 || host.equals("127.0.0.1");
     }
     private synchronized JSONObject status() throws Exception {
