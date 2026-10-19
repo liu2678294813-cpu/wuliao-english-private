@@ -4,10 +4,11 @@ import shutil
 import zipfile
 import subprocess
 from urllib.request import urlopen
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output/backup-transfer-20261019'
-PACKAGE = OUT / 'wuliao-english-windows'
+PACKAGE = OUT / ('windows-stage-' + uuid4().hex[:12])
 PACKAGE.mkdir(parents=True, exist_ok=True)
 shutil.copytree(ROOT / 'dist', PACKAGE / 'dist', dirs_exist_ok=True)
 (PACKAGE / 'scripts').mkdir(exist_ok=True)
