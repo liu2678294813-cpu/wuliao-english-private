@@ -14,8 +14,9 @@ export default function BackupTransferPanel({ username, appVersion }) {
   const [offer, setOffer] = useState(null), [plan, setPlan] = useState(null), [choices, setChoices] = useState({});
   const [histories, setHistories] = useState([]), [showHistory, setShowHistory] = useState(false);
   const file = useRef(), working = useRef(false), cancelled = useRef(false), mounted = useRef(true), ownedPlan = useRef(null);
+  const ownsConnection = useRef(false);
   const active = () => { if (!mounted.current || cancelled.current || getCurrentUsername() !== username) throw new Error('操作已取消或账号已切换'); };
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; cancelled.current = true; void transferCommand('stop').catch(() => {}); void ownedPlan.current?.dispose(); }; }, []);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; cancelled.current = true; if (ownsConnection.current) void transferCommand('stop').catch(() => {}); void ownedPlan.current?.dispose(); }; }, []);
   async function run(fn) {
     if (working.current) return;
     working.current = true; cancelled.current = false; setBusy(true); setError(false);
@@ -106,8 +107,9 @@ export default function BackupTransferPanel({ username, appVersion }) {
     <input className="visually-hidden" ref={file} type="file" accept=".json,application/json" onChange={event => { const selected = event.target.files?.[0]; event.target.value = ''; if (selected) void run(() => preview(selected)); }} />
     <div className="settings-row"><span>同一 Wi-Fi / 热点内免费互传</span><button className="settings-action" disabled={locked || Boolean(plan)} onClick={() => run(async () => {
       const info = await makeConnection();
+      try { active(); } catch (e) { await transferCommand('stop').catch(() => {}); throw e; }
       if (!info.hosts.length) { await transferCommand('stop'); throw new Error('未找到局域网地址，请连接 Wi-Fi 或开启热点后重试。'); }
-      setConnection(info); setHost(info.hosts[0]); setMessage('接收已开启，连接码 10 分钟内有效。请将完整连接码交给发送设备。');
+      ownsConnection.current = true; setConnection(info); setHost(info.hosts[0]); setMessage('接收已开启，连接码 10 分钟内有效。请将完整连接码交给发送设备。');
     })}>接收其他设备数据</button></div>
     {connection ? <div className="backup-transfer-card">
       <label>接收地址<select value={host} onChange={e => setHost(e.target.value)}>{connection.hosts.map(h => <option key={h} value={h}>{h}:{connection.port}</option>)}</select></label>

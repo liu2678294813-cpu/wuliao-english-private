@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createTransferController, privateHost } from './device-transfer-server.mjs';
 import { makeConnection, connectionCode, parseConnection, transferCipher, sendDeviceBackup } from '../src/deviceTransfer.js';
@@ -22,6 +22,7 @@ test('connection codes reject public targets and AEAD rejects tampering / wrong 
 });
 
 test('real TCP ciphertext transfer: offer confirmation, ordering, checksum, invalid token and cleanup', async () => {
+  await mkdir('artifacts/backup-transfer-20261019', { recursive: true });
   const directory = await mkdtemp(resolve('artifacts/backup-transfer-20261019/tcp-'));
   const receiver = createTransferController({ directory, bind: '127.0.0.1', advertisedHosts: ['127.0.0.1'] });
   const sender = createTransferController({ directory: directory + '-sender' });

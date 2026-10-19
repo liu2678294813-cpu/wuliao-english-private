@@ -3,6 +3,7 @@ from pathlib import Path
 import shutil
 import zipfile
 import subprocess
+from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'output/backup-transfer-20261019'
@@ -20,6 +21,10 @@ shutil.copy2(runtime, PACKAGE / 'runtime/node.exe')
 for license_name in ['LICENSE', 'LICENSE.txt']:
     license_file = Path(runtime).parent / license_name
     if license_file.exists(): shutil.copy2(license_file, PACKAGE / 'runtime' / license_name)
+if not any((PACKAGE / 'runtime' / name).exists() for name in ['LICENSE', 'LICENSE.txt']):
+    version = subprocess.check_output([runtime, '--version']).decode().strip()
+    with urlopen(f'https://raw.githubusercontent.com/nodejs/node/{version}/LICENSE', timeout=30) as response:
+        (PACKAGE / 'runtime/LICENSE').write_bytes(response.read())
 (PACKAGE / '使用说明.txt').write_text('无聊英语 1.0.100 Windows 下载版\n\n完整解压后双击“启动无聊英语.cmd”，无需另外安装 Node.js。\n更新时先关闭旧服务，继续使用原浏览器和 http://127.0.0.1:4173。浏览器资料不在 ZIP 内，不要清除浏览器数据。\n\n免费互传：两端同一 Wi-Fi/热点、同名本机账号。接收端打开设置中的接收功能，把完整 WL1 连接码交给发送端；接收确认后等待校验和差异预览，再确认导入。\n连接码包含本次加密密钥，不要公开。Windows 防火墙需允许内置运行环境在专用网络通信。\n\n导入历史可恢复被替换版本，后续已修改的记录保留。传输断开时可重新发送，或用 USB/LocalSend 传备份 JSON 再导入。\n\n本轮完成隔离浏览器与传输测试，未进行生产平板安装及实体设备互传验收。\n', encoding='utf-8-sig')
 archive = OUT / 'wuliao-english-windows.zip'
 with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as z:
