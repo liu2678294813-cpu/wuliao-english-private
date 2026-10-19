@@ -957,7 +957,13 @@ export function defaultRestoreSources({ storage = globalThis.localStorage, index
                 if (!ready) { const keep = store.get(key); keep.onsuccess = pump; return; }
                 if (failure) { tx.abort(); return; }
                 if (value === null) store.delete(key);
-                else if (store.keyPath === null) store.put(value, key); else store.put(value);
+                else if (store.keyPath === null) store.put(value, key);
+                else {
+                  const readPath = path => String(path).split('.').reduce((item, field) => item?.[field], value);
+                  const actualKey = Array.isArray(store.keyPath) ? store.keyPath.map(readPath) : readPath(store.keyPath);
+                  if (JSON.stringify(actualKey) !== JSON.stringify(key)) { failure = new Error('备份记录主键与内容 ID 不一致，已停止写入'); tx.abort(); return; }
+                  store.put(value);
+                }
               };
               pump();
             };
