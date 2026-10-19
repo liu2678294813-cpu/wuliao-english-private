@@ -8,21 +8,35 @@ export async function openBackupStaging(indexedDb = globalThis.indexedDB) {
     r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
   });
   let next = 0;
+  const lists = [];
+  let transactions = 0;
   return {
+    get transactions() { return transactions; },
+    async flush() { for (const list of lists) await list.flush(); },
     list() {
       const id = next++;
-      return {
+      let pending = [], bytes = 0;
+      const list = {
         length: 0,
-        async push(value) {
-          const index = this.length;
+        async flush() {
+          if (!pending.length) return;
+          const batch = pending;
+          pending = []; bytes = 0;
+          transactions++;
           await new Promise((resolve, reject) => {
             const tx = db.transaction('records', 'readwrite');
-            tx.objectStore('records').put(value, [id, index]);
+            for (const [index, value] of batch) tx.objectStore('records').put(value, [id, index]);
             tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error || new Error('备份暂存失败'));
           });
-          this.length++;
+        },
+        async push(value) {
+          const size = typeof value.value === 'string' ? value.value.length * 2 : JSON.stringify(value).length * 2;
+          if (bytes + size > 4 * 1024 * 1024) await this.flush();
+          pending.push([this.length++, value]); bytes += size;
+          if (pending.length >= 64 || bytes >= 4 * 1024 * 1024) await this.flush();
         },
         async *[Symbol.asyncIterator]() {
+          await this.flush();
           for (let start = 0; start < this.length; start += 64) {
             const rows = await new Promise((resolve, reject) => {
               const tx = db.transaction('records', 'readonly');
@@ -33,6 +47,8 @@ export async function openBackupStaging(indexedDb = globalThis.indexedDB) {
           }
         },
       };
+      lists.push(list);
+      return list;
     },
     async close() {
       db.close();

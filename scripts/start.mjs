@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { networkInterfaces } from "node:os";
+import { createTransferController } from './device-transfer-server.mjs';
 
 const root = resolve("dist");
 // Keep the original vocabulary-app origin so its IndexedDB records remain available after merging.
@@ -42,7 +43,9 @@ if (!existsSync(join(root, "index.html"))) {
   process.exit(1);
 }
 
-const server = createServer((request, response) => {
+const transfer = createTransferController();
+const server = createServer(async (request, response) => {
+  if (await transfer.handleControl(request, response)) return;
   const requestPath = decodeURIComponent(new URL(request.url, `http://${request.headers.host}`).pathname);
   let filePath = normalize(join(root, requestPath === "/" ? "index.html" : requestPath));
   if (!filePath.startsWith(root)) {

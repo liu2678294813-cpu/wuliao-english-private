@@ -109,11 +109,12 @@ test('备份：真实 IndexedDB 暂存、导出、隔离账号恢复和重复恢
   await createAccount(target, user);
   await target.locator('.ds-mobile-settings, .ds-settings').first().click();
   await target.locator('.settings-panel input[type=file]').setInputFiles(path);
-  await expect(target.locator('.settings-backup-status')).toContainText('备份有效');
+  await expect(target.locator('.settings-backup-status')).toContainText('文件校验通过');
   for (let i = 0; i < 2; i++) {
+    if (i) { await target.locator('.settings-panel input[type=file]').setInputFiles(path); await expect(target.locator('.settings-backup-status')).toContainText('文件校验通过'); }
     target.once('dialog', d => d.accept());
-    await target.getByRole('button', { name: '确认恢复（merge）', exact: true }).click();
-    await expect(target.locator('.settings-backup-status')).toContainText('恢复完成');
+    await target.getByRole('button', { name: '确认导入', exact: true }).click();
+    await expect(target.locator('.settings-backup-status')).toContainText('导入完成');
   }
   expect(JSON.parse(await target.evaluate(k => localStorage.getItem(k), `wuliao:user:${encodeURIComponent(user)}:${key}`))).toEqual(value);
   const attachment = await target.evaluate(async () => {

@@ -130,7 +130,7 @@ export class BackupError extends Error {
   }
 }
 
-function classifyLocalKey(key, { username, legacyOwner }) {
+export function classifyLocalKey(key, { username, legacyOwner }) {
   if (!key) return "excluded";
   if (key === CURRENT_USER_KEY || key === LEGACY_OWNER_KEY || key === BACKUP_JOURNAL_KEY) return "excluded";
   if (SECRET_KEY_PATTERN.test(key)) return "secret";
@@ -300,6 +300,7 @@ export async function createBackup({
       const list = staging.list();
       for (const entry of entries) await list.push(entry);
       sections.localStorage[name] = list;
+      await list.flush?.();
     }
   }
   for await (const database of databases) {
@@ -343,6 +344,7 @@ export async function createBackup({
         await records.push({ key: record.key, value });
       }
       if (records.length) sections.indexedDB[database.name][store.name] = records;
+      await records.flush?.();
     }
   }
 
@@ -859,7 +861,7 @@ export function browserCreateFile(meta, bytes) {
   return new File([bytes], meta.name || "backup.pdf", { type: meta.type || "application/pdf" });
 }
 
-export function defaultRestoreSources({ storage = globalThis.localStorage, indexedDb = globalThis.indexedDB } = {}) {
+export function defaultRestoreSources({ storage = globalThis.localStorage, indexedDb = globalThis.indexedDB, allowOverwrite = false } = {}) {
   const existingEntries = [];
   if (storage) {
     for (let index = 0; index < storage.length; index += 1) {
@@ -873,12 +875,12 @@ export function defaultRestoreSources({ storage = globalThis.localStorage, index
     const prefix = `wuliao:user:${encodeURIComponent(username)}:`;
     const logicalKey = write.key.startsWith(prefix) ? write.key.slice(prefix.length) : write.key;
     if (storage === globalThis.localStorage && inkStorageReady(username) && isDurableInkKey(logicalKey)) {
-      if (readDurableInk(username, logicalKey) != null) return false;
+      if (!allowOverwrite && readDurableInk(username, logicalKey) != null) return false;
       writeDurableInk(username, logicalKey, write.value);
       await flushDurableInk(username);
       return;
     }
-    if (storage.getItem(write.key) != null) return false;
+    if (!allowOverwrite && storage.getItem(write.key) != null) return false;
     if (write.storage === "localStorage-legacy") {
       storage.setItem(write.key, write.value);
       // legacy 原始 key 只对 owner 账号可读；本设备无 owner 时标记当前账号
@@ -926,7 +928,44 @@ export function defaultRestoreSources({ storage = globalThis.localStorage, index
   return {
     existingEntries: includeDurableEntries(existingEntries, storage),
     writeLocal,
+    readLocal: key => {
+      const current = includeDurableEntries([], storage).find(item => item.key === key);
+      return current?.value ?? storage?.getItem(key) ?? null;
+    },
+    removeLocal: async (key, username) => {
+      if (!allowOverwrite) throw new Error('此恢复通道不允许删除');
+      const prefix = userStoragePrefix(username), logical = key.startsWith(prefix) ? key.slice(prefix.length) : key;
+      if (storage === globalThis.localStorage && inkStorageReady(username) && isDurableInkKey(logical)) {
+        writeDurableInk(username, logical, null); await flushDurableInk(username);
+      } else storage.removeItem(key);
+    },
     idb: {
+      async compareAndPut(dbName, storeName, key, value, expected, fingerprint) {
+        if (!allowOverwrite) throw new Error('此恢复通道不允许替换');
+        const db = await openDb(dbName);
+        try {
+          await new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readwrite'), store = tx.objectStore(storeName);
+            let ready = false, failure = null;
+            const read = store.get(key);
+            read.onsuccess = () => {
+              fingerprint(read.result ?? null).then(hash => {
+                if (hash !== expected) failure = new Error('本机记录已变化，请重新预览');
+                ready = true;
+              }, error => { failure = error; ready = true; });
+              const pump = () => {
+                if (!ready) { const keep = store.get(key); keep.onsuccess = pump; return; }
+                if (failure) { tx.abort(); return; }
+                if (value === null) store.delete(key);
+                else if (store.keyPath === null) store.put(value, key); else store.put(value);
+              };
+              pump();
+            };
+            tx.oncomplete = resolve; tx.onerror = () => reject(failure || tx.error);
+            tx.onabort = () => reject(failure || tx.error || new Error('导入写入已取消'));
+          });
+        } finally { db.close(); }
+      },
       async listExists(dbName, storeName, key) {
         return (await readRecord(dbName, storeName, key)) != null;
       },

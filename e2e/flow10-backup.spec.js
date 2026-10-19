@@ -65,15 +65,15 @@ test("备份：导出 → 恢复 → 幂等（独立 context 隔离）", async (
   await openSettings(pageB);
 
   await pageB.locator(".settings-panel input[type='file']").setInputFiles(backupPath);
-  await expect(pageB.locator(".settings-backup-status")).toContainText("备份有效", { timeout: 15000 });
-  await expect(pageB.locator(".settings-action", { hasText: "确认恢复" })).toBeVisible();
+  await expect(pageB.locator(".settings-backup-status")).toContainText("文件校验通过", { timeout: 15000 });
+  await expect(pageB.locator(".settings-action", { hasText: "确认导入" })).toBeVisible();
 
   // 恢复后本地数据可见（learning-records 出现在首页学习档案/本地存储）
   pageB.once("dialog", (dialog) => dialog.accept());
-  await pageB.locator(".settings-action", { hasText: "确认恢复" }).click();
-  await expect(pageB.locator(".settings-backup-status")).toContainText("恢复完成", { timeout: 15000 });
+  await pageB.locator(".settings-action", { hasText: "确认导入" }).click();
+  await expect(pageB.locator(".settings-backup-status")).toContainText("导入完成", { timeout: 15000 });
   const restoredText = await pageB.locator(".settings-backup-status").innerText();
-  expect(restoredText).toContain("补入");
+  expect(restoredText).toContain("逐条校验");
 
   // API Key 绝不恢复
   const keysAfter = await pageB.evaluate(() => Object.keys(localStorage));
@@ -81,11 +81,11 @@ test("备份：导出 → 恢复 → 幂等（独立 context 隔离）", async (
 
   // 再次导入同一备份并恢复 → 幂等（补入 0 条）
   await pageB.locator(".settings-panel input[type='file']").setInputFiles(backupPath);
-  await expect(pageB.locator(".settings-backup-status")).toContainText("备份有效", { timeout: 15000 });
+  await expect(pageB.locator(".settings-backup-status")).toContainText("文件校验通过", { timeout: 15000 });
   pageB.once("dialog", (dialog) => dialog.accept());
-  await pageB.locator(".settings-action", { hasText: "确认恢复" }).click();
-  await expect(pageB.locator(".settings-backup-status")).toContainText("恢复完成", { timeout: 15000 });
+  await pageB.locator(".settings-action", { hasText: "确认导入" }).click();
+  await expect(pageB.locator(".settings-backup-status")).toContainText("导入完成", { timeout: 15000 });
   const idempotentText = await pageB.locator(".settings-backup-status").innerText();
-  expect(idempotentText).toMatch(/跳过已存在|全部已存在/);
+  expect(idempotentText).toContain("校验 0 条");
   await contextB.close();
 });

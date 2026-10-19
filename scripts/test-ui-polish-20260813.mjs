@@ -23,7 +23,7 @@ test("rail 不再存在独立账号卡片，设置内保留账号与切换账号
   assert.ok(shell.includes("账号、备份与本地信息"));
   const settings = read("src/ui/SettingsPanel.jsx");
   assert.ok(settings.includes("切换账号"));
-  assert.ok(settings.indexOf("<h3>账号</h3>") < settings.indexOf("<h3>数据备份</h3>"));
+  assert.ok(settings.indexOf("<h3>账号</h3>") < settings.indexOf("<BackupTransferPanel"));
 });
 
 test("底部导航 9 项：所有移动宽度保证 44px 最小列并允许横向滚动", () => {

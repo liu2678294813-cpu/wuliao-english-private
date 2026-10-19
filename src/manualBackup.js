@@ -5,6 +5,11 @@ import { hashUpdateAttachment, jsonPieces, UpdateBackupHash, writeStreamedUpdate
 
 const native = registerPlugin('ManualBackup');
 const CHUNK = 192 * 1024;
+function decodeBase64(data) {
+  const binary = atob(data), bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
 
 // Acquire the destination during the click gesture, before asynchronous reads.
 export async function openBackupDestination(filename) {
@@ -28,7 +33,7 @@ export async function openBackupDestination(filename) {
     plugin: {
       async writeBackupChunk({ data, offset }) {
         if (offset !== size) throw new Error('备份分块顺序错误');
-        const binary = atob(data), bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+        const bytes = decodeBase64(data);
         size += bytes.length;
         if (stream) await stream.write(bytes);
         else {
@@ -72,6 +77,9 @@ export async function exportManualBackup({ username, appVersion, destination, ac
     const plugin = { ...destination.plugin, writeBackupChunk: async args => {
       active(); await destination.plugin.writeBackupChunk(args);
       if (Date.now() - lastUpdate > 150) { lastUpdate = Date.now(); onProgress(`正在写入备份：${(args.offset / 1048576).toFixed(1)} MB…`); }
+    }, finishBackupAccount: async args => {
+      active(); onProgress('正在完成保存并回读校验，请稍候…');
+      return destination.plugin.finishBackupAccount(args);
     } };
     await writeStreamedUpdateBackup({ manifest, blobs, plugin, backupId: destination.backupId, accountIndex: 0, active });
     return { counts, saved: destination.saved };
@@ -114,7 +122,7 @@ async function parseFile(file, { active = () => {}, onProgress = () => {} }, sta
     const flush = () => {
       if (!raw) return;
       if (!/^[A-Za-z0-9+/]*={0,2}$/.test(raw) || raw.length % 4) throw new Error('附件 Base64 无效');
-      const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+      const bytes = decodeBase64(raw);
       size += bytes.length; hash.update(bytes); pieces.push(new Blob([bytes])); raw = '';
     };
     while (await fill()) {
@@ -165,6 +173,7 @@ async function parseFile(file, { active = () => {}, onProgress = () => {} }, sta
   if (await peek()) throw new Error('备份包含多余内容');
   if (parsed?.format !== BACKUP_FORMAT || parsed.version !== BACKUP_VERSION || !Array.isArray(parsed.accounts) || parsed.accounts.length !== 1
       || !parsed.accounts[0]?.username || !parsed.sections?.localStorage || !parsed.sections?.indexedDB || !parsed.attachments) throw new Error('备份格式或版本无效');
+  await staging.flush?.();
   for (const [id, attachment] of Object.entries(parsed.attachments)) {
     const data = attachment.data;
     if (!data?.blob || data.size !== attachment.size || data.hash !== attachment.sha256) throw new Error(`附件 ${id} 校验失败`);

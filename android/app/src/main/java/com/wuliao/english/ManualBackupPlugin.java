@@ -68,12 +68,12 @@ public class ManualBackupPlugin extends Plugin {
         worker.execute(() -> {
             try {
                 check(call);
-                if (call.getLong("offset", -1L) != offset) throw new IllegalStateException("备份分块顺序错误");
+                if (BackupChunkPosition.read(call.getData().opt("offset")) != offset) throw new IllegalStateException("备份分块顺序错误");
                 String data = call.getString("data", "");
                 if (data.length() > 300000) throw new IllegalStateException("备份分块过大");
                 byte[] bytes = Base64.decode(data, Base64.NO_WRAP);
                 output.write(bytes); digest.update(bytes); offset += bytes.length; call.resolve();
-            } catch (Exception error) { call.reject("备份写入失败，请检查存储空间和保存位置", error); }
+            } catch (Exception error) { call.reject("备份分块写入失败：" + error.getMessage(), error); }
         });
     }
 
@@ -105,7 +105,7 @@ public class ManualBackupPlugin extends Plugin {
                 if (temporary != null) temporary.delete(); temporary = null;
                 id = null; uri = null; digest = null;
                 call.resolve(new JSObject().put("verified", true));
-            } catch (Exception error) { discard(); call.reject("备份保存或校验失败", error); }
+            } catch (Exception error) { discard(); call.reject("备份保存或校验失败：" + error.getMessage(), error); }
         });
     }
 

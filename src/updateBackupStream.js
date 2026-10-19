@@ -27,7 +27,11 @@ export class UpdateBackupHash {
       const t2 = ((rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
       j = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
     }
-    [a, b, c, d, e, f, g, j].forEach((v, i) => { this.h[i] = (this.h[i] + v) | 0; });
+    const h = this.h;
+    h[0] = (h[0] + a) | 0; h[1] = (h[1] + b) | 0;
+    h[2] = (h[2] + c) | 0; h[3] = (h[3] + d) | 0;
+    h[4] = (h[4] + e) | 0; h[5] = (h[5] + f) | 0;
+    h[6] = (h[6] + g) | 0; h[7] = (h[7] + j) | 0;
   }
   update(bytes) {
     this.length += bytes.length;

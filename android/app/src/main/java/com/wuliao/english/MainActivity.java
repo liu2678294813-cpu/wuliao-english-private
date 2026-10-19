@@ -51,6 +51,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AppUpdaterPlugin.class);
         registerPlugin(ManualBackupPlugin.class);
+        registerPlugin(DeviceTransferPlugin.class);
         super.onCreate(savedInstanceState);
         WebView webView = getBridge().getWebView();
         webView.getSettings().setSupportZoom(false);
