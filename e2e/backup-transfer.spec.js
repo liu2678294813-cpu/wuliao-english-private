@@ -38,6 +38,28 @@ test('file preview, explicit replacement, repeated import, recovery and later le
   await page.getByRole('button', { name: '放弃预览' }).click();
 });
 
+test('mismatched primary key is rejected without changing the other existing PDF', async ({ page }) => {
+  const user = await createAccount(page);
+  await page.evaluate(async username => {
+    const db = await new Promise((r, j) => { const q = indexedDB.open('wuliao-english'); q.onsuccess = () => r(q.result); q.onerror = () => j(q.error); });
+    const tx = db.transaction('custom-pdfs', 'readwrite');
+    for (const id of ['source-id', 'protected-id']) tx.objectStore('custom-pdfs').put({ id, username, title: '原资料 ' + id });
+    await new Promise((r, j) => { tx.oncomplete = r; tx.onerror = () => j(tx.error); }); db.close();
+  }, user);
+  const { fileText } = await createBackup({ username: user, sources: { entries: [], databases: [{ name: 'wuliao-english', stores: [{ name: 'custom-pdfs', records: [{ key: 'source-id', value: { id: 'protected-id', username: user, title: '不应写入的异常资料' } }] }] }] } });
+  const path = `${folder}/isolated-mismatched-key.json`; await writeFile(path, fileText);
+  await settings(page); await page.locator('.backup-transfer input[type=file]').setInputFiles(path);
+  await expect(page.getByLabel('导入差异预览')).toContainText('冲突 1 条');
+  await page.getByLabel('导入资料、附件与答案（关联记录一起选择）的处理方式').selectOption('incoming');
+  page.on('dialog', d => d.accept()); await page.getByRole('button', { name: '确认导入', exact: true }).click();
+  await expect(page.locator('.settings-backup-status')).toContainText('主键与内容 ID 不一致');
+  const titles = await page.evaluate(async () => {
+    const db = await new Promise(r => { const q = indexedDB.open('wuliao-english'); q.onsuccess = () => r(q.result); });
+    const rows = await new Promise(r => { const q = db.transaction('custom-pdfs').objectStore('custom-pdfs').getAll(); q.onsuccess = () => r(q.result); }); db.close(); return rows.map(row => row.title).sort();
+  });
+  expect(titles).toEqual(['原资料 protected-id', '原资料 source-id']);
+});
+
 test('real IndexedDB batches 2048 records and preserves large Unicode ink across reads', async ({ page }) => {
   await page.goto('/');
   const source = await readFile('src/backupStaging.js', 'utf8');
