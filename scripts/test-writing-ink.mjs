@@ -889,6 +889,29 @@ test("G failed old-surface autosave cannot leak state or revision into the new o
   assert.ok(errors.some((error) => error.code === "flush-failed" && error.identity?.surfaceId === surfaceA.surfaceId));
 });
 
+test("large immutable handwriting commits publish lightweight status without serializing history", async () => {
+  const store = createMemoryPersistence();
+  let serialized = 0;
+  const statuses = [];
+  const adapter = createAdapter(store, { onStatusChange: (status) => statuses.push(status) });
+  await adapter.attach(identity());
+  const history = Array.from({ length: 3000 }, (_, i) => ({
+    tool: "pen", points: Array.from({ length: 48 }, (_, j) => ({ x: j / 100, y: (i % 40) / 40 })),
+    toJSON() { serialized += 1; return { tool: this.tool, points: this.points }; },
+  }));
+  adapter.replaceCommitted(history, { immutable: true, schedule: false });
+  serialized = 0;
+  const added = { tool: "pen", points: [{ x: .8, y: .8 }] };
+  adapter.replaceCommitted([...history, added], { immutable: true, schedule: false });
+  assert.equal(serialized, 0, "append must not traverse historical points or serialize full status");
+  assert.equal(statuses.at(-1).strokeCount, 3001);
+  assert.equal("strokes" in statuses.at(-1), false);
+  adapter.undo();
+  assert.equal(adapter.getStatus().strokeCount, 3000);
+  adapter.replaceCommitted([], { recordHistory: false, schedule: false });
+  await adapter.dispose();
+});
+
 test("I static contract: Writing consumes Shared Runtime and exposes the outer AnnotationToolbar bridge", async () => {
   const surface = readFileSync(new URL("../src/writing/WritingInkSurface.jsx", import.meta.url), "utf8");
   const adapter = readFileSync(new URL("../src/writing/writingInkAdapter.js", import.meta.url), "utf8");

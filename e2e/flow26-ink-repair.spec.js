@@ -25,7 +25,7 @@ async function exercise(page, surface, scale = 1) {
       composite.width = innerWidth * 2; composite.height = innerHeight * 2;
       const context = composite.getContext("2d");
       context.scale(2, 2);
-      for (const canvas of document.querySelectorAll(".deep-ink-tile,.custom-viewport-ink-preview,.cloze-ink-canvas,.cloze-ink-preview,.writing-ink-canvas,.writing-ink-preview,.ink-canvas,.ink-preview-canvas,.ink-tail-canvas")) {
+      for (const canvas of document.querySelectorAll(".deep-ink-tile,.custom-viewport-ink-preview,.cloze-ink-canvas,.cloze-ink-preview,.writing-ink-tile,.writing-ink-preview,.ink-canvas,.ink-preview-canvas,.ink-tail-canvas")) {
         const box = canvas.getBoundingClientRect();
         if (canvas.width && canvas.height && box.width && box.height) context.drawImage(canvas, box.left, box.top, box.width, box.height);
       }

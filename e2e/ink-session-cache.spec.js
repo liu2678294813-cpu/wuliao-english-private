@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { createAccount, openOfficialResource, clickStageAdvance } from "./helpers.js";
 
 const title = "2013 英语（一）Text 1";
@@ -106,6 +106,7 @@ for (const { count, fallback } of [{ count: 500 }, { count: 2000 }, { count: 500
     expect(errors).toEqual([]);
     const evidence = JSON.stringify({ username, count, fallback: Boolean(fallback), warmY, before, after, retained, restartCount: count + 1, errors },null,2);
     await writeFile(testInfo.outputPath("cache-result.json"), evidence);
+    await mkdir("artifacts/long-sentence-ink-20261017", { recursive: true });
     await writeFile(`artifacts/long-sentence-ink-20261017/ink-${count}${fallback ? "-fallback" : ""}.json`, evidence);
   });
 }

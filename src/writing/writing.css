@@ -127,7 +127,8 @@
   margin: 0;
   padding: 3px 9px;
   gap: 5px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-sm);
   background: var(--ds-paper);
@@ -657,7 +658,7 @@
   .writing-compact-toolbar .writing-layout-action,
   .writing-compact-toolbar .writing-stage-header-actions .primary-button { padding-inline: 9px; font-size: 0; }
   .writing-compact-toolbar .writing-layout-action::after { content: attr(data-compact-label); font-size: 11px; }
-  .writing-compact-toolbar .writing-stage-header-actions .primary-button::after { content: "提交"; font-size: 11px; }
+  .writing-compact-toolbar .writing-stage-header-actions .primary-button::after { content: attr(data-compact-label); font-size: 11px; }
   .writing-compact-toolbar-center .annotation-toolbar { padding-inline: 5px; gap: 2px; }
   .writing-compact-toolbar-center .annotation-toolbar > button { min-width: 27px; padding-inline: 4px; font-size: 9px; }
   .writing-compact-toolbar-center .annotation-toolbar > button .toolbar-icon { margin-right: 2px; font-size: 12px; }
@@ -747,3 +748,13 @@
 .writing-example-library input { box-sizing: border-box; background: #fff; color: #123e49; }
 .writing-example-library button { border: 1px solid #a5b6b3; border-radius: 8px; background: #fff; color: #123e49; cursor: pointer; }
 .writing-example-library small { overflow-wrap: anywhere; line-height: 1.6; }
+
+/* Keep the primary action reachable while tools scroll within their own slot. */
+.writing-compact-toolbar { flex: 0 0 auto; }
+.writing-compact-toolbar-right { flex-shrink: 0; }
+.writing-compact-toolbar-center .annotation-toolbar > * { flex-shrink: 0; }
+.writing-empty-input-hint { margin: 0 0 8px; color: var(--ds-ink-soft); font-size: 12px; line-height: 1.5; }
+@media (max-width: 620px) {
+  .writing-compact-toolbar .writing-layout-action { display: none; }
+  .writing-compact-toolbar .primary-button { min-height: 44px; }
+}

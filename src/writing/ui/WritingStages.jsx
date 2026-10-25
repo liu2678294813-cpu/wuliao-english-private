@@ -114,7 +114,7 @@ function WorkspaceViewActions({ layout, onToggleLayout, immersive, onToggleImmer
         {layout === "split" ? "上下布局" : "左右布局"}
       </button>
       {!immersive ? <button type="button" className="writing-button-secondary writing-view-action writing-immersive-action" onClick={onToggleImmersive}>沉浸学习</button> : null}
-      {!immersive ? primaryAction : null}
+      {primaryAction}
     </>
   );
 }
@@ -204,6 +204,9 @@ function actionButton(label, action, busyAction, onClick, options = {}) {
       type="button"
       className={options.className || "primary-button"}
       disabled={busyAction === action || options.disabled}
+      data-compact-label={options.compactLabel || "提交"}
+      aria-label={options.ariaLabel}
+      title={options.hint}
       onClick={onClick}
     >
       {busyAction === action ? options.busyLabel || "正在处理…" : label}
@@ -312,9 +315,11 @@ export function W2TranslationStage({ vm, commandContext, services, username, cre
     ? WritingInputMethod.HANDWRITING
     : WritingInputMethod.TYPED);
   const [latestInkRef, setLatestInkRef] = useState(vm.translationInkRef || null);
+  const [inkCount, setInkCount] = useState(null);
   const [draftChangeToken, setDraftChangeToken] = useState(0);
   const showsText = inputMethod === WritingInputMethod.TYPED;
   const showsInk = inputMethod === WritingInputMethod.HANDWRITING;
+  const inputEmpty = showsText ? !typedText.trim() : inkCount === 0;
 
   const saveDraft = useDraftPersistence({
     changeToken: draftChangeToken,
@@ -392,7 +397,13 @@ export function W2TranslationStage({ vm, commandContext, services, username, cre
       onBack={immersive ? onExitImmersive : onBack}
       compact
       immersive={immersive}
-      actions={<WorkspaceViewActions layout={layout} onToggleLayout={onToggleLayout} immersive={immersive} onToggleImmersive={onToggleImmersive} primaryAction={actionButton("提交完整中文译文", "w2-commit", busyAction, commit, { disabled: showsText && !typedText.trim() })} />}
+      actions={<WorkspaceViewActions layout={layout} onToggleLayout={onToggleLayout} immersive={immersive} onToggleImmersive={onToggleImmersive} primaryAction={actionButton("完成翻译，进入英文反译", "w2-commit", busyAction, commit, {
+        disabled: inputEmpty,
+        compactLabel: busyAction === "w2-commit" ? "保存中…" : "下一步",
+        ariaLabel: "完成翻译，进入英文反译",
+        busyLabel: "正在保存并进入下一步…",
+        hint: inputEmpty ? "请先完成中文翻译" : "保存中文译文后进入英文反译",
+      })} />}
     >
       <WritingSplitWorkspace
         stage={WritingStage.W2_EN_ZH}
@@ -404,6 +415,7 @@ export function W2TranslationStage({ vm, commandContext, services, username, cre
         workActions={<InputModePicker value={inputMethod} onChange={(value) => { setInputMethod(value); setDraftChangeToken((token) => token + 1); }} disabled={busyAction === "w2-commit"} />}
         workPane={(
           <>
+            {inputEmpty ? <p className="writing-empty-input-hint" role="status">{showsText ? "输入中文译文后，点击顶部“下一步”进入英文反译。" : "写下中文译文后，点击顶部“下一步”进入英文反译。"}</p> : null}
             {showsText ? <section className="writing-editor-card writing-document-editor"><label><span>完整中文译文</span><textarea rows={20} value={typedText} onChange={(event) => { setTypedText(event.target.value); setDraftChangeToken((token) => token + 1); }} placeholder="在这里完成整篇中文翻译，可按自然段分隔" /></label></section> : null}
             {showsInk ? (
               <InkComposer
@@ -414,6 +426,7 @@ export function W2TranslationStage({ vm, commandContext, services, username, cre
                 surfaceId={`w2:translation:${revisionId}`}
                 sourceFingerprint={draftFingerprint(revisionId, latestInkRef || vm.translationInkRef)}
                 flushBridge={inkFlushBridge}
+                onStrokesCountChange={setInkCount}
                 InkSurface={InkSurfaceComponent}
                 onInkRefChange={(inkRef) => {
                   setLatestInkRef(inkRef);

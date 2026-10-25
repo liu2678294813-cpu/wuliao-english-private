@@ -579,6 +579,25 @@ test("W1 command failure stays on W1 and retains the frozen sample", async () =>
   assert.doesNotMatch(container.textContent, /internal storage details/);
 });
 
+test("W2 immersive keeps next step visible, explains empty input and submits only nonempty translation", async () => {
+  let received = null;
+  const vm = stageVm(WritingStage.W2_EN_ZH, { sampleSegments: [{ unitId: "u1", text: "Reference." }], currentTranslationRevision: null, translationInkRef: null });
+  const container = await render(React.createElement(W2TranslationStage, {
+    vm, commandContext: commandContext(), username: USERNAME, createId: idFactory,
+    services: { commands: { commitTranslationAndEnterW3: async (args) => { received = args; } } },
+    immersive: true, busyAction: "", onAction: immediateAction, InkComposer: InkProbe,
+  }));
+  const next = container.querySelector('button[aria-label="完成翻译，进入英文反译"]');
+  assert.ok(next);
+  assert.equal(next.disabled, true);
+  assert.equal(next.dataset.compactLabel, "下一步");
+  assert.match(container.querySelector('[role="status"]').textContent, /输入中文译文/);
+  await setText(container.querySelector("textarea"), "沉浸模式的完整中文译文。");
+  assert.equal(next.disabled, false);
+  await click(next);
+  assert.equal(received.translationRevision.units[0].typedText, "沉浸模式的完整中文译文。");
+});
+
 test("W2 builds a formal revision and immutable snapshot request with deterministic IDs", async () => {
   let received = null;
   const vm = stageVm(WritingStage.W2_EN_ZH, {
@@ -596,7 +615,7 @@ test("W2 builds a formal revision and immutable snapshot request with determinis
   const areas = container.querySelectorAll("textarea");
   assert.equal(areas.length, 1, "W2 uses one whole-document editor rather than sentence cards");
   await setText(areas[0], "第一段。\n\n第二段。");
-  await click(buttonByText(container, "提交完整中文译文"));
+  await click(buttonByText(container, "完成翻译，进入英文反译"));
   assert.equal(received.revisionId, "translation-fixed");
   assert.equal(received.snapshotId, "translation-snapshot-fixed");
   assert.deepEqual(received.translationRevision.units.map((unit) => unit.unitId), ["u1"]);
@@ -1045,7 +1064,7 @@ test("W2 rapid double commit invokes the formal command only once", async () => 
   };
   const container = await render(React.createElement(WritingWorkspace, { sessionId: "session-ui", username: USERNAME, services, createId: idFactory }));
   await setText(container.querySelector("textarea"), "翻译内容");
-  const submit = buttonByText(container, "提交完整中文译文");
+  const submit = buttonByText(container, "完成翻译，进入英文反译");
   await act(async () => { submit.click(); submit.click(); await wait(); });
   assert.equal(calls, 1);
   gate.resolve({});
@@ -1061,7 +1080,7 @@ test("W2 command failure preserves the typed draft and keeps the safe stage", as
   };
   const container = await render(React.createElement(WritingWorkspace, { sessionId: "session-ui", username: USERNAME, services, createId: idFactory }));
   await setText(container.querySelector("textarea"), "应当保留的译文");
-  await click(buttonByText(container, "提交完整中文译文"));
+  await click(buttonByText(container, "完成翻译，进入英文反译"));
   assert.equal(container.querySelector("textarea").value, "应当保留的译文");
   assert.match(container.textContent, /笔迹尚未可靠保存/);
   assert.match(container.textContent, /完整英文范文/);

@@ -1,9 +1,10 @@
 import { startTransition, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSaveBoundary } from "../useSaveBoundary.js";
-import { scheduleInkSave, cancelScheduledInkSave } from "../saveCoordinator.js";
-import { drawInkStroke, inkPixelRatio, renderInkLayer, resizeInkCanvas } from "../annotationTools";
+import { inkPixelRatio, resizeInkCanvas } from "../annotationTools";
 import { installPenScrollGuard } from "../inkEngine";
 import { useStructuredInk } from "../ink/useStructuredInk";
+import { createWritingInkTiles } from "./writingInkTiles.js";
+import { deepInkPreviewLayout, deepInkPreviewPoint } from "../deepInkGeometry.js";
 import { isAndroidApp } from "../platform";
 import { isPhoneDevice } from "../inputDevicePolicy.js";
 import {
@@ -89,8 +90,8 @@ export default function WritingInkSurface({
   const committedCanvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
   const tailCanvasRef = useRef(null);
-  const pendingAdapterSaveRef = useRef([]);
-  const adapterSaveTimerRef = useRef(null);
+  const tilesRef = useRef(null);
+  const previewLayoutRef = useRef(null);
   const activeRef = useRef(null);
   const strokesRef = useRef([]);
   const dimensionsRef = useRef({ width: 0, height: 0, ratio: 0 });
@@ -116,7 +117,8 @@ export default function WritingInkSurface({
   const logicalSizeRef = useRef(logicalSize);
   const clearConfirmationRef = useRef(clearConfirmation);
   const requestedIdentityKeyRef = useRef("");
-  const [strokes, setStrokes] = useState([]);
+  const [strokeCount, setStrokeCount] = useState(0);
+  const [canUndo, setCanUndo] = useState(false);
   const [storageStatus, setStorageStatus] = useState("idle");
 
   pageRegionsRef.current = pageRegions;
@@ -172,28 +174,37 @@ export default function WritingInkSurface({
   }
   const geometryAdapter = geometryAdapterRef.current;
 
-  const renderCommitted = useCallback((extraStroke = null) => {
-    const canvas = committedCanvasRef.current;
-    const { width, height, ratio } = dimensionsRef.current;
-    if (!canvas || !width || !height) return false;
-    const committed = strokesRef.current.map((stroke) => geometryAdapter.projectStroke(stroke));
-    const view = extraStroke
-      ? [...committed, geometryAdapter.projectStroke(extraStroke)]
-      : committed;
-    return renderInkLayer(canvas, view, width, height, ratio);
-  }, [geometryAdapter]);
+  if (!tilesRef.current) {
+    tilesRef.current = createWritingInkTiles({
+      getContent: () => contentRef.current,
+      getLayer: () => committedCanvasRef.current,
+      getDimensions: () => dimensionsRef.current,
+      getGeometry: () => pageGeometryRef.current,
+      projectStroke: (stroke) => geometryAdapter.projectStroke(stroke),
+    });
+  }
+  const renderCommitted = useCallback((extraStroke = null) => tilesRef.current.update(
+    extraStroke ? [...strokesRef.current, extraStroke] : strokesRef.current,
+  ), []);
+  const commitAppendStroke = useCallback((stroke) => tilesRef.current.append(stroke), []);
 
-  const commitAppendStroke = useCallback((stroke) => {
-    const canvas = committedCanvasRef.current;
-    const { width, height, ratio } = dimensionsRef.current;
-    if (!canvas || !width || !height) return false;
-    const context = canvas.getContext("2d", { alpha: true });
-    context.save();
-    context.scale(ratio, ratio);
-    drawInkStroke(context, geometryAdapter.projectStroke(stroke), width, height);
-    context.restore();
-    return true;
-  }, [geometryAdapter]);
+  const syncPreview = useCallback(() => {
+    const content = contentRef.current;
+    const size = dimensionsRef.current;
+    if (!content || !size.width || !size.height) return;
+    const layout = deepInkPreviewLayout(content.getBoundingClientRect(), size, window.innerHeight, size.ratio);
+    previewLayoutRef.current = layout;
+    for (const canvas of [previewCanvasRef.current, tailCanvasRef.current]) {
+      if (!canvas) continue;
+      if (canvas.width !== Math.max(1, Math.floor(layout.width * size.ratio))
+        || canvas.height !== Math.max(1, Math.floor(layout.height * size.ratio))) {
+        resizeInkCanvas(canvas, layout.width, layout.height, size.ratio);
+      }
+      canvas.style.width = `${layout.width}px`;
+      canvas.style.height = `${layout.height}px`;
+      canvas.style.top = `${layout.startY}px`;
+    }
+  }, []);
 
   const adapterRef = useRef(null);
   if (!adapterRef.current) {
@@ -203,13 +214,17 @@ export default function WritingInkSurface({
       onStrokesChange: (next, meta) => {
         strokesRef.current = next;
         if (!mountedRef.current) return;
-        startTransition(() => { setStrokes(next); onStrokesCountChangeRef.current?.(next.length); });
-        if (!meta.skipTileRedraw) renderCommitted();
+        startTransition(() => { setStrokeCount(next.length); onStrokesCountChangeRef.current?.(next.length); });
+        tilesRef.current.update(next, {
+          appendPainted: meta.skipTileRedraw && !meta.structural,
+          reset: ["identity-switch-mask", "identity-change", "restore"].includes(meta.reason),
+        });
       },
       onInkRefChange: (ref) => onInkRefChangeRef.current?.(ref),
       onStatusChange: (next) => {
         if (!mountedRef.current) return;
         setStorageStatus(next.status);
+        setCanUndo(next.canUndo);
         onStatusChangeRef.current?.(next);
       },
       onError: (error) => onErrorRef.current?.(error),
@@ -217,23 +232,13 @@ export default function WritingInkSurface({
   }
   const adapter = adapterRef.current;
 
-  const flushAdapterChanges = useCallback(() => {
-    cancelScheduledInkSave(adapterSaveTimerRef.current);
-    adapterSaveTimerRef.current = null;
-    while (pendingAdapterSaveRef.current.length) {
-      const pending = pendingAdapterSaveRef.current[0];
-      adapter.replaceCommitted(pending.next, pending.options);
-      pendingAdapterSaveRef.current.shift();
-    }
-  }, [adapter]);
-
   const persistStrokes = useCallback((next, options = {}) => {
     strokesRef.current = next;
     onInkMutationRef.current?.(next.length, dimensionsRef.current);
-    pendingAdapterSaveRef.current.push({ next, options });
-    cancelScheduledInkSave(adapterSaveTimerRef.current);
-    adapterSaveTimerRef.current = scheduleInkSave(flushAdapterChanges);
-  }, [flushAdapterChanges]);
+    // The adapter records each undo operation cheaply and coalesces only its
+    // durable snapshot. There is no queue of historical full-page copies.
+    adapter.replaceCommitted(next, { ...options, immutable: true });
+  }, [adapter]);
 
   const inkController = useStructuredInk({
     canInteract: () => {
@@ -266,19 +271,22 @@ export default function WritingInkSurface({
     onHint: (hint) => onHintRef.current?.(hint),
     beforeInkDown: () => {
       try {
-        pageGeometryRef.current = readPageGeometry();
+        const nextGeometry = readPageGeometry();
+        if (nextGeometry.signature !== pageGeometryRef.current?.signature) pageGeometryRef.current = nextGeometry;
+        syncPreview();
       } catch (cause) {
         pageGeometryRef.current = null;
         reportGeometryError(cause);
       }
     },
-    toPreviewPixel: (point) => writingInkPointToPixel(point, dimensionsRef.current),
+    toPreviewPixel: (point, active) => previewLayoutRef.current
+      ? deepInkPreviewPoint(point, active, previewLayoutRef.current)
+      : writingInkPointToPixel(point, dimensionsRef.current),
   });
 
   const finalizeActive = useCallback(() => {
     if (activeRef.current) inkController.finishActiveForGeometryChange();
-    flushAdapterChanges();
-  }, [inkController, flushAdapterChanges]);
+  }, [inkController]);
 
   const flush = useCallback(async (context = {}) => {
     finalizeActive();
@@ -305,7 +313,7 @@ export default function WritingInkSurface({
 
   const clear = useCallback(() => {
     finalizeActive();
-    if (disabledRef.current || readOnlyRef.current || !adapter.getState().canClear) return false;
+    if (disabledRef.current || readOnlyRef.current || !adapter.getStatus().canClear) return false;
     if (!window.confirm(clearConfirmationRef.current)) return false;
     inkController.clearPreview();
     const changed = adapter.clear();
@@ -346,19 +354,19 @@ export default function WritingInkSurface({
       undo,
       clear,
       flush,
-      canUndo: strokes.length > 0,
-      canClear: strokes.length > 0,
+      canUndo,
+      canClear: strokeCount > 0,
       status: storageStatus,
     };
     onToolbarApiChangeRef.current?.(api);
     return () => onToolbarApiChangeRef.current?.(null);
-  }, [clear, flush, storageStatus, strokes.length, undo]);
+  }, [canUndo, clear, flush, storageStatus, strokeCount, undo]);
 
   useLayoutEffect(() => {
     const resize = () => {
       const content = contentRef.current;
       if (!content) return;
-      const next = measureWritingInkSurface(content, inkPixelRatio(), logicalSizeRef.current);
+      const next = measureWritingInkSurface(content, Math.min(1.5, inkPixelRatio()), logicalSizeRef.current);
       const current = dimensionsRef.current;
       let nextPageGeometry = null;
       try {
@@ -375,11 +383,9 @@ export default function WritingInkSurface({
       pageGeometryRef.current = nextPageGeometry;
       dimensionsRef.current = next;
       if (dimensionsChanged) {
-        resizeInkCanvas(committedCanvasRef.current, next.width, next.height, next.ratio);
-        resizeInkCanvas(previewCanvasRef.current, next.width, next.height, next.ratio);
-        resizeInkCanvas(tailCanvasRef.current, next.width, next.height, next.ratio);
+        syncPreview();
       }
-      renderCommitted();
+      tilesRef.current.sync(true);
     };
     resize();
     const observer = globalThis.ResizeObserver ? new ResizeObserver(resize) : null;
@@ -393,7 +399,16 @@ export default function WritingInkSurface({
       observer?.disconnect();
       window.removeEventListener("resize", resize);
     };
-  }, [finalizeActive, logicalSize?.width, logicalSize?.height, pageRegions, readPageGeometry, renderCommitted, reportGeometryError]);
+  }, [finalizeActive, logicalSize?.width, logicalSize?.height, pageRegions, readPageGeometry, reportGeometryError, syncPreview]);
+
+  useEffect(() => {
+    const onScroll = () => { syncPreview(); tilesRef.current.scheduleSync(); };
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      tilesRef.current.dispose();
+    };
+  }, [syncPreview]);
 
   useEffect(() => installPenScrollGuard({
     root: rootRef,
@@ -442,7 +457,7 @@ export default function WritingInkSurface({
         onLostPointerCapture={inkController.handlePointerUp}
       >
         {children}
-        <canvas ref={committedCanvasRef} className="writing-ink-canvas" style={CANVAS_STYLE} aria-hidden="true" />
+        <div ref={committedCanvasRef} className="writing-ink-canvas" style={CANVAS_STYLE} aria-hidden="true" />
         <canvas ref={previewCanvasRef} className="writing-ink-preview" style={CANVAS_STYLE} aria-hidden="true" />
         <canvas ref={tailCanvasRef} className="ink-tail-canvas" style={CANVAS_STYLE} aria-hidden="true" />
       </div>

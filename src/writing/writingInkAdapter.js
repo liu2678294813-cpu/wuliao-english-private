@@ -3,6 +3,7 @@ import {
   saveWritingInkSnapshot,
   writingInkRefFromSnapshot,
 } from "./writingInkStorage.js";
+import { createInkUndoPatch } from "../ink/inkUndo.js";
 
 const READY_STATUSES = new Set(["missing", "ok", "pending", "persist-failed", "stale-revision"]);
 
@@ -73,10 +74,13 @@ export function createWritingInkAdapter({
   let revision = 0;
   let mutationRevision = 0;
   let lastSnapshot = null;
-  let lastPersistedCanonical = canonical([]);
+  let persistedStrokes = [];
+  let ownedStrokes = new WeakMap();
+  let strokeContent = new WeakMap();
   let dirty = false;
   let saveTimer = null;
   let saveTail = Promise.resolve();
+  let persisting = null;
   let transitionTail = Promise.resolve();
   let requestedIdentityKey = "";
   let attachRevision = 0;
@@ -84,11 +88,36 @@ export function createWritingInkAdapter({
   let beforeDetach = null;
   let disposed = false;
 
-  function state() {
+  // Completed strokes are immutable, just as in the reader. Copy/encode only a
+  // new stroke; keep the same owned objects through rendering, undo and saves.
+  function ownStroke(stroke) {
+    if (!stroke || typeof stroke !== "object") return stroke;
+    if (ownedStrokes.has(stroke)) return ownedStrokes.get(stroke);
+    const owned = clone(stroke);
+    strokeContent.set(owned, canonical(owned));
+    ownedStrokes.set(owned, owned);
+    ownedStrokes.set(stroke, owned);
+    return owned;
+  }
+
+  function sameStrokes(left, right) {
+    return left === right || (left.length === right.length && left.every((stroke, index) => {
+      if (stroke === right[index]) return true;
+      const encoded = (value) => {
+        if (!value || typeof value !== "object") return canonical(value);
+        if (!strokeContent.has(value)) strokeContent.set(value, canonical(value));
+        return strokeContent.get(value);
+      };
+      return encoded(stroke) === encoded(right[index]);
+    }));
+  }
+
+  function state(includeStrokes = true) {
     return {
       identity: identity ? clone(identity) : null,
       status,
-      strokes: clone(strokes),
+      ...(includeStrokes ? { strokes: clone(strokes) } : {}),
+      strokeCount: strokes.length,
       revision,
       dirty,
       inkRef: writingInkRefFromSnapshot(lastSnapshot),
@@ -99,13 +128,13 @@ export function createWritingInkAdapter({
 
   function publishStatus(nextStatus) {
     status = nextStatus;
-    onStatusChange(state());
+    onStatusChange(state(false));
   }
 
   function publishStrokes(next, meta = {}) {
-    strokes = clone(next);
-    onStrokesChange(clone(strokes), meta);
-    onStatusChange(state());
+    strokes = next;
+    onStrokesChange(strokes, meta);
+    onStatusChange(state(false));
   }
 
   function report(error) {
@@ -126,7 +155,7 @@ export function createWritingInkAdapter({
   function storageArgs(nextStrokes, expectedRevision) {
     return {
       ...identity,
-      strokes: clone(nextStrokes),
+      strokes: nextStrokes,
       expectedRevision,
     };
   }
@@ -135,13 +164,13 @@ export function createWritingInkAdapter({
     assertAttached();
     clearScheduledSave();
     if (!dirty) return Promise.resolve(writingInkRefFromSnapshot(lastSnapshot));
+    if (persisting) return persisting;
 
     const taskGeneration = generation;
     const taskIdentityKey = identityKey;
     const taskIdentity = clone(identity);
     const taskMutationRevision = mutationRevision;
-    const taskStrokes = clone(strokes);
-    const taskCanonical = canonical(taskStrokes);
+    const taskStrokes = strokes;
 
     const task = saveTail.then(async () => {
       if (disposed || taskGeneration !== generation || taskIdentityKey !== identityKey) return null;
@@ -161,20 +190,22 @@ export function createWritingInkAdapter({
       }
       if (disposed || taskGeneration !== generation || taskIdentityKey !== identityKey) return null;
       revision = saved.revision;
-      lastSnapshot = clone(saved);
-      lastPersistedCanonical = taskCanonical;
-      dirty = canonical(strokes) !== lastPersistedCanonical;
+      lastSnapshot = saved;
+      persistedStrokes = taskStrokes;
+      dirty = !sameStrokes(strokes, persistedStrokes);
       const mayPublish = taskIdentityKey === requestedIdentityKey;
       if (mayPublish && mutationRevision === taskMutationRevision && !dirty) publishStatus("ok");
       const ref = writingInkRefFromSnapshot(saved);
       if (mayPublish) {
         onInkRefChange(ref);
-        onStatusChange(state());
+        onStatusChange(state(false));
       }
+      if (dirty && mayPublish) schedulePersist();
       return ref;
     });
-    saveTail = task.catch(() => null);
-    return task;
+    persisting = task.finally(() => { persisting = null; });
+    saveTail = persisting.catch(() => null);
+    return persisting;
   }
 
   function schedulePersist() {
@@ -186,14 +217,20 @@ export function createWritingInkAdapter({
     }, autosaveDelay);
   }
 
-  function replaceCommitted(nextStrokes, { recordHistory = true, schedule = true, ...meta } = {}) {
+  function replaceCommitted(nextStrokes, { recordHistory = true, schedule = true, immutable = false, ...meta } = {}) {
     assertAttached();
     if (!Array.isArray(nextStrokes)) throw errorFor("invalid-strokes", "Writing ink strokes must be an array", null, identity);
-    const next = clone(nextStrokes);
-    if (canonical(next) === canonical(strokes)) return false;
-    if (recordHistory) history.push(clone(strokes));
+    const next = immutable ? nextStrokes.slice() : nextStrokes.map((stroke, index) => {
+      const owned = ownStroke(stroke);
+      return strokes[index] && sameStrokes([owned], [strokes[index]]) ? strokes[index] : owned;
+    });
+    if (immutable) for (const stroke of next) {
+      if (stroke && typeof stroke === "object") ownedStrokes.set(stroke, stroke);
+    }
+    if (sameStrokes(next, strokes)) return false;
+    if (recordHistory) history.push(createInkUndoPatch(strokes, next));
     mutationRevision += 1;
-    dirty = canonical(next) !== lastPersistedCanonical;
+    dirty = !sameStrokes(next, persistedStrokes);
     publishStrokes(next, meta);
     if (schedule && dirty) schedulePersist();
     else if (!dirty) {
@@ -246,7 +283,9 @@ export function createWritingInkAdapter({
     revision = 0;
     mutationRevision = 0;
     lastSnapshot = null;
-    lastPersistedCanonical = canonical([]);
+    persistedStrokes = [];
+    ownedStrokes = new WeakMap();
+    strokeContent = new WeakMap();
     dirty = false;
     history = [];
     publishStrokes([], { reason: "identity-change" });
@@ -285,8 +324,8 @@ export function createWritingInkAdapter({
       }
       revision = snapshot.revision;
       lastSnapshot = clone(snapshot);
-      lastPersistedCanonical = canonical(snapshot.strokes);
-      publishStrokes(snapshot.strokes, { reason: "restore" });
+      publishStrokes(snapshot.strokes.map(ownStroke), { reason: "restore" });
+      persistedStrokes = strokes;
       onInkRefChange(writingInkRefFromSnapshot(snapshot));
       publishStatus("ok");
       return state();
@@ -340,8 +379,8 @@ export function createWritingInkAdapter({
 
   function undo() {
     assertAttached();
-    if (!strokes.length) return false;
-    const previous = history.length ? history.pop() : strokes.slice(0, -1);
+    if (!history.length && !strokes.length) return false;
+    const previous = history.length ? history.pop()(strokes) : strokes.slice(0, -1);
     return replaceCommitted(previous, { recordHistory: false, reason: "undo" });
   }
 
@@ -374,6 +413,7 @@ export function createWritingInkAdapter({
     clear,
     dispose,
     getState: state,
+    getStatus: () => state(false),
     getIdentity: () => identity ? clone(identity) : null,
     isInteractive: () => !disposed && READY_STATUSES.has(status),
   };

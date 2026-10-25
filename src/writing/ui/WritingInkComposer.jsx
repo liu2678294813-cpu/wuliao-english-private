@@ -48,6 +48,7 @@ export default function WritingInkComposer({
   showHeading = true,
   disabled = false,
   onInkRefChange,
+  onStrokesCountChange,
   pageLabel = "在这里书写",
   InkSurface = WritingInkSurface,
   Toolbar = AnnotationToolbar,
@@ -63,6 +64,12 @@ export default function WritingInkComposer({
   const [eraserSize, setEraserSize] = useState(24);
   const [toolbarApi, setToolbarApi] = useState(null);
   const [strokeCount, setStrokeCount] = useState(0);
+  const onStrokesCountChangeRef = useRef(onStrokesCountChange);
+  onStrokesCountChangeRef.current = onStrokesCountChange;
+  const handleStrokesCountChange = useCallback((count) => {
+    setStrokeCount(count);
+    onStrokesCountChangeRef.current?.(count);
+  }, []);
   const [flushHandle, setFlushHandle] = useState(null);
   const [inkError, setInkError] = useState("");
 
@@ -138,7 +145,7 @@ export default function WritingInkComposer({
         onFlushHandleChange={handleFlushHandleChange}
         onInkRefChange={onInkRefChange}
         onToolbarApiChange={setToolbarApi}
-        onStrokesCountChange={setStrokeCount}
+        onStrokesCountChange={handleStrokesCountChange}
         onError={(error) => setInkError(error?.message || "笔迹暂时无法保存")}
         pageRegions={pageRegions}
       >

@@ -47,16 +47,27 @@ function cloneJson(value, name) {
   }
 }
 
-function cloneStrokes(strokes) {
-  if (!Array.isArray(strokes)) throw new WritingInkStorageError("invalid-strokes", "strokes must be an array");
-  return cloneJson(strokes, "strokes");
-}
-
 function canonicalJson(value) {
   if (value === undefined) return "null";
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   return `{${Object.keys(value).sort().filter((key) => value[key] !== undefined).map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+}
+
+// Keep the existing canonical JSON/SHA-256 wire format, but yield between
+// batches. A long document must not block live pen input while being verified.
+async function mapInkInSlices(strokes, map) {
+  const result = [];
+  let started = performance.now();
+  for (let i = 0; i < strokes.length; i += 1) {
+    result.push(map(strokes[i]));
+    if (i + 1 < strokes.length && performance.now() - started >= 4) {
+      if (globalThis.scheduler?.yield) await globalThis.scheduler.yield();
+      else await new Promise((resolve) => setTimeout(resolve, 0));
+      started = performance.now();
+    }
+  }
+  return result;
 }
 
 function surfaceContract(surfaceId) {
@@ -117,9 +128,21 @@ export function writingInkRecordId({ username, sessionId, surfaceId }) {
 }
 
 export async function fingerprintWritingInkSnapshot(snapshot) {
-  const value = cloneJson(snapshot, "WritingInkSnapshot");
+  const { strokes, ...metadata } = snapshot;
+  const value = cloneJson(metadata, "WritingInkSnapshot");
   delete value.fingerprint;
-  const fingerprint = await computeFileFingerprint(new TextEncoder().encode(canonicalJson(value)));
+  let json;
+  if (Array.isArray(strokes)) {
+    const encodedStrokes = await mapInkInSlices(strokes, (stroke) => canonicalJson(cloneJson(stroke, "stroke")));
+    const entries = Object.keys({ ...value, strokes: true }).sort().map((key) => (
+      `${JSON.stringify(key)}:${key === "strokes" ? `[${encodedStrokes.join(",")}]` : canonicalJson(value[key])}`
+    ));
+    json = `{${entries.join(",")}}`;
+  } else {
+    if (strokes !== undefined) value.strokes = cloneJson(strokes, "strokes");
+    json = canonicalJson(value);
+  }
+  const fingerprint = await computeFileFingerprint(new TextEncoder().encode(json));
   if (!SHA256_PATTERN.test(fingerprint)) {
     throw new WritingInkStorageError("fingerprint-unavailable", "SHA-256 is unavailable for Writing ink fingerprints");
   }
@@ -183,7 +206,8 @@ async function withDatabase(indexedDb, action) {
 function readRaw(id, indexedDb) {
   return withDatabase(indexedDb, (database) => runRequest(database, "readonly", (store, control) => {
     const request = store.get(id);
-    request.onsuccess = () => control.resolve(request.result ? cloneJson(request.result, "WritingInkSnapshot") : null);
+    // IndexedDB already returns an isolated structured clone.
+    request.onsuccess = () => control.resolve(request.result || null);
     request.onerror = () => control.fail(request.error || new WritingInkStorageError("read-error", "Writing ink read failed"));
   }));
 }
@@ -218,7 +242,7 @@ async function inspectRecord(record, identity, expectedSourceFingerprint = null)
   if (expectedSourceFingerprint !== null && record.sourceFingerprint !== requiredString(expectedSourceFingerprint, "expectedSourceFingerprint")) {
     return { status: "source-mismatch", snapshot: null, revision: record.revision };
   }
-  return { status: "ok", snapshot: cloneJson(record, "WritingInkSnapshot") };
+  return { status: "ok", snapshot: record };
 }
 
 export async function getWritingInkSnapshot({
@@ -248,7 +272,8 @@ export async function saveWritingInkSnapshot({
   const identity = normalizeIdentity({ username, sessionId, surfaceId, stageId, ownerRecordId });
   const source = requiredString(sourceFingerprint, "sourceFingerprint");
   const expected = normalizeExpectedRevision(expectedRevision);
-  const nextStrokes = cloneStrokes(strokes);
+  if (!Array.isArray(strokes)) throw new WritingInkStorageError("invalid-strokes", "strokes must be an array");
+  const nextStrokes = await mapInkInSlices(strokes, (stroke) => cloneJson(stroke, "stroke"));
   if (!((typeof updatedAt === "number" && Number.isFinite(updatedAt)) || (typeof updatedAt === "string" && updatedAt.trim()))) {
     throw new WritingInkStorageError("invalid-input", "updatedAt is invalid");
   }

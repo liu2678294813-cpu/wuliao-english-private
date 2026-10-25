@@ -1,8 +1,135 @@
 import { test, expect } from "@playwright/test";
 import { createAccount, navTo, uniqueUsername } from "./helpers.js";
 import { GENERATED_WRITING_QUESTIONS } from "../src/writing/questions/generatedWritingQuestionData.js";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const FAKE_BASE = "https://e2e-writing.invalid/v1";
+const REPAIR_EVIDENCE = resolve("artifacts/writing-repair-20261025/browser");
+mkdirSync(REPAIR_EVIDENCE, { recursive: true });
+
+for (const fallback of [false, true]) test(`Writing repair long page: 3000 strokes, warm cache, structural edits and restart${fallback ? " without Worker" : ""}`, async ({ page }) => {
+  if (fallback) await page.addInitScript(() => { window.Worker = undefined; });
+  const gates = attachBrowserGates(page);
+  await installFakeProviders(page);
+  const username = await createAccount(page, uniqueUsername("writing-repair-long"));
+  await configureFakeProviders(page, username);
+  await startQuestion(page, 2023, "A");
+  await page.getByRole("button", { name: "完成范文精读" }).click();
+  await page.getByRole("button", { name: "手写", exact: true }).click();
+  await drawStroke(page);
+  await page.locator(".writing-compact-toolbar .back-button").click();
+  await expect(page.locator(".writing-library")).toBeVisible();
+  await page.evaluate(async (user) => {
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open("wuliao-english"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const rows = await new Promise((resolve) => { const request = db.transaction("writing-ink").objectStore("writing-ink").getAll(); request.onsuccess = () => resolve(request.result); });
+    const record = rows.find(row => row.username === user);
+    if (!record) throw Error("Isolated test surface is missing");
+    const source = record.strokes[0];
+    record.strokes = Array.from({ length: 3000 }, (_, i) => ({ ...source, points: Array.from({ length: 48 }, (_, j) => {
+      const x = .04 + (i % 10) * .08 + j * .0008;
+      const y = .02 + Math.floor(i / 10) / 310 + Math.sin(j / 5) * .0003;
+      return { x, y, pressure: .5, writingLocal: { x, y } };
+    }) }));
+    record.revision += 1;
+    record.fingerprint = await window.__WULIAO_WRITING_E2E__.computeWritingFingerprint(record);
+    await new Promise((resolve, reject) => { const tx = db.transaction("writing-ink", "readwrite"); tx.objectStore("writing-ink").put(record); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
+    db.close();
+  }, username);
+  await page.locator(".writing-library-card button").first().click();
+  await expectStage(page, "W2");
+  await expect(page.locator(".writing-ink-composer")).toContainText("3000 笔");
+  await page.addStyleTag({ content: ".writing-stage-w2 .writing-paper,.writing-stage-w2 .writing-ink-content,.writing-stage-w2 .writing-ink-surface {height:9000px!important;min-height:9000px!important}" });
+  const scroll = page.locator(".writing-split-work > .writing-split-scroll");
+  const layer = page.locator(".writing-split-work .writing-ink-canvas");
+  for (const top of [0, 3500, 7000, 3500, 0]) { await scroll.evaluate((el, y) => { el.scrollTop = y; }, top); await page.waitForTimeout(250); }
+  const before = await layer.evaluate(el => Number(el.dataset.historyPaints));
+  for (const top of [3500, 7000, 3500, 0]) { await scroll.evaluate((el, y) => { el.scrollTop = y; }, top); await page.waitForTimeout(150); }
+  const after = await layer.evaluate(el => Number(el.dataset.historyPaints));
+  expect(after).toBe(before);
+  expect(await layer.evaluate(el => Number(el.dataset.cacheBytes))).toBeLessThanOrEqual(32 * 1024 * 1024);
+  const box = await page.locator(".writing-paper").boundingBox();
+  const y = Math.max(160, box.y + 70);
+  const start = Date.now();
+  await page.mouse.move(box.x + 75, y); await page.mouse.down();
+  await page.mouse.move(box.x + 180, y + 15, { steps: 12 }); await page.mouse.up();
+  await expect(page.locator(".writing-ink-composer")).toContainText("3001 笔");
+  const commitAndUiMs = Date.now() - start;
+  expect(await layer.evaluate(el => Number(el.dataset.historyPaints))).toBe(after);
+  await page.getByRole("button", { name: "撤销", exact: true }).click();
+  await expect(page.locator(".writing-ink-composer")).toContainText("3000 笔");
+  await page.screenshot({ path: resolve(REPAIR_EVIDENCE, `long-page${fallback ? "-fallback" : ""}.png`) });
+  await page.locator(".writing-compact-toolbar .back-button").click();
+  await expect(page.locator(".writing-library")).toBeVisible();
+  await page.reload();
+  await expect(page.locator(".writing-library")).toBeVisible();
+  await page.locator(".writing-library-card button").first().click();
+  await expectStage(page, "W2");
+  await expect(page.locator(".writing-ink-composer")).toContainText("3000 笔");
+  writeFileSync(resolve(REPAIR_EVIDENCE, `long-page${fallback ? "-fallback" : ""}.json`), JSON.stringify({ strokes: 3000, fallback, beforeHistoryPaints: before, afterHistoryPaints: after, commitAndUiMs, restartRestored: true }, null, 2));
+  await gates.assertClean();
+});
+
+for (const input of ["typed", "handwriting", "handwriting-no-worker"]) {
+  test(`Writing repair W2 next step: ${input}, immersive, both layouts and responsive toolbar`, async ({ page }) => {
+    if (input === "handwriting-no-worker") await page.addInitScript(() => { window.Worker = undefined; });
+    const gates = attachBrowserGates(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const calls = await installFakeProviders(page);
+    const username = await createAccount(page, uniqueUsername(`writing-repair-${input}`));
+    await configureFakeProviders(page, username);
+    await startQuestion(page, 2023, "A");
+    await page.getByRole("button", { name: "完成范文精读" }).click();
+    await expectStage(page, "W2");
+    const next = page.getByRole("button", { name: "完成翻译，进入英文反译", exact: true });
+    await expect(next).toBeVisible();
+    await expect(next).toBeDisabled();
+    if (input === "typed") await page.getByLabel("完整中文译文").fill("保存这一份中文译文，然后进入英文反译。");
+    else {
+      await page.getByRole("button", { name: "手写", exact: true }).click();
+      await expect(next).toBeDisabled();
+      await drawStroke(page);
+      await expect(page.locator(".writing-ink-tile").first()).toBeVisible();
+      await expect.poll(() => page.locator(".writing-ink-tile").evaluateAll((tiles) => tiles.reduce((sum, tile) => {
+        const pixels = tile.getContext("2d").getImageData(0, 0, tile.width, tile.height).data;
+        return sum + pixels.filter((v, i) => i % 4 === 3 && v > 0).length;
+      }, 0))).toBeGreaterThan(20);
+      await page.getByRole("button", { name: "撤销", exact: true }).click();
+      await expect(next).toBeDisabled();
+      await drawStroke(page);
+    }
+    await expect(next).toBeEnabled();
+    await page.getByRole("button", { name: "沉浸学习", exact: true }).click();
+    await expect(page.locator(".writing-stage-w2")).toHaveClass(/is-immersive/);
+    for (const viewport of [{ width: 1280, height: 800 }, { width: 832, height: 544 }, { width: 800, height: 1100 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(viewport);
+      await expect(next).toBeVisible();
+      const box = await next.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+      if (viewport.width > 620) {
+        await page.getByRole("button", { name: "切换双区布局" }).click();
+        await expect(next).toBeVisible();
+      }
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.screenshot({ path: resolve(REPAIR_EVIDENCE, `w2-${input}.png`) });
+    await next.click();
+    await expectStage(page, "W3");
+    if (input === "typed") await expect(page.locator(".writing-split-source")).toContainText("保存这一份中文译文");
+    else {
+      await expect(page.getByLabel("W2 中文手写译文（只读）")).toBeVisible();
+      await expect(page.locator(".writing-readonly-ink .writing-ink-tile").first()).toBeVisible();
+      const records = await writingRecords(page, username);
+      const frozen = Object.entries(records).find(([key]) => key.startsWith("wuliao:writing-translation-snapshot:v1:"));
+      expect(frozen?.[1]?.units?.[0]?.inkRef).toBeTruthy();
+    }
+    expect(calls.vision).toBe(0);
+    await page.screenshot({ path: resolve(REPAIR_EVIDENCE, `w3-${input}.png`) });
+    await gates.assertClean();
+  });
+}
 const FORBIDDEN_W7 = [
   "E2E_SAMPLE_SECRET",
   "E2E_TRANSLATION_SECRET",
@@ -282,7 +409,7 @@ async function completeW1ToW5(page, { compareAi = false, translation = "E2E_TRAN
   await expectStage(page, "W2");
   const translationArea = page.getByLabel("完整中文译文");
   await translationArea.fill(translation);
-  await page.getByRole("button", { name: "提交完整中文译文" }).click();
+  await page.getByRole("button", { name: "完成翻译，进入英文反译" }).click();
   await expectStage(page, "W3");
   await page.locator(".writing-editor-card textarea").fill(backTranslation);
   await page.getByRole("button", { name: "准备提交完整反译" }).click();
@@ -507,7 +634,7 @@ test("Slice 10 focused W3：handwriting fake Vision 不自动推进，编辑确�
   await page.getByRole("button", { name: "完成范文精读" }).click();
   await expectStage(page, "W2");
   await page.getByLabel("完整中文译文").fill("只允许这份冻结译文出现在 W3");
-  await page.getByRole("button", { name: "提交完整中文译文" }).click();
+  await page.getByRole("button", { name: "完成翻译，进入英文反译" }).click();
   await expectStage(page, "W3");
   const w3Body = await page.locator("body").innerText();
   expect(w3Body).not.toContain(A_ESSAY);
@@ -539,7 +666,7 @@ test("Slice 10 failure paths：Vision unsupported/network manual fallback、Comp
   await page.getByRole("button", { name: "完成范文精读" }).click();
   await expectStage(page, "W2");
   await page.getByLabel("完整中文译文").fill("失败路径的冻结中文译文");
-  await page.getByRole("button", { name: "提交完整中文译文" }).click();
+  await page.getByRole("button", { name: "完成翻译，进入英文反译" }).click();
   await expectStage(page, "W3");
   await page.getByRole("button", { name: "手写", exact: true }).click();
   await drawStroke(page);
@@ -764,7 +891,7 @@ test("W2 tablet workspace：双模式、顶部提交、共享中线、独立滚�
   await expect(page.locator(".writing-stage-header")).toHaveCount(0);
   await expect(page.locator(".writing-compact-toolbar")).not.toContainText("左侧阅读完整英文范文");
   await expect(page.locator(".writing-split-pane > header p")).toHaveCount(0);
-  await expect(page.locator(".writing-compact-toolbar").getByRole("button", { name: "提交完整中文译文" })).toBeVisible();
+  await expect(page.locator(".writing-compact-toolbar").getByRole("button", { name: "完成翻译，进入英文反译" })).toBeVisible();
   const translation = "键盘草稿在两种输入模式之间保持不变。";
   await page.getByLabel("完整中文译文").fill(translation);
 

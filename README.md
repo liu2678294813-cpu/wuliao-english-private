@@ -10,7 +10,7 @@
 
 </div>
 
-> **最新下载：[1.0.101 含文章版 Android / Windows](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 合并重难句仓库、作文式单句复盘工作台和单词筛选手写区扩展。保留备份与免费局域网互传。安卓请直接覆盖安装，不要卸载或清除数据；Windows 先关闭旧服务，再启动新版，继续使用原浏览器和 `http://127.0.0.1:4173`。本轮未安装平板，真实账号升级与实体手写笔未验收。
+> **最新安卓下载：[1.0.103 含文章版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 修复作文手写卡顿和中文翻译后的下一步；沉浸模式仍可提交，窄屏显示“下一步”。保留自带文章、作文、词库及原有学习数据。请直接覆盖安装，不要卸载或清除数据。本轮未连接生产平板，实体手写笔和真实账号升级未验收。Windows 下载版可在历史 Releases 中获取。
 
 <details>
 <summary>查看新版界面</summary>

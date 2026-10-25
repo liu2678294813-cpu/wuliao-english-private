@@ -274,6 +274,7 @@ export function projectWritingStroke(stroke, snapshot) {
 
 export function createWritingInkGeometryAdapter({ getSnapshot, onError = () => {} } = {}) {
   const canonicalByProjection = new WeakMap();
+  const projectionCache = new WeakMap();
   const reportedByStroke = new WeakMap();
 
   function reportOnce(error, stroke, operation) {
@@ -305,9 +306,13 @@ export function createWritingInkGeometryAdapter({ getSnapshot, onError = () => {
     },
     projectStroke(stroke) {
       try {
-        const projected = projectWritingStroke(stroke, snapshot());
+        const geometry = snapshot();
+        const cached = projectionCache.get(stroke);
+        if (cached && cached.signature === geometry?.signature) return cached.projected;
+        const projected = projectWritingStroke(stroke, geometry);
         if (projected !== stroke && projected && typeof projected === "object") {
           canonicalByProjection.set(projected, stroke);
+          projectionCache.set(stroke, { signature: geometry?.signature, projected });
         }
         return projected;
       } catch (error) {

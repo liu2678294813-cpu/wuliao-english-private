@@ -1032,6 +1032,21 @@ function inkOptions(indexedDb, overrides = {}) {
   };
 }
 
+test("Writing ink sliced hashing preserves the existing canonical SHA-256 format", async () => {
+  const snapshot = {
+    schemaVersion: 1, username: ALICE, sessionId: "session-hash", surfaceId: "w7:independent:attempt-hash",
+    stageId: WritingStage.W7_INDEPENDENT, ownerRecordId: "attempt-hash", sourceFingerprint: "legacy-source",
+    revision: 7, updatedAt: NOW,
+    strokes: Array.from({ length: 100 }, (_, i) => ({ tool: "pen", color: "#173a62", width: 2.6, points: [{ x: i / 101, y: .3, pressure: .5 }] })),
+  };
+  const expected = await computeWritingFingerprint(snapshot);
+  assert.equal(await fingerprintWritingInkSnapshot(snapshot), expected);
+  snapshot.fingerprint = expected;
+  assert.equal(await fingerprintWritingInkSnapshot(snapshot), expected, "stored fingerprint must be excluded exactly as before");
+  snapshot.strokes[0].points[0].x = .99;
+  assert.notEqual(await fingerprintWritingInkSnapshot(snapshot), expected, "a mutated record must never use a stale hash cache");
+});
+
 test("M Writing ink deterministic identity, revisions, stale/source guards, deep clone, and refs", async () => {
   const indexedDb = createV4Database();
   const firstInput = inkOptions(indexedDb);
