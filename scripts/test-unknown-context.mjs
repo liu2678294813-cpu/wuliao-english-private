@@ -136,6 +136,27 @@ test("finger can add from the repeated English sentence within the translation m
   } finally { f.restore(); }
 });
 
+test("finger can mark timed initial original text with canonical sentence context, but not redo text", () => {
+  const f = touchGeometryFixture();
+  try {
+    const stage = f.scope.parentElement;
+    stage.id = "deep-clean-text";
+    stage.className = "";
+    const article = document.createElement("div");
+    article.className = "clean-article";
+    stage.append(article);
+    article.append(f.scope);
+    f.scope.dataset.unknownScope = "clean:p1";
+    f.scope.dataset.sentenceScope = "clean:p1:s1";
+    const token = unknownTouchWordFromPoint(105, 108, f.root);
+    assert.equal(token?.word, "of");
+    assert.equal(token.occurrenceId, "clean:p1:0");
+    assert.equal(unknownSentenceContextFromToken(token, "passage").contextKey, "passage:p1:s1");
+    stage.id = "deep-redo";
+    assert.equal(unknownTouchWordFromPoint(105, 108, f.root), null);
+  } finally { f.restore(); }
+});
+
 test("finger up keeps the down word in whitespace but rejects an actual neighboring glyph", () => {
   const f = touchGeometryFixture();
   try {

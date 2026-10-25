@@ -53,8 +53,8 @@ export async function readUnknown(page, username) {
   }, username);
 }
 
-async function points(page, scopeIndex = 0) {
-  const scope = page.locator('.sentence-source [data-unknown-scope]').nth(scopeIndex);
+async function points(page, scopeIndex = 0, selector = '.sentence-source [data-unknown-scope]') {
+  const scope = page.locator(selector).nth(scopeIndex);
   await scope.scrollIntoViewIfNeeded();
   return scope.evaluate(async (element) => {
     await document.fonts.ready;
@@ -108,6 +108,196 @@ async function handwritingFixture(page) {
   await expect(page.locator(".deep-reader-content")).toHaveClass(/note-mode/);
   return f;
 }
+
+const INITIAL_ORIGINAL = '#deep-clean-text .clean-article [data-unknown-scope]';
+const initialPoints = (page) => points(page, 0, INITIAL_ORIGINAL);
+
+async function timedInitialFixture(page, phase = "running", aiFailure = false) {
+  const errors = [], consoleErrors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  let calls = 0;
+  await page.route("**/chat/completions", async (route) => {
+    calls++;
+    await route.fulfill({ status: 503, json: { error: { message: "isolated contextual meaning failure" } } });
+  });
+  const username = await createAccount(page, uniqueUsername("timed-unknown"));
+  if (aiFailure) await page.evaluate((user) => {
+    localStorage.setItem(`wuliao:user:${encodeURIComponent(user)}:wuliao:ai:apikey`, "isolated-mock-key");
+  }, username);
+  await openOfficialResource(page, TITLE);
+  await clickStageAdvance(page, "开始精读");
+  await clickStageAdvance(page, "完成审题，进入初做");
+  if (phase === "paused") {
+    await page.getByRole("button", { name: "← 资料库", exact: true }).click();
+    await page.locator(".resource-card", { hasText: TITLE }).first().locator(".resource-open").click();
+  }
+  await expect(page.locator(`.timed-reading-timer.${phase}`)).toBeVisible();
+  await page.waitForTimeout(650);
+  return { username, errors, consoleErrors, calls: () => calls };
+}
+
+async function protectedInitialState(page, username) {
+  return page.evaluate((user) => {
+    const prefix = `wuliao:user:${encodeURIComponent(user)}:`;
+    return Object.fromEntries(Object.entries(localStorage).filter(([key]) => key.startsWith(prefix)
+      && /reading-flow:|answers:|translation-progress:|review-history:|question-evidence:/.test(key)));
+  }, username);
+}
+
+for (const phase of ["running", "paused"]) {
+  test(`timed initial ${phase}: finger marks original, preserves learning state and survives reload`, async ({ page }, info) => {
+    const f = await timedInitialFixture(page, phase);
+    await page.locator("#deep-first-quiz .deep-options button").first().click();
+    await page.locator(".annotation-toolbar").getByRole("button", { name: "手写批注", exact: true }).click();
+    await expect(page.locator(".annotation-toolbar").getByRole("button", { name: "陌生词", exact: true })).toBeVisible();
+    let token = (await initialPoints(page))[4];
+    const before = await protectedInitialState(page, f.username);
+    const inkBefore = await readDurableInkEntries(page, f.username);
+    await fingerGesture(page, token, token, 400);
+    await expect.poll(async () => (await readUnknown(page, f.username)).map((r) => r.word)).toEqual([token.word]);
+    const [saved] = await readUnknown(page, f.username);
+    expect(saved.occurrences[0]).toMatch(/^clean:p1:/);
+    expect(saved.senses[0].contextKey).toMatch(/:p1:s1$/);
+    const sentence = await page.locator('[data-sentence-scope="clean:p1:s1"]').textContent();
+    expect(saved.senses[0].sentence).toBe(sentence.trim());
+    await expect.poll(() => page.evaluate(() => CSS.highlights.get("wuliao-unknown-words")?.size || 0)).toBe(1);
+    expect(await protectedInitialState(page, f.username)).toEqual(before);
+    expect(await readDurableInkEntries(page, f.username)).toEqual(inkBefore);
+    await expect(page.locator(`.timed-reading-timer.${phase}`)).toBeVisible();
+    await expect(page.locator(".sentence-action-bar")).toHaveCount(0);
+    await expect(page.locator("#deep-first-quiz .question-ai-hint-button, #deep-first-quiz .deep-options .correct")).toHaveCount(0);
+    expect(await page.locator("vite-error-overlay").count()).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`timed-initial-${phase}.png`) });
+    await reopen(page);
+    expect(await readUnknown(page, f.username)).toHaveLength(1);
+    token = (await initialPoints(page))[4];
+    const reopenedState = await protectedInitialState(page, f.username);
+    await fingerGesture(page, token);
+    await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(0);
+    expect(await protectedInitialState(page, f.username)).toEqual(reopenedState);
+    await expect.poll(() => page.evaluate(() => CSS.highlights.get("wuliao-unknown-words")?.size || 0)).toBe(0);
+    expect(await readDurableInkEntries(page, f.username)).toEqual(inkBefore);
+    expect(f.errors).toEqual([]);
+    expect(f.consoleErrors).toEqual([]);
+  });
+}
+
+test("timed initial keyboard mode: mouse and pen tap original without changing answers or ink", async ({ page }) => {
+  const f = await timedInitialFixture(page);
+  await page.locator(".annotation-toolbar").getByRole("button", { name: "键盘输入", exact: true }).click();
+  const tokens = await initialPoints(page), before = await protectedInitialState(page, f.username);
+  const inkBefore = await readDurableInkEntries(page, f.username);
+  await page.mouse.click(tokens[4].x, tokens[4].y);
+  await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(1);
+  await page.mouse.click(tokens[4].x, tokens[4].y);
+  await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(0);
+  await penGesture(page, [tokens[7]]);
+  await expect.poll(async () => (await readUnknown(page, f.username)).map((r) => r.word)).toEqual([tokens[7].word]);
+  expect(await protectedInitialState(page, f.username)).toEqual(before);
+  expect(await readDurableInkEntries(page, f.username)).toEqual(inkBefore);
+  expect(f.errors).toEqual([]);
+  expect(f.consoleErrors).toEqual([]);
+});
+
+test("timed initial handwriting: ordinary pen writes; unknown tool selects a phrase and finger cancels it", async ({ page }, info) => {
+  const f = await timedInitialFixture(page);
+  const toolbar = page.locator(".annotation-toolbar");
+  await toolbar.getByRole("button", { name: "手写批注", exact: true }).click();
+  await toolbar.getByRole("button", { name: "笔", exact: true }).click();
+  let tokens = await initialPoints(page);
+  await penGesture(page, [tokens[4], { ...tokens[4], x: tokens[4].x + 30, y: tokens[4].y + 3 }]);
+  const strokes = async () => (await readDurableInkEntries(page, f.username)).flatMap((r) => {
+    const value = JSON.parse(r.value); return Array.isArray(value) ? value : [];
+  });
+  await expect.poll(async () => (await strokes()).length).toBe(1);
+  expect(await readUnknown(page, f.username)).toHaveLength(0);
+  await toolbar.getByRole("button", { name: "陌生词", exact: true }).click();
+  tokens = await initialPoints(page);
+  const inkBefore = await readDurableInkEntries(page, f.username);
+  const before = await protectedInitialState(page, f.username);
+  await penGesture(page, [tokens[2], tokens[4]]);
+  await expect.poll(async () => (await readUnknown(page, f.username)).map((r) => r.word)).toEqual([tokens.slice(2, 5).map((t) => t.word).join(" ")]);
+  expect((await readUnknown(page, f.username))[0].occurrences).toHaveLength(3);
+  await page.screenshot({ path: info.outputPath("timed-initial-phrase.png") });
+  await fingerGesture(page, tokens[3]);
+  await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(0);
+  expect(await protectedInitialState(page, f.username)).toEqual(before);
+  expect(await readDurableInkEntries(page, f.username)).toEqual(inkBefore);
+  expect(f.errors).toEqual([]);
+  expect(f.consoleErrors).toEqual([]);
+});
+
+test("timed initial original: evidence selection takes priority when revisited from redo", async ({ page }) => {
+  const f = await fixture(page, false, "deep-redo");
+  await page.locator("#deep-redo .deep-options button").first().click();
+  await page.locator(".annotation-toolbar").getByRole("button", { name: "陌生词", exact: true }).click();
+  await page.locator("#deep-redo").getByRole("button", { name: "去原文定位", exact: true }).first().click();
+  const editor = page.locator(".evidence-editor-bar");
+  await editor.getByRole("button", { name: "句子定位", exact: true }).click();
+  let tokens = await initialPoints(page);
+  await fingerGesture(page, tokens[4]);
+  await expect(page.locator(".evidence-sentence-chip")).toHaveCount(1);
+  expect(await readUnknown(page, f.username)).toHaveLength(0);
+  await editor.getByRole("button", { name: "原文片段", exact: true }).click();
+  tokens = await initialPoints(page);
+  await page.mouse.move(tokens[2].left, tokens[2].y);
+  await page.mouse.down();
+  await page.mouse.move(tokens[4].right, tokens[4].y, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator(".evidence-text-ranges q")).toHaveCount(1);
+  expect(await readUnknown(page, f.username)).toHaveLength(0);
+  await editor.getByRole("button", { name: "取消", exact: true }).click();
+  tokens = await initialPoints(page);
+  await fingerGesture(page, tokens[4]);
+  await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(1);
+  expect(f.errors).toEqual([]);
+});
+
+test("timed initial rejects controls, whitespace, scrolling, multiple fingers and cancelled gestures", async ({ page }) => {
+  const f = await timedInitialFixture(page);
+  await page.locator(".annotation-toolbar").getByRole("button", { name: "手写批注", exact: true }).click();
+  let token = (await initialPoints(page))[4];
+  const heading = page.locator("#deep-clean-text .clean-paragraph-heading").first();
+  const box = await heading.boundingBox();
+  await fingerGesture(page, { x: box.x + 10, y: box.y + box.height / 2 });
+  await fingerGesture(page, { x: box.x + box.width - 5, y: box.y + box.height / 2 });
+  await fingerGesture(page, token, token, 451);
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: token.x, y: token.y }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: token.x, y: token.y }, { x: token.x + 40, y: token.y }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: token.x, y: token.y }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: token.x, y: token.y - 70 }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  } finally { await cdp.detach(); }
+  expect(await readUnknown(page, f.username)).toHaveLength(0);
+  token = (await initialPoints(page))[4];
+  await fingerGesture(page, token);
+  await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(1);
+  expect(f.errors).toEqual([]);
+  expect(f.consoleErrors).toEqual([]);
+});
+
+test("timed initial saves a word despite contextual AI failure and keeps translation controls hidden", async ({ page }) => {
+  const f = await timedInitialFixture(page, "running", true);
+  const token = (await initialPoints(page))[4];
+  const before = await protectedInitialState(page, f.username);
+  await fingerGesture(page, token);
+  await expect.poll(async () => (await readUnknown(page, f.username)).length).toBe(1);
+  await expect.poll(f.calls).toBeGreaterThan(0);
+  await expect(page.locator(".sentence-action-bar")).toHaveCount(0);
+  expect((await readUnknown(page, f.username))[0].senses[0].meaningSource).not.toBe("context-ai");
+  expect(await protectedInitialState(page, f.username)).toEqual(before);
+  expect(f.errors).toEqual([]);
+  expect(f.consoleErrors.filter((message) => !message.includes("503"))).toEqual([]);
+  await page.getByRole("button", { name: "← 资料库", exact: true }).click();
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
+  await expect(page.locator(".unknown-word-card", { hasText: token.word })).toHaveCount(1);
+});
 
 for (const stage of ["deep-cover", "deep-first-read", "deep-clean-text", "deep-first-quiz", "deep-translation", "deep-redo", "deep-review"]) {
   test(`finger adds from visible sentence when actual task is ${stage}, without changing other learning state`, async ({ page }, testInfo) => {
@@ -300,7 +490,7 @@ test("touching a phrase constituent cancels the whole phrase and remains cancell
   await reopen(page);
   expect(await readUnknown(page, f.username)).toHaveLength(0);
   await page.getByRole("button", { name: "← 资料库", exact: true }).click();
-  await page.locator(".unknown-library-button").click();
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
   await expect(page.locator(".unknown-word-card")).toHaveCount(0);
   expect(f.errors).toEqual([]);
   await cdp.detach();
@@ -322,7 +512,7 @@ test("unknown forward/reverse sparse samples create one phrase, library edits su
   expect(saved.word).toBe(phrase); expect(saved.occurrences).toHaveLength(3);
   expect(f.calls()).toBe(1);
   await page.getByRole("button", { name: "← 资料库", exact: true }).click();
-  await page.locator(".unknown-library-button").click();
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
   const card = page.locator(".unknown-word-card", { hasText: phrase });
   await expect(card).toHaveCount(1); await expect(card).toContainText("本句测试义");
   page.once("dialog", (dialog) => dialog.accept("人工本句义"));
@@ -332,7 +522,7 @@ test("unknown forward/reverse sparse samples create one phrase, library edits su
   await page.reload();
   await page.locator(".reader-page, .library-page").first().waitFor();
   if (await page.locator(".reader-page").isVisible()) await page.getByRole("button", { name: "← 资料库", exact: true }).click();
-  await page.locator(".unknown-library-button").click();
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
   await expect(page.locator(".unknown-word-card", { hasText: phrase })).toContainText("人工本句义");
   expect(f.errors).toEqual([]);
 });
@@ -364,7 +554,7 @@ test("cross-sentence gesture persists separate phrases with distinct contexts af
   const reloaded = await readUnknown(page, f.username);
   expect(reloaded.map((row) => row.id).sort()).toEqual(saved.map((row) => row.id).sort());
   await page.getByRole("button", { name: "← 资料库", exact: true }).click();
-  await page.locator(".unknown-library-button").click();
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
   await expect(page.locator(".unknown-word-card")).toHaveCount(2);
   expect(f.errors).toEqual([]);
 });
@@ -430,7 +620,7 @@ test("library switches meaning/context views, remembers the mode, and preserves 
     }); db.close();
   }, f.username);
   await page.getByRole("button", { name: "← 资料库", exact: true }).click();
-  await page.locator(".unknown-library-button").click();
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
   const issue = page.locator(".unknown-word-card", { hasText: "issue" });
   await expect(issue.locator(".unknown-context-sense")).toHaveCount(2);
   await expect(page.getByRole("button", { name: "只看释义", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -446,7 +636,7 @@ test("library switches meaning/context views, remembers the mode, and preserves 
   await page.reload();
   await page.locator(".reader-page, .library-page").first().waitFor();
   if (await page.locator(".reader-page").isVisible()) await page.getByRole("button", { name: "← 资料库", exact: true }).click();
-  await page.locator(".unknown-library-button").click();
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
   await expect(page.getByRole("button", { name: "显示语境", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(issue).toContainText("This issue matters.");
   await page.getByRole("button", { name: "只看释义", exact: true }).click();

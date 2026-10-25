@@ -2069,8 +2069,7 @@ export default function CustomDeepReader({
   // 共享 Ink Runtime：精读 / 普通完形 / 模拟考试使用同一份笔系统实现。
   // 精读在同一纸张层内使用固定笔迹分块与可视范围预览带。
   const inkController = useStructuredInk({
-    canInteract: () => !keyboardOnly && !evidenceEditorRef.current && noteModeRef.current
-      && !(timedReadingActiveRef.current && toolRef.current === "unknown"),
+    canInteract: () => !keyboardOnly && !evidenceEditorRef.current && noteModeRef.current,
     surfaceRef: contentRef,
     previewCanvasRef: viewportPreviewCanvasRef,
     tailCanvasRef,
@@ -2132,14 +2131,17 @@ export default function CustomDeepReader({
     canHandle: (event) => shouldHandleDirectUnknownTap({
       pointerType: event.pointerType, button: event.button, noteMode: noteModeRef.current,
       activeInk: activeInkRef.current || unknownSelectionRef.current,
-      // Viewing an original sentence is enough for a finger tap, even when
-      // the canonical task has advanced. Keep the mouse/pen stage gate.
-      enabled: !reviewActive && !evidenceEditorRef.current
-        && (event.pointerType === "touch" || flowRef.current?.currentStage === "deep-translation"),
+      enabled: !reviewActive && !evidenceEditorRef.current,
     }),
     hitTest: (x, y) => {
       const token = unknownWordFromPoint(x, y);
-      return token?.scope?.closest(".sentence-source") && contentRef.current?.contains(token.scope) ? token : null;
+      if (!token || !contentRef.current?.contains(token.scope)) return null;
+      const stage = flowRef.current?.currentStage;
+      // Precise mouse/pen taps keep their stage gate; fingers can still mark
+      // a visible translation sentence after the canonical task advances.
+      if (token.scope.closest(".sentence-source") && stage === "deep-translation") return token;
+      return token.scope.closest("#deep-clean-text .clean-article")
+        && ["deep-clean-text", "deep-first-quiz"].includes(stage) ? token : null;
     },
     onCommit: commitUnknownSelection,
     onError: (reason) => setHint(`陌生词保存失败：${reason?.message || reason}`),
@@ -4633,7 +4635,7 @@ export default function CustomDeepReader({
           canClear={canClearPassage}
           clearLabel="清空页面"
           showClear={false}
-          unknownEnabled={!timedReadingActive}
+          unknownEnabled
           tabletInk={androidApp}
         />
       )}
