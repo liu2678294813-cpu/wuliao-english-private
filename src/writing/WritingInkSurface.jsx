@@ -183,9 +183,12 @@ export default function WritingInkSurface({
       projectStroke: (stroke) => geometryAdapter.projectStroke(stroke),
     });
   }
-  const renderCommitted = useCallback((extraStroke = null) => tilesRef.current.update(
-    extraStroke ? [...strokesRef.current, extraStroke] : strokesRef.current,
-  ), []);
+  const renderCommitted = useCallback((extraStroke = null) => {
+    // Live erasers mutate their points. Give the immutable tile index a fresh
+    // preview snapshot, so every move invalidates both old and new bounds.
+    const preview = extraStroke && { ...extraStroke, points: extraStroke.points?.map((point) => ({ ...point })) };
+    return tilesRef.current.update(preview ? [...strokesRef.current, preview] : strokesRef.current);
+  }, []);
   const commitAppendStroke = useCallback((stroke) => tilesRef.current.append(stroke), []);
 
   const syncPreview = useCallback(() => {

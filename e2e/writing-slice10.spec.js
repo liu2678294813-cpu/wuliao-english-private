@@ -8,6 +8,63 @@ const FAKE_BASE = "https://e2e-writing.invalid/v1";
 const REPAIR_EVIDENCE = resolve("artifacts/writing-repair-20261025/browser");
 mkdirSync(REPAIR_EVIDENCE, { recursive: true });
 
+test("Writing repair eraser drag updates live pixels before pointerup", async ({ page }) => {
+  const gates = attachBrowserGates(page);
+  await installFakeProviders(page);
+  const username = await createAccount(page, uniqueUsername("writing-repair-eraser"));
+  await configureFakeProviders(page, username);
+  await startQuestion(page, 2023, "A");
+  await page.getByRole("button", { name: "完成范文精读" }).click();
+  await page.getByRole("button", { name: "手写", exact: true }).click();
+  const paper = page.locator(".writing-paper");
+  const box = await paper.boundingBox();
+  let y = box.y + 100;
+  await page.mouse.move(box.x + 80, y); await page.mouse.down();
+  await page.mouse.move(box.x + 280, y, { steps: 16 }); await page.mouse.up();
+  await expect(page.locator(".writing-ink-composer")).toContainText("1 笔");
+  const inkAt = async (x) => page.locator(".writing-ink-tile").evaluateAll((tiles, point) => {
+    let alpha=0;
+    for (const tile of tiles) {
+      const rect=tile.getBoundingClientRect();
+      if(point.y<rect.top || point.y>=rect.bottom || point.x<rect.left || point.x>=rect.right) continue;
+      const sx=Math.round((point.x-rect.left)*tile.width/rect.width),sy=Math.round((point.y-rect.top)*tile.height/rect.height);
+      const pixels=tile.getContext("2d").getImageData(sx-3,sy-3,7,7).data;
+      for(let i=3;i<pixels.length;i+=4) alpha+=pixels[i];
+    }
+    return alpha;
+  }, {x,y});
+  let painted;
+  await expect.poll(async () => {
+    painted=await page.locator(".writing-ink-tile").evaluateAll(tiles => {
+      let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity,count=0;
+      for(const tile of tiles){
+        const rect=tile.getBoundingClientRect(),pixels=tile.getContext("2d").getImageData(0,0,tile.width,tile.height).data;
+        for(let i=3;i<pixels.length;i+=4) if(pixels[i]>50){
+          const index=(i-3)/4,x=rect.left+(index%tile.width)*rect.width/tile.width,y=rect.top+Math.floor(index/tile.width)*rect.height/tile.height;
+          left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);count++;
+        }
+      }
+      return {left,right,y:(top+bottom)/2,count};
+    });
+    return painted.count;
+  }).toBeGreaterThan(100);
+  const startX=painted.left+12,endX=painted.right-12;
+  y=painted.y;
+  const before=await inkAt(endX);
+  expect(before).toBeGreaterThan(500);
+  await page.getByRole("button",{name:"橡皮",exact:true}).click();
+  await page.mouse.move(startX,y); await page.mouse.down();
+  await expect.poll(()=>inkAt(startX)).toBeLessThan(100);
+  await page.mouse.move(endX,y,{steps:8});
+  // The endpoint must already be erased while the pen is still held down.
+  await expect.poll(()=>inkAt(endX),{timeout:5000}).toBeLessThan(100);
+  await page.mouse.up();
+  await expect(page.locator(".writing-ink-composer")).toContainText("2 笔");
+  await page.getByRole("button",{name:"撤销",exact:true}).click();
+  await expect.poll(()=>inkAt(endX)).toBeGreaterThan(500);
+  await gates.assertClean();
+});
+
 for (const fallback of [false, true]) test(`Writing repair long page: 3000 strokes, warm cache, structural edits and restart${fallback ? " without Worker" : ""}`, async ({ page }) => {
   if (fallback) await page.addInitScript(() => { window.Worker = undefined; });
   const gates = attachBrowserGates(page);

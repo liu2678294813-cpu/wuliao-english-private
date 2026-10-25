@@ -10,7 +10,7 @@
 
 </div>
 
-> **最新安卓下载：[1.0.103 含文章版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 修复作文手写卡顿和中文翻译后的下一步；沉浸模式仍可提交，窄屏显示“下一步”。保留自带文章、作文、词库及原有学习数据。请直接覆盖安装，不要卸载或清除数据。本轮未连接生产平板，实体手写笔和真实账号升级未验收。Windows 下载版可在历史 Releases 中获取。
+> **最新安卓下载：[1.0.104 含文章版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 修复作文手写卡顿和中文翻译后的下一步；沉浸模式仍可提交，窄屏显示“下一步”。保留自带文章、作文、词库及原有学习数据。请直接覆盖安装，不要卸载或清除数据。本轮未连接生产平板，实体手写笔和真实账号升级未验收。Windows 下载版可在历史 Releases 中获取。
 
 <details>
 <summary>查看新版界面</summary>
