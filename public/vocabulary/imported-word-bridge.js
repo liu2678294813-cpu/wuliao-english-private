@@ -1,3 +1,5 @@
+import { isUnknownWordId, readUnknownWordList, UNKNOWN_LIST_KEY } from "./unknown-word-list.js";
+
 const CURRENT_USER_KEY = "kaoyan_vocab_current_user";
 const MEMORY_DB_NAME = "KaoyanVocabMemorizeDB";
 const MEMORY_DB_VERSION = 2;
@@ -6,6 +8,7 @@ const IMPORT_WORD_STORE = "importedWords";
 const MAIN_DB_NAME = "KaoyanVocabDB";
 const MAIN_LIST_STORE = "wordLists";
 const IMPORTED_WORD_PREFIX = "import:";
+export const isReadingWordList = (list) => list?.sourceType === "reading-unknown";
 
 function requestResult(request) {
   return new Promise((resolve, reject) => {
@@ -71,6 +74,88 @@ function openExistingMainDatabase() {
       reject(request.error);
     };
   });
+}
+
+function accountLists(store, username) {
+  return store.indexNames.contains("username")
+    ? requestResult(store.index("username").getAll(username))
+    : requestResult(store.getAll()).then((lists) => lists.filter((list) => list.username === username));
+}
+
+async function withWordLists(mode, action, fallback = null) {
+  const database = await openExistingMainDatabase();
+  if (!database) return fallback;
+  try {
+    const transaction = database.transaction(MAIN_LIST_STORE, mode);
+    const done = transactionDone(transaction);
+    // Await both the result and commit, including when the IDB request fails.
+    const [result] = await Promise.all([action(transaction.objectStore(MAIN_LIST_STORE)), done]);
+    return result;
+  } finally {
+    database.close();
+  }
+}
+
+export function readingListWords(list, snapshot) {
+  const excluded = new Set(list?.excludedWordIds);
+  return snapshot.words.filter((word) => !excluded.has(word.wordId));
+}
+
+function projectReadingList(list, snapshot) {
+  return { ...list, wordIds: readingListWords(list, snapshot).map((word) => word.wordId) };
+}
+
+export async function getReadingWordList(username, { snapshot, create = false, restore = false } = {}) {
+  if (!username) return null;
+  snapshot ??= await readUnknownWordList(username);
+  if (snapshot.error && restore) throw new Error(snapshot.error);
+
+  // Serialize creation and changes to metadata in the existing wordLists store.
+  // Reading entries and their meanings are always resolved from unknown-words.
+  return withWordLists(create || restore ? "readwrite" : "readonly", async (store) => {
+    const existing = (await accountLists(store, username)).find(isReadingWordList);
+    if (existing) {
+      if (restore && existing.hidden) {
+        existing.hidden = false;
+        await requestResult(store.put(existing));
+      }
+      return projectReadingList(existing, snapshot);
+    }
+    if (!(create || restore) || !snapshot.words.length) return null;
+    const list = {
+      username,
+      name: "陌生词库",
+      type: "custom",
+      round: 0,
+      wordIds: [],
+      sourceListKey: UNKNOWN_LIST_KEY,
+      sourceType: "reading-unknown",
+      createdAt: Date.now(),
+    };
+    list.id = await requestResult(store.add(list));
+    return projectReadingList(list, snapshot);
+  });
+}
+
+export async function resolveVocabularyList(list) {
+  if (!isReadingWordList(list)) return list;
+  if (list.hidden || list.username !== localStorage.getItem(CURRENT_USER_KEY)?.trim()) return undefined;
+  const snapshot = await readUnknownWordList(list.username);
+  return snapshot.error ? undefined : projectReadingList(list, snapshot);
+}
+
+// Screen preparation and option generation can request the same word in parallel.
+const readingWordReads = new Map();
+export async function getReadingWords(wordIds) {
+  const ids = [...new Set(wordIds.filter(isUnknownWordId))];
+  const username = localStorage.getItem(CURRENT_USER_KEY)?.trim();
+  if (!ids.length || !username) return [];
+  if (!readingWordReads.has(username)) {
+    readingWordReads.set(username, readUnknownWordList(username).finally(() => readingWordReads.delete(username)));
+  }
+  const snapshot = await readingWordReads.get(username);
+  if (localStorage.getItem(CURRENT_USER_KEY)?.trim() !== username) return [];
+  return ids.map((id) => snapshot.wordMap.get(id)).filter(Boolean);
 }
 
 function isUsableImportedList(list) {
@@ -268,7 +353,7 @@ export async function getImportedMainLists(username = localStorage.getItem(CURRE
       ? await requestResult(store.index("username").getAll(username))
       : (await requestResult(store.getAll())).filter((list) => list.username === username);
     await done;
-    return lists.filter((list) => list.sourceImportId || list.sourceType === "imported");
+    return lists.filter((list) => list.sourceImportId || list.sourceType === "imported" || (isReadingWordList(list) && !list.hidden));
   } finally {
     database.close();
   }
@@ -293,6 +378,16 @@ export async function renameImportedListForMainRecord(mainListId, name) {
 
 export async function deleteImportedListForMainRecord(mainListId) {
   const mainList = await mainListById(mainListId);
+  if (isReadingWordList(mainList)) {
+    return withWordLists("readwrite", async (store) => {
+      const current = await requestResult(store.get(mainListId));
+      if (!current || current.username !== localStorage.getItem(CURRENT_USER_KEY)?.trim()) {
+        throw new Error("词库已失效，请刷新后重试");
+      }
+      await requestResult(store.put({ ...current, hidden: true }));
+      return true;
+    });
+  }
   const importedList = await importedListForMainRecord(mainList);
   if (!importedList) return;
 
@@ -306,8 +401,39 @@ export async function deleteImportedListForMainRecord(mainListId) {
   }
 }
 
-export async function removeFamiliarWordsFromImportedListForMainRecord(mainListId) {
+function familiarIdsForLists(lists) {
+  return new Set(lists.filter((list) => list.type === "familiar").flatMap((list) => list.wordIds || []));
+}
+
+export async function getReadingFamiliarWordIds(mainListId) {
+  const list = await resolveVocabularyList(await mainListById(mainListId));
+  if (!isReadingWordList(list)) throw new Error("词库已失效，请刷新后重试");
+  return withWordLists("readonly", async (store) => {
+    const familiar = familiarIdsForLists(await accountLists(store, list.username));
+    return list.wordIds.filter((id) => familiar.has(id));
+  }, []);
+}
+
+export async function removeFamiliarWordsFromImportedListForMainRecord(mainListId, confirmedWordIds) {
   const mainList = await mainListById(mainListId);
+  if (isReadingWordList(mainList)) {
+    const list = await resolveVocabularyList(mainList);
+    if (!list) throw new Error("词库已失效，请刷新后重试");
+    const confirmed = new Set(confirmedWordIds);
+    return withWordLists("readwrite", async (store) => {
+      const lists = await accountLists(store, list.username);
+      const current = lists.find((item) => item.id === mainListId && !item.hidden);
+      if (!current) throw new Error("词库已失效，请刷新后重试");
+      const familiar = familiarIdsForLists(lists);
+      const excluded = new Set(current.excludedWordIds);
+      const candidates = list.wordIds.filter((id) => !excluded.has(id));
+      const removed = candidates.filter((id) => confirmed.has(id) && familiar.has(id));
+      if (removed.length) {
+        await requestResult(store.put({ ...current, excludedWordIds: [...excluded, ...removed] }));
+      }
+      return { removed: removed.length, remaining: candidates.length - removed.length };
+    });
+  }
   const importedList = await importedListForMainRecord(mainList);
   if (!mainList || !importedList) {
     throw new Error("这不是可整理的导入词库");
@@ -325,9 +451,7 @@ export async function removeFamiliarWordsFromImportedListForMainRecord(mainListI
       ? await requestResult(store.index("username").getAll(mainList.username))
       : (await requestResult(store.getAll())).filter((list) => list.username === mainList.username);
     await done;
-    familiarWordIds = new Set(userLists
-      .filter((list) => list.type === "familiar")
-      .flatMap((list) => list.wordIds || []));
+    familiarWordIds = familiarIdsForLists(userLists);
   } finally {
     mainDatabase.close();
   }
@@ -369,13 +493,15 @@ export async function addImportedWordsToClassificationList(mainListId, targetTyp
   }
 
   const mainList = await mainListById(mainListId);
-  const importedList = await importedListForMainRecord(mainList);
-  if (!mainList || !importedList) {
-    throw new Error("The selected list is not an imported vocabulary list");
-  }
+  const reading = isReadingWordList(mainList);
+  const readingList = reading ? await resolveVocabularyList(mainList) : null;
+  const importedList = reading ? null : await importedListForMainRecord(mainList);
+  if (!readingList && !importedList) throw new Error("词库已失效，请刷新后重试");
 
   const namePrefix = targetType === "familiar" ? "熟知词库_" : "生词库_";
-  const name = `${namePrefix}${mainList.name}`;
+  const source = reading
+    ? { derivedFromReadingListId: mainListId, sourceType: "reading-classification" }
+    : { derivedFromImportId: importedList.id, sourceType: "imported-classification" };
   const database = await openExistingMainDatabase();
   if (!database) throw new Error("Vocabulary data is unavailable");
 
@@ -386,22 +512,25 @@ export async function addImportedWordsToClassificationList(mainListId, targetTyp
     const userLists = store.indexNames.contains("username")
       ? await requestResult(store.index("username").getAll(mainList.username))
       : (await requestResult(store.getAll())).filter((list) => list.username === mainList.username);
-    const existing = userLists.find((list) => (
-      list.derivedFromImportId === importedList.id && list.type === targetType
-    ));
+    const current = userLists.find((list) => list.id === mainListId && !list.hidden);
+    if (!current) throw new Error("词库已失效，请刷新后重试");
+    const existing = userLists.find((list) => list.type === targetType && (reading
+      ? list.derivedFromReadingListId === mainListId
+      : list.derivedFromImportId === importedList.id));
     const previousWordIds = existing?.wordIds || [];
-    const wordIds = [...new Set([...previousWordIds, ...mainList.wordIds])];
+    const excluded = new Set(current.excludedWordIds);
+    const currentIds = reading ? readingList.wordIds.filter((id) => !excluded.has(id)) : current.wordIds;
+    const wordIds = [...new Set([...previousWordIds, ...currentIds])];
     const added = wordIds.length - previousWordIds.length;
     const list = {
       ...(existing || {}),
       username: mainList.username,
-      name,
+      name: `${namePrefix}${current.name}`,
       type: targetType,
       round: targetType === "familiar" ? Math.max(mainList.round, 1) : mainList.round,
       wordIds,
       createdAt: existing?.createdAt || Date.now(),
-      derivedFromImportId: importedList.id,
-      sourceType: "imported-classification",
+      ...source,
     };
     const listId = existing?.id
       ? (store.put(list), existing.id)

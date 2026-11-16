@@ -10,7 +10,7 @@
 
 </div>
 
-> **最新安卓下载：[1.1.0 含文章版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 修复作文手写卡顿和中文翻译后的下一步；沉浸模式仍可提交，窄屏显示“下一步”。保留自带文章、作文、词库及原有学习数据。请直接覆盖安装，不要卸载或清除数据。本轮未连接生产平板，实体手写笔和真实账号升级未验收。Windows 下载版可在历史 Releases 中获取。
+> **最新安卓下载：[1.1.1 含文章版](https://github.com/liu2678294813-cpu/wuliao-english-private/releases/latest)。** 阅读标记生成的陌生词库可在「词库管理」中筛查、学习、归类和导出 PDF，也可从精读的「陌生词库」直接导出。Android 请直接覆盖安装，保留原应用及其数据。本版的平板安装和真实账号升级未验证。Windows 下载版可在历史 Releases 中获取。
 
 <details>
 <summary>查看新版界面</summary>

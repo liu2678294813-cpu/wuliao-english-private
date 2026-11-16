@@ -389,3 +389,148 @@ test("实际精读加词后返回背诵立即显示，截图与 console 验收",
   await page.screenshot({ path: testInfo.outputPath("unknown-memorize-narrow.png") });
   expect(errors).toEqual([]);
 });
+
+test("阅读陌生词从原页面进入完整导出，双语 PDF 可重新导入", async ({ page }, testInfo) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const username = await openUnknown(page, [
+    issue, { ...issue, id: "issue-second", meaning: "议题" },
+    { id: "phrase", word: "take account of", meaning: "考虑到" },
+  ]);
+  await rowFor(page).locator(".mark-button").click();
+  const previous = await memoryRecord(page, username);
+  expect(previous.clickCount).toBe(1);
+
+  await page.goto("/");
+  await navTo(page, "精读");
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "陌生词库", exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("reading-library.png") });
+  await page.setViewportSize({ width: 390, height: 800 });
+  const buttons = await page.locator(".unknown-library-actions").boundingBox();
+  const filters = await page.locator(".unknown-source-filter").boundingBox();
+  expect(buttons.y + buttons.height).toBeLessThan(filters.y);
+  await page.screenshot({ path: testInfo.outputPath("reading-library-phone.png") });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole("button", { name: "导出词库", exact: true }).click();
+  const frame = page.frameLocator(".vocabulary-frame");
+  await expect(frame.getByRole("heading", { name: "PDF 导出" })).toBeVisible();
+  await expect(frame.getByRole("radio", { name: /陌生词库/ })).toBeChecked();
+  const downloadButton = frame.getByRole("button", { name: "下载 PDF" });
+  await expect(downloadButton).toBeEnabled();
+  await page.screenshot({ path: testInfo.outputPath("reading-list-export.png") });
+  const bilingual = page.waitForEvent("download");
+  await downloadButton.click();
+  const pdf = await bilingual;
+  expect(pdf.suggestedFilename()).toBe("陌生词库_双语.pdf");
+  const pdfPath = testInfo.outputPath(pdf.suggestedFilename());
+  await pdf.saveAs(pdfPath);
+
+  await frame.getByText("纯英文版", { exact: true }).click();
+  const englishOnly = page.waitForEvent("download");
+  await downloadButton.click();
+  expect((await englishOnly).suggestedFilename()).toBe("陌生词库_英文.pdf");
+
+  await page.goto("/vocabulary/import.html");
+  await page.locator("#fileInput").setInputFiles(pdfPath);
+  await page.locator("#parseButton").click();
+  await expect(page.locator("#previewTitle")).toHaveText("已识别 2 词");
+  await expect(page.locator("#previewRows")).toContainText("问题；议题");
+  await expect(page.locator("#previewRows")).toContainText("take account of");
+  await expect(page.locator("#previewRows")).toContainText("考虑到");
+  await page.locator("#listName").fill("回导测试词库");
+  await page.locator("#saveButton").click();
+  await expect(page.locator("#successText")).toContainText("共 2 词");
+
+  await page.goto("/vocabulary/memorize.html?list=unknown-words");
+  await expect(rowFor(page).locator(".mark-button")).toHaveText("记录 1/3");
+  expect(await memoryRecord(page, username)).toEqual(previous);
+  expect(errors).toEqual([]);
+});
+
+test("词库管理可筛查、学习、归类、移除熟知词及重新打开阅读词库", async ({ page }, testInfo) => {
+  const username = await openUnknown(page, [
+    issue, { id: "without-meaning", word: "unresolved", meaning: "" },
+  ]);
+  await rowFor(page).locator(".mark-button").click();
+  const previous = await memoryRecord(page, username);
+  await page.goto("/");
+  await navTo(page, "精读");
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
+  await page.getByRole("button", { name: "在词库中管理", exact: true }).click();
+  const frame = page.frameLocator(".vocabulary-frame");
+  const list = frame.locator("[data-vocab-list-id]").filter({ hasText: "陌生词库" });
+  await expect(list).toContainText("2 词");
+  await expect(list.getByRole("button", { name: "全部设熟知" })).toBeVisible();
+  await expect(list.getByRole("button", { name: "全部加入生词" })).toBeVisible();
+  const listId = await list.getAttribute("data-vocab-list-id");
+  const card = frame.locator(`[data-vocab-list-id="${listId}"]`);
+  await page.screenshot({ path: testInfo.outputPath("reading-list-management.png") });
+
+  await card.getByRole("button", { name: "学习", exact: true }).click();
+  await expect(frame.getByText("问题", { exact: true })).toBeVisible();
+  await frame.getByRole("button", { name: "返回", exact: true }).click();
+  await expect(card).toBeVisible();
+
+  await card.getByRole("button", { name: "继续筛查" }).click();
+  await expect(frame.getByRole("button", { name: "问题", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "手写模式", exact: true }).click();
+  const handwriting = page.locator(".vocab-ink-row");
+  await expect(handwriting).toHaveCount(1);
+  await expect(handwriting.first()).toContainText("issue");
+  await page.getByRole("button", { name: "选择模式", exact: true }).click();
+  await frame.getByRole("button", { name: "问题", exact: true }).click();
+  await expect(frame.getByText(/筛查完成/)).toBeVisible();
+  await page.evaluate(() => window.__wuliaoHandleHardwareBack());
+  await expect(card).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.accept("阅读积累"));
+  await card.getByRole("button", { name: "重命名", exact: true }).click();
+  await expect(card).toContainText("阅读积累");
+
+  await acceptDialogs(page, () => card.getByRole("button", { name: "全部加入生词" }).click());
+  await expect(frame.getByText("生词库_阅读积累", { exact: true })).toBeVisible();
+  await acceptDialogs(page, () => card.getByRole("button", { name: "全部设熟知" }).click());
+  await expect(frame.getByText("熟知词库_阅读积累", { exact: true })).toBeVisible();
+  const dialogs = await acceptDialogs(page, () => card.getByRole("button", { name: "删除熟知词" }).click());
+  expect(dialogs[0]).toContain("2 个词");
+  await expect(card).toContainText("0 词");
+
+  await writeUnknown(page, username, [{ id: "new", word: "zebra", meaning: "斑马" }]);
+  await page.reload();
+  await expect(card).toContainText("1 词");
+  await card.getByRole("button", { name: "删除", exact: true }).click();
+  await expect(frame.getByText(/阅读标记、语境与学习记录会保留/)).toBeVisible();
+  await frame.getByRole("button", { name: "删除", exact: true }).last().click();
+  await expect(card).toHaveCount(0);
+  await page.reload();
+  await expect(frame.getByRole("heading", { name: "词库管理" })).toBeVisible();
+  await expect(card).toHaveCount(0);
+
+  await navTo(page, "精读");
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
+  await expect(page.getByText("Issue", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "在词库中管理", exact: true }).click();
+  await expect(card).toContainText("1 词");
+  await expect(card).toContainText("阅读积累");
+  await page.goto("/vocabulary/memorize.html?list=unknown-words");
+  await expect(page.locator('#listSelect option[value="unknown-words"]')).toHaveText("阅读积累（1词）");
+  await expect(rowFor(page, "unknown:zebra")).toBeVisible();
+  expect(await memoryRecord(page, username)).toEqual(previous);
+});
+
+async function acceptDialogs(page, click) {
+  const messages = [];
+  const handle = async (dialog) => {
+    messages.push(dialog.message());
+    await dialog.accept();
+  };
+  page.on("dialog", handle);
+  try {
+    await click();
+    await expect.poll(() => messages.length).toBe(2);
+    return messages;
+  } finally {
+    page.off("dialog", handle);
+  }
+}

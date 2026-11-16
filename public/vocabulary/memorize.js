@@ -3,6 +3,7 @@ import { withMemoryProgress, clearUndoEntries } from "./memory-record.js";
 import { createWordSaveQueue } from "./word-save-queue.js";
 import { interactionTiming } from "./interaction-timing.js";
 import { UNKNOWN_LIST_KEY, isUnknownWordId, readUnknownWordList } from "./unknown-word-list.js";
+import { getReadingWordList, isReadingWordList, readingListWords } from "./imported-word-bridge.js";
 const CURRENT_USER_KEY = "kaoyan_vocab_current_user";
 const MAIN_DB_NAME = "KaoyanVocabDB";
 const MEMORY_DB_NAME = "KaoyanVocabMemorizeDB";
@@ -607,24 +608,36 @@ function isCurrentAccount() {
   return state.username === (localStorage.getItem(CURRENT_USER_KEY)?.trim() || "");
 }
 
+async function readUnknownSnapshot() {
+  const snapshot = await readUnknownWordList(state.username);
+  const list = await getReadingWordList(state.username, { snapshot });
+  return { ...snapshot, list };
+}
+
 function applyUnknownSnapshot(snapshot) {
   state.unknownWords = snapshot.words;
   state.unknownWordMap = snapshot.wordMap;
   state.unknownError = snapshot.error;
   let list = state.lists.find((item) => item.key === UNKNOWN_LIST_KEY);
+  let option = [...listSelect.options].find((item) => item.value === UNKNOWN_LIST_KEY);
+  if (snapshot.list?.hidden) {
+    state.lists = state.lists.filter((item) => item.key !== UNKNOWN_LIST_KEY);
+    option?.remove();
+    return false;
+  }
   if (!list) {
     list = { key: UNKNOWN_LIST_KEY, virtualUnknown: true };
     state.lists.push(list);
   }
-  list.name = "陌生词库（" + snapshot.words.length + "词）";
-  list.wordIds = snapshot.words.map((word) => word.wordId);
-  let option = [...listSelect.options].find((item) => item.value === UNKNOWN_LIST_KEY);
+  list.wordIds = readingListWords(snapshot.list, snapshot).map((word) => word.wordId);
+  list.name = `${snapshot.list?.name || "陌生词库"}（${list.wordIds.length}词）`;
   if (!option) {
     option = document.createElement("option");
     option.value = UNKNOWN_LIST_KEY;
     listSelect.append(option);
   }
   option.textContent = list.name;
+  return true;
 }
 
 let unknownRefreshTask = null;
@@ -642,16 +655,21 @@ function requestUnknownRefresh() {
       unknownRefreshPending = false;
       const refreshVersion = unknownRefreshVersion;
       await window.__wuliaoFlushVocabulary();
-      const snapshot = await readUnknownWordList(state.username);
+      const snapshot = await readUnknownSnapshot();
       await window.__wuliaoFlushVocabulary();
       if (!isCurrentAccount()) return;
       if (loadingList) { unknownRefreshPending = true; break; }
       if (refreshVersion !== unknownRefreshVersion) continue;
       const changed = JSON.stringify(state.unknownWords) !== JSON.stringify(snapshot.words)
         || state.unknownError !== snapshot.error;
-      applyUnknownSnapshot(snapshot);
-      if (changed && state.currentListKey === UNKNOWN_LIST_KEY) {
-        await selectList(UNKNOWN_LIST_KEY, { refreshUnknown: false });
+      const current = state.lists.find((list) => list.key === state.currentListKey);
+      const previousIds = current?.wordIds;
+      const available = applyUnknownSnapshot(snapshot);
+      if (current?.virtualUnknown && !available) {
+        await selectList("original", { refreshUnknown: false });
+      } else if ((current?.virtualUnknown && JSON.stringify(previousIds) !== JSON.stringify(current.wordIds))
+        || (changed && (current?.virtualUnknown || current?.wordIds.some(isUnknownWordId)))) {
+        await selectList(current.key, { refreshUnknown: false });
       }
     }
   })().catch(() => showMessage("保存或读取失败，请重试后刷新陌生词库"))
@@ -666,7 +684,7 @@ async function selectList(listKey, { refreshUnknown = true } = {}) {
   if (!isCurrentAccount()) return;
   if (saving || loadingList) return;
   const version = ++listLoadVersion;
-  const selected = state.lists.find((list) => list.key === listKey);
+  let selected = state.lists.find((list) => list.key === listKey);
   if (!selected) return;
 
   saveProgress();
@@ -682,6 +700,7 @@ async function selectList(listKey, { refreshUnknown = true } = {}) {
   spacer.style.height = "0";
   refreshModes();
   state.currentListKey = listKey;
+  listSelect.value = listKey;
   listSelect.disabled = true;
   clearButton.disabled = true;
   listSummary.textContent = "正在加载单词…";
@@ -689,9 +708,14 @@ async function selectList(listKey, { refreshUnknown = true } = {}) {
 
   try {
     if (selected.virtualUnknown && refreshUnknown) {
-      const snapshot = await readUnknownWordList(state.username);
+      const snapshot = await readUnknownSnapshot();
       if (version !== listLoadVersion || !isCurrentAccount()) return;
-      applyUnknownSnapshot(snapshot);
+      if (!applyUnknownSnapshot(snapshot)) {
+        listKey = "original";
+        selected = state.lists[0];
+        state.currentListKey = listKey;
+        listSelect.value = listKey;
+      }
     }
     const wordIds = selected.virtualOriginal
       ? await getOriginalWordIds()
@@ -751,8 +775,9 @@ async function initialize() {
 
   accountLabel.textContent = state.username;
   await loadAssetMap();
-  const [userLists, importedLists] = await Promise.all([readWordLists(), readImportedLists()]);
-  const unknownSnapshot = await readUnknownWordList(state.username);
+  const [userLists, importedLists, unknownSnapshot] = await Promise.all([
+    readWordLists(), readImportedLists(), readUnknownSnapshot(),
+  ]);
   if (!isCurrentAccount()) return;
   const mirroredImportIds = new Set(
     userLists.map((list) => list.sourceImportId).filter(Boolean)
@@ -764,7 +789,7 @@ async function initialize() {
       virtualOriginal: true,
       wordIds: [],
     },
-    ...userLists.map((list) => ({
+    ...userLists.filter((list) => !isReadingWordList(list)).map((list) => ({
       key: list.sourceListKey || `list-${list.id}`,
       name: `${list.name}（${list.wordIds.length}词）`,
       wordIds: list.wordIds,

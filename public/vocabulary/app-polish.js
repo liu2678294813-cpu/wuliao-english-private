@@ -7,10 +7,7 @@
   const HOST_ROUTES = new Set(["/dashboard", "/lists", "/screening", "/learning", "/export", "/confusion"]);
   const EMBEDDED_TOOLS_ID = "embeddedVocabActions";
   const EMBEDDED_DASHBOARD_LIBRARY_ID = "embeddedDashboardLibrary";
-  const IMPORTED_LIST_CARD_SELECTOR = "#root main .space-y-2 > .bg-white";
   const IMPORTED_LIST_ACTIONS_SELECTOR = ".flex.items-center.gap-2.ml-4";
-  const IMPORTED_LIST_NAME_SELECTOR = ".font-medium.text-gray-900";
-  const IMPORTED_LIST_META_SELECTOR = ".text-xs.text-gray-400";
   const IMPORTED_LIST_TOOLS_MIN_INTERVAL_MS = 300;
   const IMPORTED_LIST_TOOLS_RETRY_LIMIT = 10;
   const IMPORTED_LIST_TOOLS_RETRY_DELAY_MS = 200;
@@ -407,16 +404,6 @@
     removeEmbeddedWorkspaceTools();
   };
 
-  // 集中式语义定位：卡片内名称节点精确匹配 + 元信息行包含轮次/数量，
-  // 不依赖整卡 substring、lastElementChild 或 nth-child。
-  const cardForImportedList = (list) => [...document.querySelectorAll(IMPORTED_LIST_CARD_SELECTOR)]
-    .find((card) => {
-      const name = card.querySelector(IMPORTED_LIST_NAME_SELECTOR)?.textContent.trim();
-      if (name !== list.name) return false;
-      const meta = card.querySelector(IMPORTED_LIST_META_SELECTOR)?.textContent || card.textContent;
-      return meta.includes(`第 ${list.round} 轮 · ${list.wordIds.length} 词`);
-    });
-
   const installImportedListTools = async () => {
     window.clearTimeout(importedListToolsTimer);
     importedListToolsTimer = 0;
@@ -429,10 +416,11 @@
       const lists = await bridge.getImportedMainLists(username);
       let pending = false;
       lists.forEach((list) => {
-        const card = cardForImportedList(list);
+        const card = document.querySelector(`[data-vocab-list-id="${list.id}"]`);
         const actions = card?.querySelector(IMPORTED_LIST_ACTIONS_SELECTOR);
         if (!actions || actions.querySelector(`[data-remove-familiar-list-id=\"${list.id}\"]`)) return;
         pending = true;
+        const reading = bridge.isReadingWordList(list);
         card.classList.add("has-imported-list-actions");
 
         const addClassificationButton = (targetType, label) => {
@@ -442,7 +430,8 @@
           actionButton.dataset.importedListClassification = targetType;
           actionButton.textContent = label;
           actionButton.addEventListener("click", async () => {
-            if (!window.confirm(`\u628a\u300c${list.name}\u300d\u4e2d\u7684\u5168\u90e8\u8bcd\u52a0\u5165\u201c${label}\u201d\u5417\uff1f\u539f\u5bfc\u5165\u8bcd\u5e93\u4f1a\u4fdd\u7559\u3002`)) return;
+            const name = card.querySelector(".font-medium.text-gray-900")?.textContent || list.name;
+            if (!window.confirm(`把「${name}」中的词全部加入“${label}”吗？`)) return;
             actionButton.disabled = true;
             actionButton.textContent = "\u6b63\u5728\u52a0\u5165\u2026";
             try {
@@ -467,17 +456,25 @@
         button.dataset.removeFamiliarListId = String(list.id);
         button.textContent = "删除熟知词";
         button.addEventListener("click", async () => {
-          if (!window.confirm(`删除「${list.name}」中此前筛为熟知的词吗？仅会从这个导入词库移除，学习与筛查记录会保留。`)) return;
           button.disabled = true;
-          button.textContent = "正在删除…";
           try {
-            const result = await bridge.removeFamiliarWordsFromImportedListForMainRecord(list.id);
+            const name = card.querySelector(".font-medium.text-gray-900")?.textContent || list.name;
+            const confirmedIds = reading ? await bridge.getReadingFamiliarWordIds(list.id) : undefined;
+            if (confirmedIds?.length === 0) {
+              window.alert("这个词库暂时没有可删除的熟知词。");
+              return;
+            }
+            const count = confirmedIds ? `（${confirmedIds.length} 个词）` : "";
+            if (!window.confirm(`删除「${name}」中的熟知词${count}吗？学习与筛查记录会保留。`)) return;
+            button.textContent = "正在删除…";
+            const result = await bridge.removeFamiliarWordsFromImportedListForMainRecord(list.id, confirmedIds);
             window.alert(result.removed
               ? `已删除 ${result.removed} 个熟知词，剩余 ${result.remaining} 词。`
               : "这个词库暂时没有可删除的熟知词。");
             window.location.reload();
           } catch (error) {
             window.alert(error?.message || "删除熟知词失败，请重试");
+          } finally {
             button.disabled = false;
             button.textContent = "删除熟知词";
           }

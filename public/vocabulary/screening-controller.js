@@ -1,4 +1,5 @@
 import { displayMeaning } from "./screening-options.js";
+import { isUnknownWordId } from "./unknown-word-list.js";
 import { interactionTiming } from './interaction-timing.js';
 import { makeConfusion } from './confusion-records.js';
 // All question fields are published together. Storage never owns visible state.
@@ -27,7 +28,7 @@ export function createScreeningController(api, publish, clock = globalThis) {
     const wordId = currentSession.sourceWordIds[index];
     let optionError = '';
     const [word, options] = await Promise.all([api.word(wordId), api.options(wordId).catch(error => {
-      if (error.code !== 'insufficient-meanings') throw error;
+      if (error.code !== 'insufficient-meanings' && !(isUnknownWordId(wordId) && error.code === 'missing-meaning')) throw error;
       optionError = error.message; return [];
     })]);
     return { optionError, questionId: `${currentSession.sessionKey}:${v}:${index}:${wordId}`, sessionVersion: v,
@@ -65,7 +66,7 @@ export function createScreeningController(api, publish, clock = globalThis) {
     locked = true;
     const timing = interactionTiming('screening');
     const v = version, before = state, correct = selected?.isCorrect === true;
-    const confusion = !correct ? makeConfusion({ username: session.username,
+    const confusion = !correct && !state.optionError ? makeConfusion({ username: session.username,
       eventId: `screening:${session.sessionKey}:${session.startedAt}:${session.currentIndex}`,
       source: 'screening', round: session.round, listId: session.listId,
       word: { wordId: session.sourceWordIds[session.currentIndex], english: before.currentEnglish,
@@ -195,12 +196,21 @@ export function screeningApi(deps) {
         const selected = listId ? await list(listId) : null;
         sourceWordIds = listId ? (selected?.username === username ? selected.wordIds : [])
           : round === 1 ? await allIds() : (await rawList(username))?.wordIds ?? [];
-        if (!saved) {
-          if (localStorage.getItem('wuliao:vocabulary:shuffle-screening') === 'true') {
-            localStorage.setItem(`wuliao:vocabulary:shuffle-original:${username}:${round}:${listId}`, JSON.stringify(sourceWordIds));
-          }
-          sourceWordIds = shuffleWords([...sourceWordIds]);
+      }
+      const answeredCount = saved?.currentIndex ?? 0;
+      const remaining = sourceWordIds.slice(answeredCount);
+      const unknownIds = remaining.filter(isUnknownWordId);
+      if (unknownIds.length) {
+        const available = new Set((await words(unknownIds))
+          .filter((word) => displayMeaning(word.chinese)).map((word) => word.wordId));
+        sourceWordIds = sourceWordIds.slice(0, answeredCount)
+          .concat(remaining.filter((id) => !isUnknownWordId(id) || available.has(id)));
+      }
+      if (!saved) {
+        if (localStorage.getItem('wuliao:vocabulary:shuffle-screening') === 'true') {
+          localStorage.setItem(`wuliao:vocabulary:shuffle-original:${username}:${round}:${listId}`, JSON.stringify(sourceWordIds));
         }
+        sourceWordIds = shuffleWords([...sourceWordIds]);
       }
       return { startedAt: Date.now(), ...saved, username, round, listId,
         sessionKey: sessionKey(username, listId, round), sourceWordIds,
@@ -238,7 +248,9 @@ export function screeningApi(deps) {
         if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(session.sourceWordIds));
         remaining = shuffleWords(session.sourceWordIds.slice(keep));
       } else {
-        remaining = JSON.parse(localStorage.getItem(key) || JSON.stringify(session.sourceWordIds)).filter((id) => !seenSet.has(id));
+        const sessionIds = new Set(session.sourceWordIds);
+        remaining = JSON.parse(localStorage.getItem(key) || JSON.stringify(session.sourceWordIds))
+          .filter((id) => sessionIds.has(id) && !seenSet.has(id));
       }
       await db.screeningSessions.update(session.sessionKey, { sourceWordIds: seen.concat(remaining) });
     } };

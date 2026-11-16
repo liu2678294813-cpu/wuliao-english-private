@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { deleteUnknownWord, listUnknownWords, updateUnknownWordMeaning, updateUnknownWordContextMeaning } from "./storage";
 import { unknownWordSourceType } from "./clozeUnknownWords";
-import { getUserItem, setUserItem } from "./userData";
+import { getCurrentUsername, getUserItem, setUserItem } from "./userData";
+import { getReadingWordList } from "../public/vocabulary/imported-word-bridge.js";
 
 const DISPLAY_KEY = "wuliao:unknown-library-display";
 
@@ -11,9 +12,11 @@ const SOURCE_FILTERS = [
   { id: "cloze", label: "完形" },
 ];
 
-export default function UnknownWordLibrary({ onBack }) {
+export default function UnknownWordLibrary({ onBack, onOpenVocabulary }) {
   const [words, setWords] = useState([]);
   const [notice, setNotice] = useState("");
+  const [openingList, setOpeningList] = useState(false);
+  const [listError, setListError] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [displayMode, setDisplayMode] = useState(() => getUserItem(DISPLAY_KEY) === "context" ? "context" : "meaning");
 
@@ -45,6 +48,26 @@ export default function UnknownWordLibrary({ onBack }) {
     return result;
   }, {}), [filteredWords]);
 
+  async function openVocabulary(exportList = false) {
+    if (openingList) return;
+    setOpeningList(true);
+    setListError("");
+    const username = getCurrentUsername();
+    try {
+      const list = await getReadingWordList(username, { restore: true });
+      if (getCurrentUsername() !== username) return;
+      if (exportList && !list?.wordIds.length) {
+        setListError("当前词库没有可导出的词。");
+        return;
+      }
+      onOpenVocabulary(exportList ? `/export/${list.id}` : "/lists");
+    } catch {
+      setListError("词库暂时无法打开，请重试。");
+    } finally {
+      setOpeningList(false);
+    }
+  }
+
   async function editMeaning(word, sense) {
     const meaning = window.prompt(`修改 ${word.word} 的${sense ? "本句" : "中文"}释义`, (sense || word).meaning || "");
     if (meaning === null) return;
@@ -71,7 +94,12 @@ export default function UnknownWordLibrary({ onBack }) {
       <main className="unknown-library-main">
         <section className="library-intro unknown-library-intro">
           <div><p className="eyebrow">READ · MARK · REVIEW</p><h1>陌生词库</h1></div>
+          <div className="unknown-library-actions">
+            <button type="button" disabled={openingList || !words.length} onClick={() => openVocabulary()}>在词库中管理</button>
+            <button type="button" disabled={openingList || !words.length} onClick={() => openVocabulary(true)}>导出词库</button>
+          </div>
         </section>
+        {listError && <p role="alert">{listError}</p>}
         <div className="unknown-source-filter" role="tablist" aria-label="按来源筛选">
           {SOURCE_FILTERS.map((item) => (
             <button

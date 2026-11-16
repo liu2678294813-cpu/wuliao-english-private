@@ -2050,7 +2050,10 @@ function WorkspaceApp({ username, onSwitchAccount, onReady }) {
       />
     );
   } else if (nav.view === "unknown-words") {
-    content = <UnknownWordLibrary onBack={goBack} />;
+    content = <UnknownWordLibrary
+      onBack={goBack}
+      onOpenVocabulary={(route) => openVocabularyWorkspace({ kind: "spa", route })}
+    />;
   } else if (nav.view === "vocabulary") {
     const vocabularyWorkspace = vocabularyMode === "static"
       ? (() => {

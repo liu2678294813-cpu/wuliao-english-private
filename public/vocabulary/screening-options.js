@@ -4,7 +4,7 @@ export function displayMeaning(value) {
 
 export function uniqueScreeningOptions(word, pool, { similar = () => false, shuffle = values => [...values].sort(() => Math.random() - 0.5) } = {}) {
   const correct = displayMeaning(word?.chinese);
-  if (!word || !correct) throw new Error('当前单词缺少有效释义，暂时无法筛选');
+  if (!word || !correct) throw Object.assign(new Error('当前单词缺少有效释义，暂时无法筛选'), { code: 'missing-meaning' });
   const used = new Set([correct]);
   const selected = [];
   const candidates = shuffle(pool);

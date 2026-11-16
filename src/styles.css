@@ -79,7 +79,10 @@
 .unknown-library-title strong { color: var(--navy-deep); font-family: Georgia, "Times New Roman", serif; }
 .unknown-library-count { justify-self: end; color: var(--teal); font-size: 12px; font-weight: 800; }
 .unknown-library-main { width: min(1120px, calc(100% - 34px)); margin: 0 auto; padding: 42px 0 80px; }
-.unknown-library-intro { margin-bottom: 28px; }
+.unknown-library-intro { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 28px; }
+.unknown-library-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.unknown-library-actions button { min-height: 44px; padding: 0 14px; border: 1px solid #cad8d9; border-radius: 9px; background: #fffefa; color: var(--teal); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.unknown-library-actions button:disabled { opacity: .55; cursor: default; }
 .unknown-year-group { margin-top: 34px; }
 .unknown-chapter { margin-top: 14px; padding: 18px; border: 1px solid rgba(23, 58, 98, 0.1); border-radius: 14px; background: rgba(255, 255, 255, 0.78); }
 .unknown-chapter > header { display: flex; margin-bottom: 14px; align-items: center; justify-content: space-between; }
