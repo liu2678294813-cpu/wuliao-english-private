@@ -615,3 +615,15 @@ html.vocab-embedded body:has(#viewport) .page { height: 100%; }
   .memory-list-controls { max-width: none; width: 100%; }
   .range-panel { align-items: flex-start; flex-direction: column; }
 }
+
+#unknownSortControl[hidden] { display: none; }
+.unknown-memory-detail {
+  display: block;
+  margin-top: 5px;
+  color: #526773;
+  font-size: 11px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(100%, 44ch);
+}

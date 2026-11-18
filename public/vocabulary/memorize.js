@@ -2,6 +2,7 @@ import { memoryProgress, memoryState, advanceMemory, swipeDirection } from "./me
 import { withMemoryProgress, clearUndoEntries } from "./memory-record.js";
 import { createWordSaveQueue } from "./word-save-queue.js";
 import { interactionTiming } from "./interaction-timing.js";
+import { UNKNOWN_SORTS, buildUnknownWordStats, readUnknownSort, saveUnknownSort, unknownMemoryOrder } from "./unknown-word-order.js";
 import { UNKNOWN_LIST_KEY, isUnknownWordId, readUnknownWordList } from "./unknown-word-list.js";
 import { getReadingWordList, isReadingWordList, readingListWords } from "./imported-word-bridge.js";
 const CURRENT_USER_KEY = "kaoyan_vocab_current_user";
@@ -25,6 +26,9 @@ const undoStack = [];
 const OVERSCAN = 8;
 
 const listSelect = document.getElementById("listSelect");
+const unknownSortControl = document.getElementById("unknownSortControl");
+const unknownSort = document.getElementById("unknownSort");
+unknownSort.replaceChildren(...UNKNOWN_SORTS.map(([value, label]) => new Option(label, value)));
 const clearButton = document.getElementById("clearButton");
 const accountLabel = document.getElementById("accountLabel");
 const listSummary = document.getElementById("listSummary");
@@ -53,6 +57,7 @@ const state = {
   todayDate: "",
   todayWordIds: new Set(),
   unknownWords: [],
+  unknownStats: null,
   unknownWordMap: new Map(),
   unknownError: "",
 };
@@ -380,6 +385,7 @@ function refreshModes() {
   undoButton.textContent = !undoStack.length && recoverable ? "恢复上次清除" : "撤销上一步";
   clearButton.disabled = saving || loadingList;
   listSelect.disabled = saving || loadingList;
+  unknownSort.disabled = saving || loadingList || rangeSelecting;
   rangeButton.disabled = saving || loadingList;
   rangeConfirm.disabled = saving || loadingList || rangeStart === null || rangeEnd === null;
   rangeCancel.disabled = saving || loadingList;
@@ -571,6 +577,19 @@ function createRow(word, index) {
     if (direction) { suppressClickUntil = Date.now() + 500; event.preventDefault(); changeWord(word.wordId, direction); }
   });
   content.append(english, chinese);
+  if (!masked && state.currentListKey === UNKNOWN_LIST_KEY && unknownSort.value !== "alphabetical") {
+    const detail = document.createElement("small");
+    detail.className = "unknown-memory-detail";
+    if (unknownSort.value === "frequency") {
+      detail.textContent = word.groups.map(({ meaning, count }) =>
+        word.groups.length === 1 ? count + " 次" : (meaning || "待补释义") + " " + count + " 次").join(" · ");
+    } else {
+      detail.textContent = word.sources.map((id) => state.unknownArticles.get(id)).filter(Boolean)
+        .map((article) => article.year + " · " + article.chapter).join("；另见 ");
+    }
+    detail.title = detail.textContent;
+    chinese.append(detail);
+  }
   row.append(content, button);
   return row;
 }
@@ -611,11 +630,14 @@ function isCurrentAccount() {
 async function readUnknownSnapshot() {
   const snapshot = await readUnknownWordList(state.username);
   const list = await getReadingWordList(state.username, { snapshot });
-  return { ...snapshot, list };
+  const stats = buildUnknownWordStats(snapshot.records, state.username);
+  return { ...snapshot, list, stats };
 }
 
 function applyUnknownSnapshot(snapshot) {
   state.unknownWords = snapshot.words;
+  state.unknownStats = snapshot.stats;
+  state.unknownArticles = new Map(snapshot.stats.articles.map((article) => [article.id, article]));
   state.unknownWordMap = snapshot.wordMap;
   state.unknownError = snapshot.error;
   let list = state.lists.find((item) => item.key === UNKNOWN_LIST_KEY);
@@ -661,7 +683,9 @@ function requestUnknownRefresh() {
       if (loadingList) { unknownRefreshPending = true; break; }
       if (refreshVersion !== unknownRefreshVersion) continue;
       const changed = JSON.stringify(state.unknownWords) !== JSON.stringify(snapshot.words)
-        || state.unknownError !== snapshot.error;
+        || state.unknownError !== snapshot.error
+        || JSON.stringify(state.unknownStats?.marks) !== JSON.stringify(snapshot.stats.marks)
+        || JSON.stringify(state.unknownStats?.articles) !== JSON.stringify(snapshot.stats.articles);
       const current = state.lists.find((list) => list.key === state.currentListKey);
       const previousIds = current?.wordIds;
       const available = applyUnknownSnapshot(snapshot);
@@ -700,6 +724,8 @@ async function selectList(listKey, { refreshUnknown = true } = {}) {
   spacer.style.height = "0";
   refreshModes();
   state.currentListKey = listKey;
+  unknownSortControl.hidden = !selected.virtualUnknown;
+  unknownSort.value = readUnknownSort(state.username, "memory");
   listSelect.value = listKey;
   listSelect.disabled = true;
   clearButton.disabled = true;
@@ -714,6 +740,7 @@ async function selectList(listKey, { refreshUnknown = true } = {}) {
         listKey = "original";
         selected = state.lists[0];
         state.currentListKey = listKey;
+        unknownSortControl.hidden = true;
         listSelect.value = listKey;
       }
     }
@@ -725,7 +752,7 @@ async function selectList(listKey, { refreshUnknown = true } = {}) {
       readMemoryRecords(listKey),
     ]);
     if (version !== listLoadVersion || !isCurrentAccount()) return;
-    state.words = words;
+    state.words = selected.virtualUnknown ? unknownMemoryOrder(words, state.unknownStats, unknownSort.value) : words;
     state.records = records;
     spacer.style.height = `${state.words.length * ROW_HEIGHT}px`;
     if (state.words.length && !viewport.clientHeight) {
@@ -861,6 +888,16 @@ window.addEventListener("storage", (event) => {
     .catch(() => showMessage("保存失败，请重试后切换账号"));
 });
 listSelect.addEventListener("change", () => selectList(listSelect.value));
+unknownSort.addEventListener("change", () => {
+  if (!isCurrentAccount() || state.currentListKey !== UNKNOWN_LIST_KEY || saving || loadingList) return;
+  try {
+    saveUnknownSort(state.username, "memory", unknownSort.value);
+    selectList(UNKNOWN_LIST_KEY, { refreshUnknown: false });
+  } catch {
+    unknownSort.value = readUnknownSort(state.username, "memory");
+    showMessage("排序设置保存失败，请重试");
+  }
+});
 async function resetProgress(entries, remember = false) {
   if (!isCurrentAccount()) return;
   if (state.currentListKey === UNKNOWN_LIST_KEY) {

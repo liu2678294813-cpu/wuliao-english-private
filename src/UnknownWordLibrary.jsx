@@ -56,7 +56,7 @@ export default function UnknownWordLibrary({ onBack, onOpenVocabulary }) {
     try {
       const list = await getReadingWordList(username, { restore: true });
       if (getCurrentUsername() !== username) return;
-      if (exportList && !list?.wordIds.length) {
+      if (exportList && !list) {
         setListError("当前词库没有可导出的词。");
         return;
       }

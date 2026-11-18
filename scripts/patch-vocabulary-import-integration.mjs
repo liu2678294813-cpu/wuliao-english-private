@@ -67,6 +67,29 @@ const readingListReplacements = [
   ],
 ];
 
+const unknownExportImport = 'import{UnknownExportOptions as __UnknownExportOptions,createUnknownPdfGenerator as __unknownPdfGenerator}from"../unknown-word-export.js";';
+
+function patchUnknownExport(source) {
+  if (!source.includes(unknownExportImport)) source = unknownExportImport + source;
+  const start = source.indexOf("function Pz(){");
+  const end = source.indexOf("}/* wuliao-confusion", start);
+  if (start < 0 || end < 0) throw new Error("PDF export route was not found");
+  let route = source.slice(start, end);
+  if (route.includes("__UnknownExportOptions")) return source;
+  const format = ']}),(0,Y.jsxs)(`div`,{children:[(0,Y.jsx)(`label`,{className:`block text-sm font-medium text-gray-700 mb-2`,children:`导出格式`})';
+  const split = route.indexOf(format);
+  const tail = ',r.length===0';
+  const finish = route.indexOf(tail, split);
+  if (split < 0 || finish < 0) throw new Error("PDF export options changed");
+  const afterPicker = split + 4;
+  const list = 'r.find(e=>e.id===a)';
+  const startOptions = '...(__isReadingList(' + list + ')?[(0,Y.jsx)(__UnknownExportOptions,{react:_,username:t,name:' + list
+    + '.name,generate:__unknownPdfGenerator({createDocument:()=>Hh.create(),fontkit:Ux,standardFonts:Mh,loadChinese:wz,color:$p,download:Tz})},t+`:`+a)]:[';
+  route = route.slice(0, afterPicker) + startOptions + route.slice(afterPicker, finish)
+    + '])' + route.slice(finish);
+  return source.slice(0, start) + route + source.slice(end);
+}
+
 let source = (await readFile(bundlePath, "utf8")).split(oldBridgeImport).join("");
 
 if (!source.includes(bridgeImport)) {
@@ -87,5 +110,6 @@ for (const [before, after] of [...replacements, ...readingListReplacements]) {
   source = source.replace(before, after);
 }
 
+source = patchUnknownExport(source);
 await writeFile(bundlePath, source, "utf8");
 console.log("Vocabulary import integration patch is present.");

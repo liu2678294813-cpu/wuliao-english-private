@@ -60,16 +60,22 @@ function validEnglish(value) {
   return /[A-Za-z]/.test(value) && /^[A-Za-z][A-Za-z\s.'’\-/()]*$/.test(value) && value.length <= 100;
 }
 
-function normalizeRows(rows) {
-  const seen = new Set();
+function normalizeRows(rows, { combineMeanings = false } = {}) {
+  const seen = new Map();
   const words = [];
   rows.forEach((row) => {
     const english = cleanEnglish(row.english);
     const chinese = cleanChinese(row.chinese);
     const key = english.toLocaleLowerCase("en-US");
-    if (!validEnglish(english) || !hasChinese(chinese) || seen.has(key)) return;
-    seen.add(key);
-    words.push({ english, chinese });
+    if (!validEnglish(english) || !hasChinese(chinese)) return;
+    const existing = seen.get(key);
+    if (existing) {
+      if (combineMeanings && !existing.chinese.split("；").includes(chinese)) existing.chinese += "；" + chinese;
+      return;
+    }
+    const entry = { english, chinese };
+    seen.set(key, entry);
+    words.push(entry);
   });
   return words.slice(0, MAX_WORDS);
 }
@@ -134,18 +140,19 @@ function rowsFromTextLines(lines) {
   const candidates = [];
   for (let index = 0; index < lines.length; index += 1) {
     const line = String(lines[index] || "").trim();
+    if (/^【(?:文章|另见)】/.test(line)) continue;
     const chineseIndex = line.search(/[\u3400-\u9fff]/);
     if (chineseIndex > 0) {
       candidates.push({ english: line.slice(0, chineseIndex), chinese: line.slice(chineseIndex) });
       continue;
     }
     const next = String(lines[index + 1] || "").trim();
-    if (validEnglish(cleanEnglish(line)) && hasChinese(next)) {
+    if (validEnglish(cleanEnglish(line)) && hasChinese(next) && !/^【(?:文章|另见)】/.test(next)) {
       candidates.push({ english: line, chinese: next });
       index += 1;
     }
   }
-  return normalizeRows(candidates);
+  return normalizeRows(candidates, { combineMeanings: true });
 }
 
 function withParseTimeout(promise, message, timeoutMs = 60000) {

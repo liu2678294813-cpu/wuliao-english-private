@@ -1,0 +1,34 @@
+
+.unknown-export-options { color: #263b46; }
+.unknown-export-options fieldset { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
+.unknown-export-fields { display: flex; flex-wrap: wrap; gap: 12px; }
+.unknown-export-field { display: grid; flex: 1 1 125px; gap: 5px; font-size: 14px; font-weight: 600; }
+.unknown-export-field select, .unknown-export-articles input[type="search"] {
+  background: #fff; border: 1px solid #cdd9dc; border-radius: 8px; padding: 7px 9px; color: #263b46;
+}
+.unknown-export-articles { margin-top: 16px; }
+.unknown-export-articles input[type="search"] { width: 100%; margin: 8px 0; }
+.unknown-export-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.unknown-export-tools h3 { margin: 0 auto 0 0; font-size: 15px; font-weight: 650; }
+.unknown-export-tools button, .unknown-export-year > button {
+  padding: 6px 9px; border: 1px solid #d4e0e3; border-radius: 8px; color: #315965; background: #f6f9fa;
+}
+.unknown-export-scroll { max-height: 16rem; overflow: auto; overscroll-behavior: contain; border: 1px solid #dce5e7; border-radius: 9px; }
+.unknown-export-year { padding: 8px; }
+.unknown-export-year + .unknown-export-year { border-top: 1px solid #dce5e7; }
+.unknown-export-year > button { font-size: 12px; margin-bottom: 4px; }
+.unknown-export-article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 40px; padding: 6px; cursor: pointer; }
+.unknown-export-article:hover { background: #f1f7f8; }
+.unknown-export-article input { accent-color: #246875; width: 16px; height: 16px; }
+.unknown-export-subtitle { display: block; color: #58717d; }
+.unknown-export-count { color: #58717d; white-space: nowrap; }
+.unknown-export-summary { margin: 12px 0; font-size: 14px; }
+.unknown-export-primary { display: block; padding: 10px; width: 100%; margin: 0 0 10px; border-radius: 8px; background: #215f6c; color: white; font-weight: 650; }
+.unknown-export-options button:disabled { opacity: .5; cursor: default; }
+.unknown-export-history, .unknown-export-confirm { display: grid; gap: 8px; background: #f4f8f9; border-radius: 8px; margin-top: 10px; padding: 10px; font-size: 13px; }
+.unknown-export-options > [role="status"] { margin-top: 10px; font-size: 14px; }
+@media (max-width: 480px) {
+  .unknown-export-article { grid-template-columns: auto minmax(0, 1fr); }
+  .unknown-export-count { grid-column: 2; }
+}
+

@@ -46,7 +46,7 @@ export function filterResolvableUnknownRecords(records, words) {
 }
 
 export async function readUnknownWordList(username, { indexedDB = globalThis.indexedDB } = {}) {
-  const empty = (error = "") => ({ words: [], wordMap: new Map(), error });
+  const empty = (error = "") => ({ records: [], words: [], wordMap: new Map(), error });
   if (!username) return empty();
   if (!indexedDB?.open) return empty("陌生词库读取失败，请重新打开页面");
   let db;
@@ -89,7 +89,7 @@ export async function readUnknownWordList(username, { indexedDB = globalThis.ind
       transaction.onerror = transaction.onabort = () => reject(transaction.error || new Error("read-failed"));
     });
     const words = buildUnknownWordList(records, username);
-    return { words, wordMap: new Map(words.map((word) => [word.wordId, word])), error: "" };
+    return { records, words, wordMap: new Map(words.map((word) => [word.wordId, word])), error: "" };
   } catch {
     return empty("陌生词库读取失败，请重新打开页面");
   } finally { db?.close(); }

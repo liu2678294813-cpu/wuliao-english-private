@@ -426,7 +426,8 @@ test("阅读陌生词从原页面进入完整导出，双语 PDF 可重新导入
   const pdfPath = testInfo.outputPath(pdf.suggestedFilename());
   await pdf.saveAs(pdfPath);
 
-  await frame.getByText("纯英文版", { exact: true }).click();
+  await frame.getByLabel("导出状态").selectOption("all");
+  await frame.getByLabel("导出格式").selectOption("english-only");
   const englishOnly = page.waitForEvent("download");
   await downloadButton.click();
   expect((await englishOnly).suggestedFilename()).toBe("陌生词库_英文.pdf");
@@ -435,7 +436,8 @@ test("阅读陌生词从原页面进入完整导出，双语 PDF 可重新导入
   await page.locator("#fileInput").setInputFiles(pdfPath);
   await page.locator("#parseButton").click();
   await expect(page.locator("#previewTitle")).toHaveText("已识别 2 词");
-  await expect(page.locator("#previewRows")).toContainText("问题；议题");
+  await expect(page.locator("#previewRows")).toContainText("问题");
+  await expect(page.locator("#previewRows")).toContainText("议题");
   await expect(page.locator("#previewRows")).toContainText("take account of");
   await expect(page.locator("#previewRows")).toContainText("考虑到");
   await page.locator("#listName").fill("回导测试词库");
@@ -534,3 +536,87 @@ async function acceptDialogs(page, click) {
     page.off("dialog", handle);
   }
 }
+
+test("按位置增量导出，文章范围和排序可独立选择", async ({ page }, testInfo) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const first = { resourceId: "first", passageId: "text-1", chapter: "Text 1", year: "2025", updatedAt: 5 };
+  const second = { resourceId: "second", passageId: "text-2", chapter: "Text 2", year: "2024", updatedAt: 4 };
+  const mark = (article, id, word, meaning, positions) => ({
+    ...article, id, word, meaning,
+    senses: [{ contextKey: id + "-context", occurrenceIds: positions, meaning, meaningSource: "manual-context" }],
+    occurrences: positions,
+  });
+  const username = await openUnknown(page, [
+    mark(first, "decide-a", "decide", "决定", ["p:2", "p:11"]),
+    mark(first, "zebra-a", "zebra", "斑马", ["p:8"]),
+    mark(second, "decide-b", "decide", "决定", ["p:4"]),
+    mark(second, "decision-b", "decision", "n. 决定", ["p:5"]),
+    mark(second, "apple-b", "apple", "苹果", ["p:7"]),
+  ]);
+  const order = page.getByLabel("陌生词排序");
+  await expect(order).toHaveValue("alphabetical");
+  await expect(page.locator(".english").first()).toHaveText("apple");
+  await rowFor(page, "unknown:decide").locator(".mark-button").click();
+  await expect.poll(async () => (await memoryRecord(page, username, "unknown:decide"))?.clickCount).toBe(1);
+  await order.selectOption("frequency");
+  await expect(page.locator(".english").first()).toHaveText("decide");
+  await expect(rowFor(page, "unknown:decision").locator(".unknown-memory-detail")).toHaveText("4 次");
+  await page.reload();
+  await expect(order).toHaveValue("frequency");
+  await expect(rowFor(page, "unknown:decide").locator(".mark-button")).toHaveText("记录 1/3");
+  await order.selectOption("article");
+  await expect(page.locator(".english")).toHaveText(["decide", "zebra", "apple", "decision"]);
+
+  await page.goto("/");
+  await navTo(page, "精读");
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
+  await page.getByRole("button", { name: "导出词库", exact: true }).click();
+  const frame = page.frameLocator(".vocabulary-frame");
+  const chooseA = frame.getByRole("checkbox", { name: /Text 1/ });
+  const chooseB = frame.getByRole("checkbox", { name: /Text 2/ });
+  const scope = frame.getByLabel("导出状态");
+  const summary = frame.locator(".unknown-export-summary");
+  await expect(summary).toHaveText("已选 2 篇 · 本次 6 个标记 · PDF 共 4 条");
+  await expect(frame.getByLabel("单词排序")).toHaveValue("alphabetical");
+  await frame.getByLabel("搜索文章").fill("2024");
+  await expect(chooseA).toHaveCount(0);
+  await frame.getByRole("button", { name: "取消 2024 匹配文章" }).click();
+  await expect(chooseB).not.toBeChecked();
+  await frame.getByLabel("搜索文章").clear();
+  await frame.getByRole("button", { name: "补记以前的导出" }).click();
+  await expect(frame.getByText(/当前 3 个未导出的标记/)).toBeVisible();
+  await frame.getByRole("button", { name: "确认补记" }).click();
+  await expect(summary).toContainText("本次 0 个标记");
+  await chooseB.check();
+  await expect(summary).toContainText("本次 3 个标记");
+  await frame.getByLabel("单词排序").selectOption("article");
+  await scope.selectOption("all");
+  await page.screenshot({ path: testInfo.outputPath("unknown-export-desktop.png") });
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.screenshot({ path: testInfo.outputPath("unknown-export-mobile.png") });
+  const downloading = page.waitForEvent("download");
+  await frame.getByRole("button", { name: "下载 PDF" }).click();
+  await (await downloading).saveAs(testInfo.outputPath("article-order.pdf"));
+  await expect(frame.getByRole("status")).toContainText("记录 6 个标记");
+  await scope.selectOption("new");
+  await expect(summary).toContainText("本次 0 个标记");
+  await writeUnknown(page, username, [
+    mark(first, "decide-a", "decide", "决定", ["p:2", "p:11", "p:14"]),
+    mark(second, "decision-new", "decided", "决定", ["p:9"]),
+  ]);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await navTo(page, "精读");
+  await page.getByRole("button", { name: "陌生词库", exact: true }).click();
+  await page.getByRole("button", { name: "导出词库", exact: true }).click();
+  await expect(scope).toHaveValue("new");
+  await expect(frame.getByLabel("单词排序")).toHaveValue("article");
+  await expect(summary).toContainText("本次 2 个标记 · PDF 共 2 条");
+  await frame.getByRole("button", { name: "导出记录", exact: true }).click();
+  await frame.getByRole("button", { name: "撤销", exact: true }).last().click();
+  await expect(summary).toContainText("本次 2 个标记");
+  await frame.getByRole("button", { name: "撤销", exact: true }).click();
+  await expect(summary).toContainText("本次 8 个标记");
+  expect(errors).toEqual([]);
+});
